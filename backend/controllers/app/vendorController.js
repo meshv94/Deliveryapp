@@ -1,5 +1,6 @@
 const Vendor = require('../../models/vendorModal');
 const Address = require('../../models/addressModal');
+const Product = require('../../models/productModal');
 
 // Get all active vendors (status = 1) sorted by proximity to user's default address
 exports.getActiveVendors = async (req, res) => {
@@ -120,5 +121,23 @@ exports.getActiveVendors = async (req, res) => {
   } catch (err) {
     console.error('Error fetching active vendors by proximity:', err);
     return res.status(500).json({ success: false, message: 'Error fetching active vendors', error: err.message });
+  }
+};
+
+// Get vendor details and its active products (isActive = true)
+exports.getVendorWithProducts = async (req, res) => {
+  try {
+    const vendorId = req.params.vendor_id || req.query.vendor_id || req.body.vendor_id;
+    if (!vendorId) return res.status(400).json({ success: false, message: 'vendor_id is required' });
+
+    const vendor = await Vendor.findById(vendorId).select('-__v');
+    if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
+
+    const products = await Product.find({ vendor_id: vendorId, isActive: true }).select('-__v');
+
+    return res.status(200).json({ success: true, data: { vendor, products, count: products.length } });
+  } catch (err) {
+    console.error('Error fetching vendor with products:', err);
+    return res.status(500).json({ success: false, message: 'Error fetching vendor products', error: err.message });
   }
 };

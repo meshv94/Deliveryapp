@@ -411,6 +411,26 @@ exports.getProductById = async (req, res) => {
   }
 };
 
+// Get products by vendor (admin)
+exports.getProductsByVendor = async (req, res) => {
+  try {
+    const vendorId = req.params.id || req.query.vendor_id || req.body.vendor_id;
+    if (!vendorId) return res.status(400).json({ success: false, message: 'vendor_id is required' });
+
+    // Ensure vendor exists
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
+
+    // Return all products for vendor (admin view)
+    const products = await Product.find({ vendor_id: vendorId }).populate('module_id', 'name').populate('vendor_id', 'name');
+
+    return res.status(200).json({ success: true, message: 'Products retrieved successfully', data: products, count: products.length });
+  } catch (err) {
+    console.error('Error fetching products by vendor:', err);
+    res.status(500).json({ success: false, message: 'Error fetching products', error: err.message });
+  }
+};
+
 // Update product
 exports.updateProduct = async (req, res) => {
   try {

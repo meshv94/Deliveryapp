@@ -187,7 +187,7 @@ exports.verifyOtp = async (req, res) => {
 // Get current user profile
 exports.getUserProfile = async (req, res) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?._id;
 
     if (!userId) {
       return res.status(401).json({
@@ -224,7 +224,7 @@ exports.getUserProfile = async (req, res) => {
 // Update user profile
 exports.updateUserProfile = async (req, res) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?._id;
 
     if (!userId) {
       return res.status(401).json({

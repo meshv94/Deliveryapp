@@ -11,16 +11,15 @@ router.post('/vendors', upload.single('vendor_image'), vendorController.createVe
 // Get all vendors
 router.get('/vendors', vendorController.getAllVendors);
 
-// Get active vendors
-router.get('/vendors/active/list', vendorController.getActiveVendors);
-
 // Get vendors by module
 router.get('/vendors/module/:moduleId', vendorController.getVendorsByModule);
+
+// Get all products for a vendor (admin)
+router.get('/vendors/:id/products', vendorController.getProductsByVendor);
 
 // Get vendor by ID
 router.get('/vendors/:id', vendorController.getVendorById);
 
-// Update vendor
 // Update vendor
 router.put('/vendors/:id', upload.single('vendor_image'), vendorController.updateVendor);
 
