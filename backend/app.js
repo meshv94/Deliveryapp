@@ -63,6 +63,7 @@ const vendorRoutes = require('./routes/admin/vendorRoutes');
 const userRoutes = require('./routes/app/userRoutes');
 const addressRoutes = require('./routes/app/addressRoutes');
 const vendorAppRoutes = require('./routes/app/vendorRoutes');
+const cartCheckoutRoutes = require('./routes/app/cartCheckoutRoute');
 
 // Mount admin routes
 app.use('/api/admin', moduleRoutes);
@@ -72,6 +73,7 @@ app.use('/api/admin', vendorRoutes);
 app.use('/api/app', userRoutes);
 app.use('/api/app', addressRoutes);
 app.use('/api/app', vendorAppRoutes);
+app.use('/api/app', cartCheckoutRoutes);
 
 // Health Check Route
 app.get('/api/health', (req, res) => {
