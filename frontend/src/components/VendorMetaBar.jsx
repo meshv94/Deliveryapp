@@ -26,45 +26,45 @@ const VendorMetaBar = ({ vendor }) => {
   const metaItems = [];
 
   // Delivery Charge
-  if (vendor.deliveryCharge !== undefined && vendor.deliveryCharge !== null) {
+  if (vendor.delivery_charge !== undefined && vendor.delivery_charge !== null) {
     metaItems.push({
       id: 'delivery',
       icon: <DeliveryDiningIcon sx={{ fontSize: '1.1rem' }} />,
       label: 'Delivery Charge',
-      value: `$${vendor.deliveryCharge.toFixed(2)}`,
+      value: `$${vendor.delivery_charge.toFixed(2)}`,
       color: '#ff9800',
     });
   }
 
   // Packaging Charge
-  if (vendor.packagingCharge !== undefined && vendor.packagingCharge !== null) {
+  if (vendor.packaging_charge !== undefined && vendor.packaging_charge !== null) {
     metaItems.push({
       id: 'packaging',
       icon: <LocalShippingIcon sx={{ fontSize: '1.1rem' }} />,
       label: 'Packaging Charge',
-      value: `$${vendor.packagingCharge.toFixed(2)}`,
+      value: `$${vendor.packaging_charge.toFixed(2)}`,
       color: '#2196f3',
     });
   }
 
   // Convenience Charge
-  if (vendor.convenienceCharge !== undefined && vendor.convenienceCharge !== null) {
+  if (vendor.convenience_charge !== undefined && vendor.convenience_charge !== null) {
     metaItems.push({
       id: 'convenience',
       icon: <LocalOfferIcon sx={{ fontSize: '1.1rem' }} />,
       label: 'Convenience Charge',
-      value: `$${vendor.convenienceCharge.toFixed(2)}`,
+      value: `$${vendor.convenience_charge.toFixed(2)}`,
       color: '#9c27b0',
     });
   }
 
   // Preparation Time
-  if (vendor.preparationTime) {
+  if (vendor.preparation_time_minutes !== undefined && vendor.preparation_time_minutes !== null) {
     metaItems.push({
       id: 'prep',
       icon: <AccessTimeIcon sx={{ fontSize: '1.1rem' }} />,
       label: 'Est. Prep Time',
-      value: `${vendor.preparationTime} min`,
+      value: `${vendor.preparation_time_minutes} min`,
       color: '#4caf50',
     });
   }
@@ -77,93 +77,114 @@ const VendorMetaBar = ({ vendor }) => {
   return (
     <Box
       sx={{
-        backgroundColor: '#fafafa',
-        borderBottom: '1px solid #e0e0e0',
-        py: 1.5,
+        backgroundColor: '#fff',
+        borderBottom: '1px solid #e8e8e8',
+        py: { xs: 1.5, sm: 2 },
         position: 'sticky',
-        top: 64, // Adjust based on your AppBar height
+        top: { xs: 56, sm: 64 },
         zIndex: 50,
-        overflow: 'auto',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+        backdropFilter: 'blur(10px)',
       }}
     >
       <Container maxWidth="lg">
         <Stack
           direction="row"
-          spacing={1.5}
+          spacing={{ xs: 1.5, sm: 2 }}
           sx={{
             overflowX: 'auto',
+            overflowY: 'hidden',
             pb: 0.5,
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#ddd transparent',
             '&::-webkit-scrollbar': {
-              height: '4px',
+              height: '6px',
             },
             '&::-webkit-scrollbar-track': {
-              backgroundColor: '#f1f1f1',
+              backgroundColor: 'transparent',
+              borderRadius: '10px',
             },
             '&::-webkit-scrollbar-thumb': {
               backgroundColor: '#ddd',
-              borderRadius: '2px',
+              borderRadius: '10px',
+              '&:hover': {
+                backgroundColor: '#bbb',
+              },
             },
           }}
         >
-          {metaItems.map((item, index) => (
-            <Box key={item.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {/* Chip */}
+          {metaItems.map((item) => (
+            <Box
+              key={item.id}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.25,
+                backgroundColor: '#fafafa',
+                border: '1px solid #f0f0f0',
+                borderRadius: '16px',
+                padding: { xs: '10px 14px', sm: '12px 16px' },
+                minWidth: 'fit-content',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer',
+                '&:hover': {
+                  backgroundColor: '#fff',
+                  borderColor: item.color,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 4px 12px ${item.color}20`,
+                },
+              }}
+            >
+              {/* Icon with background */}
               <Box
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 0.75,
-                  backgroundColor: '#fff',
-                  border: `1px solid #e0e0e0`,
-                  borderRadius: '20px',
-                  padding: '8px 12px',
-                  minWidth: 'fit-content',
+                  justifyContent: 'center',
+                  width: { xs: 36, sm: 40 },
+                  height: { xs: 36, sm: 40 },
+                  borderRadius: '12px',
+                  backgroundColor: `${item.color}15`,
+                  color: item.color,
+                  flexShrink: 0,
                   transition: 'all 0.3s ease',
-                  '&:hover': {
-                    backgroundColor: '#f5f5f5',
-                    borderColor: item.color,
-                  },
                 }}
               >
-                <Box sx={{ color: item.color, display: 'flex' }}>
-                  {item.icon}
-                </Box>
-
-                <Box>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: '#999',
-                      display: 'block',
-                      fontSize: '0.7rem',
-                    }}
-                  >
-                    {item.label}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: '#1a1a1a',
-                      fontWeight: 700,
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    {item.value}
-                  </Typography>
-                </Box>
+                {React.cloneElement(item.icon, {
+                  sx: { fontSize: { xs: '1.2rem', sm: '1.35rem' } },
+                })}
               </Box>
 
-              {/* Divider between items (except last) */}
-              {index < metaItems.length - 1 && (
-                <Divider
-                  orientation="vertical"
-                  flexItem
+              {/* Text content */}
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="caption"
                   sx={{
-                    height: 30,
-                    opacity: 0.2,
+                    color: '#888',
+                    display: 'block',
+                    fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                    fontWeight: 500,
+                    letterSpacing: '0.3px',
+                    textTransform: 'uppercase',
+                    lineHeight: 1.2,
+                    mb: 0.25,
                   }}
-                />
-              )}
+                >
+                  {item.label}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: '#1a1a1a',
+                    fontWeight: 700,
+                    fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                    lineHeight: 1.3,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {item.value}
+                </Typography>
+              </Box>
             </Box>
           ))}
         </Stack>

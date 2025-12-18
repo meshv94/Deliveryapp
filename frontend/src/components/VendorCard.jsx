@@ -176,11 +176,11 @@ const VendorCard = ({ vendor }) => {
         )}
 
         {/* Distance */}
-        {vendor.distance !== undefined && (
+        {vendor.distance_km !== undefined && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#666' }}>
             <LocationOnIcon sx={{ fontSize: '1rem', color: '#1976d2' }} />
             <Typography variant="caption" sx={{ fontWeight: 500 }}>
-              {vendor.distance} km away
+              {vendor.distance_km} km away
             </Typography>
           </Box>
         )}
