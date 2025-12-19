@@ -16,7 +16,7 @@ const sendOtpToNumber = async (mobileNumber, otp) => {
     console.log(`📱 OTP sent to ${mobileNumber}: ${otp}`);
     
     // Uncomment below for Twilio integration
-    /*
+    
     const twilio = require('twilio');
     const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     
@@ -25,7 +25,7 @@ const sendOtpToNumber = async (mobileNumber, otp) => {
       from: process.env.TWILIO_PHONE_NUMBER,
       to: `+91${mobileNumber}`
     });
-    */
+    
     
     return { success: true, message: 'OTP sent successfully' };
   } catch (error) {
