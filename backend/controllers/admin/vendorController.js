@@ -99,6 +99,10 @@ const updateVendorSchema = Joi.object({
   description: Joi.string().trim().optional(),
   status: Joi.number().valid(0, 1).optional().messages({
     'any.only': 'Status must be 0 (inactive) or 1 (active)'
+  }),
+  module: Joi.string().optional().messages({
+    'string.empty': 'Module ID is required',
+    'any.required': 'Module ID is required'
   })
 }).min(1).messages({
   'object.min': 'At least one field is required to update'
