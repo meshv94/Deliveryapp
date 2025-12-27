@@ -20,6 +20,7 @@ import {
   Dashboard as DashboardIcon,
   Store as StoreIcon,
   Apps as AppsIcon,
+  People as PeopleIcon,
   Settings as SettingsIcon,
   LocalShipping as DeliveryIcon,
 } from '@mui/icons-material';
@@ -31,6 +32,7 @@ const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
   { text: 'Vendors', icon: <StoreIcon />, path: '/vendors' },
   { text: 'Modules', icon: <AppsIcon />, path: '/modules' },
+  { text: 'Users', icon: <PeopleIcon />, path: '/users' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
 ];
 

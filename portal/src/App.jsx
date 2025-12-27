@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Vendors from './pages/Vendors';
 import Modules from './pages/Modules';
+import Users from './pages/Users';
 import Settings from './pages/Settings';
 
 // Create Material UI theme
@@ -67,6 +68,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/vendors" element={<Vendors />} />
             <Route path="/modules" element={<Modules />} />
+            <Route path="/users" element={<Users />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </Layout>
