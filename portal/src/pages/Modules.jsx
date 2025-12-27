@@ -1,117 +1,373 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Grid,
-  Card,
-  CardContent,
+  Paper,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  CircularProgress,
+  Alert,
   Switch,
-  FormControlLabel,
-  Divider,
 } from '@mui/material';
 import {
-  Notifications as NotificationsIcon,
-  Payment as PaymentIcon,
-  Security as SecurityIcon,
-  Analytics as AnalyticsIcon,
-  LocalOffer as OffersIcon,
-  DeliveryDining as DeliveryIcon,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
-
-const ModuleCard = ({ title, description, icon, enabled }) => (
-  <Card sx={{ height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-    <CardContent>
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-        <Box
-          sx={{
-            width: 48,
-            height: 48,
-            borderRadius: 2,
-            background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#667eea',
-            mr: 2,
-          }}
-        >
-          {icon}
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-            {title}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {description}
-          </Typography>
-        </Box>
-      </Box>
-      <Divider sx={{ my: 2 }} />
-      <FormControlLabel
-        control={<Switch defaultChecked={enabled} />}
-        label={enabled ? 'Enabled' : 'Disabled'}
-        sx={{ ml: 0 }}
-      />
-    </CardContent>
-  </Card>
-);
+import moduleService from '../services/moduleService';
 
 const Modules = () => {
-  const modules = [
-    {
-      title: 'Notifications',
-      description: 'Push notifications and SMS alerts',
-      icon: <NotificationsIcon fontSize="large" />,
-      enabled: true,
-    },
-    {
-      title: 'Payment Gateway',
-      description: 'Online payment processing',
-      icon: <PaymentIcon fontSize="large" />,
-      enabled: true,
-    },
-    {
-      title: 'Security',
-      description: 'Advanced security features',
-      icon: <SecurityIcon fontSize="large" />,
-      enabled: true,
-    },
-    {
-      title: 'Analytics',
-      description: 'Business analytics and reports',
-      icon: <AnalyticsIcon fontSize="large" />,
-      enabled: false,
-    },
-    {
-      title: 'Offers & Coupons',
-      description: 'Promotional offers management',
-      icon: <OffersIcon fontSize="large" />,
-      enabled: true,
-    },
-    {
-      title: 'Delivery Tracking',
-      description: 'Real-time delivery tracking',
-      icon: <DeliveryIcon fontSize="large" />,
-      enabled: true,
-    },
-  ];
+  const [modules, setModules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  // Dialog states
+  const [openDialog, setOpenDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [selectedModule, setSelectedModule] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Form data
+  const [formData, setFormData] = useState({
+    name: '',
+    active: true,
+  });
+
+  // Fetch modules on mount
+  useEffect(() => {
+    fetchModules();
+  }, []);
+
+  const fetchModules = async () => {
+    try {
+      setLoading(true);
+      const response = await moduleService.getAllModules();
+      setModules(response.data || []);
+      setError(null);
+    } catch (err) {
+      setError(err.message || 'Failed to fetch modules');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenDialog = (module = null) => {
+    if (module) {
+      // Edit mode
+      setSelectedModule(module);
+      setFormData({
+        name: module.name || '',
+        active: module.active !== undefined ? module.active : true,
+      });
+    } else {
+      // Add mode
+      setSelectedModule(null);
+      setFormData({
+        name: '',
+        active: true,
+      });
+    }
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setSelectedModule(null);
+    setFormData({
+      name: '',
+      active: true,
+    });
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      const data = {
+        name: formData.name,
+        active: formData.active,
+      };
+
+      if (selectedModule) {
+        // Update
+        await moduleService.updateModule(selectedModule._id, data);
+        setSuccess('Module updated successfully!');
+      } else {
+        // Create
+        await moduleService.createModule(data);
+        setSuccess('Module created successfully!');
+      }
+
+      handleCloseDialog();
+      fetchModules();
+    } catch (err) {
+      setError(err.message || 'Failed to save module');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteClick = (module) => {
+    setSelectedModule(module);
+    setDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      setSubmitting(true);
+      await moduleService.deleteModule(selectedModule._id);
+      setSuccess('Module deleted successfully!');
+      setDeleteDialog(false);
+      setSelectedModule(null);
+      fetchModules();
+    } catch (err) {
+      setError(err.message || 'Failed to delete module');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleToggleActive = async (module) => {
+    try {
+      const data = {
+        name: module.name,
+        active: !module.active,
+      };
+      await moduleService.updateModule(module._id, data);
+      setSuccess(`Module ${data.active ? 'activated' : 'deactivated'} successfully!`);
+      fetchModules();
+    } catch (err) {
+      setError(err.message || 'Failed to update module status');
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <CircularProgress size={60} thickness={4} sx={{ color: '#667eea' }} />
+      </Box>
+    );
+  }
 
   return (
-    <Box>
-      <Typography variant="h4" sx={{ mb: 1, fontWeight: 800 }}>
-        Modules Configuration
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Enable or disable application modules
-      </Typography>
+    <Box sx={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+      {/* Success/Error Messages */}
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
+          {success}
+        </Alert>
+      )}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
-      <Grid container spacing={3}>
-        {modules.map((module, index) => (
-          <Grid item xs={12} sm={6} md={4} key={index}>
-            <ModuleCard {...module} />
-          </Grid>
-        ))}
-      </Grid>
+      {/* Header */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 4,
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
+      >
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 800, fontSize: { xs: '1.5rem', md: '2.125rem' } }}>
+            Modules Management
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Manage application modules and their status
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => handleOpenDialog()}
+          sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            textTransform: 'none',
+            fontWeight: 600,
+          }}
+        >
+          Add Module
+        </Button>
+      </Box>
+
+      {/* Modules Table */}
+      <TableContainer component={Paper} sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)', width: '100%', overflowX: 'auto' }}>
+        <Table sx={{ minWidth: { xs: 300, sm: 650 } }}>
+          <TableHead>
+            <TableRow sx={{ backgroundColor: '#f5f7fa' }}>
+              <TableCell sx={{ fontWeight: 700 }}>Module Name</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: 700, display: { xs: 'none', sm: 'table-cell' } }}>Created At</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Active</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {modules.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                  <Typography color="text.secondary">No modules found</Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              modules.map((module) => (
+                <TableRow key={module._id} hover>
+                  <TableCell sx={{ fontWeight: 600 }}>{module.name}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={module.active ? 'Active' : 'Inactive'}
+                      size="small"
+                      color={module.active ? 'success' : 'default'}
+                      sx={{ fontWeight: 600 }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                    {new Date(module.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={module.active}
+                      onChange={() => handleToggleActive(module)}
+                      color="primary"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                      <IconButton size="small" color="info" onClick={() => handleOpenDialog(module)} title="Edit Module">
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" color="error" onClick={() => handleDeleteClick(module)} title="Delete Module">
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Add/Edit Dialog */}
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        maxWidth="sm"
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: { xs: 2, sm: 3 },
+            maxHeight: { xs: 'calc(100% - 32px)', sm: 'calc(100% - 64px)' },
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            {selectedModule ? 'Edit Module' : 'Add New Module'}
+          </Typography>
+          <IconButton onClick={handleCloseDialog}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* Module Name */}
+            <TextField
+              fullWidth
+              label="Module Name"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              required
+              placeholder="Enter module name"
+            />
+
+            {/* Active Status */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                Status:
+              </Typography>
+              <Switch
+                checked={formData.active}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, active: e.target.checked }))
+                }
+                color="primary"
+              />
+              <Typography variant="body2" color="text.secondary">
+                {formData.active ? 'Active' : 'Inactive'}
+              </Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={handleCloseDialog} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={submitting || !formData.name.trim()}
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            }}
+          >
+            {submitting ? <CircularProgress size={24} color="inherit" /> : selectedModule ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)}>
+        <DialogTitle>Delete Module?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete <strong>{selectedModule?.name}</strong>? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeleteConfirm}
+            disabled={submitting}
+          >
+            {submitting ? <CircularProgress size={24} color="inherit" /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

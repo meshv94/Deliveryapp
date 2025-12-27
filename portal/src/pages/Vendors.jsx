@@ -31,6 +31,7 @@ import {
   CloudUpload as UploadIcon,
   MyLocation as MyLocationIcon,
   Search as SearchIcon,
+  Inventory as InventoryIcon,
 } from '@mui/icons-material';
 import vendorService from '../services/vendorService';
 
@@ -46,6 +47,27 @@ const Vendors = () => {
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Product Management states
+  const [productsDialog, setProductsDialog] = useState(false);
+  const [productFormDialog, setProductFormDialog] = useState(false);
+  const [productDeleteDialog, setProductDeleteDialog] = useState(false);
+  const [currentVendor, setCurrentVendor] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [productFormData, setProductFormData] = useState({
+    name: '',
+    main_price: '',
+    special_price: '',
+    preparation_time_minute: 0,
+    packaging_charge: 0,
+    vendor_id: '',
+    module_id: '',
+    isActive: true,
+    image: null,
+  });
+  const [productImagePreview, setProductImagePreview] = useState(null);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -84,7 +106,7 @@ const Vendors = () => {
   const mapRef = useRef(null);
   const markerRef = useRef(null);
 
-  // const GOOGLE_MAPS_API_KEY = 'AIzaSyCt-3lkaKLavZB1iAu_yjkO3tTjBOCvrpM';
+  const GOOGLE_MAPS_API_KEY = 'AIzaSyCt-3lkaKLavZB1iAu_yjkO3tTjBOCvrpM';
 
   // Fetch vendors and modules on mount
   useEffect(() => {
@@ -529,6 +551,150 @@ const Vendors = () => {
     }
   };
 
+  // Product Management Functions
+  const handleOpenProductsDialog = async (vendor) => {
+    setCurrentVendor(vendor);
+    setProductsDialog(true);
+    await fetchVendorProducts(vendor._id);
+  };
+
+  const fetchVendorProducts = async (vendorId) => {
+    try {
+      setLoadingProducts(true);
+      const response = await vendorService.getProductsByVendor(vendorId);
+      setProducts(response.data || []);
+    } catch (err) {
+      setError(err.message || 'Failed to fetch products');
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const handleOpenProductForm = (product = null) => {
+    if (product) {
+      setSelectedProduct(product);
+      setProductFormData({
+        name: product.name || '',
+        main_price: product.main_price || '',
+        special_price: product.special_price || '',
+        preparation_time_minute: product.preparation_time_minute || 0,
+        packaging_charge: product.packaging_charge || 0,
+        vendor_id: product.vendor_id?._id || currentVendor?._id || '',
+        module_id: product.module_id?._id || currentVendor?.module?._id || '',
+        isActive: product.isActive !== undefined ? product.isActive : true,
+        image: null,
+      });
+      setProductImagePreview(product.image || null);
+    } else {
+      setSelectedProduct(null);
+      setProductFormData({
+        name: '',
+        main_price: '',
+        special_price: '',
+        preparation_time_minute: 0,
+        packaging_charge: 0,
+        vendor_id: currentVendor?._id || '',
+        module_id: currentVendor?.module?._id || currentVendor?.module || '',
+        isActive: true,
+        image: null,
+      });
+      setProductImagePreview(null);
+    }
+    setProductFormDialog(true);
+  };
+
+  const handleCloseProductForm = () => {
+    setProductFormDialog(false);
+    setSelectedProduct(null);
+    setProductFormData({
+      name: '',
+      main_price: '',
+      special_price: '',
+      preparation_time_minute: 0,
+      packaging_charge: 0,
+      vendor_id: '',
+      module_id: '',
+      isActive: true,
+      image: null,
+    });
+    setProductImagePreview(null);
+  };
+
+  const handleProductInputChange = (e) => {
+    const { name, value } = e.target;
+    setProductFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleProductImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProductFormData((prev) => ({
+        ...prev,
+        image: file,
+      }));
+      setProductImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleProductSubmit = async () => {
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      const data = new FormData();
+      data.append('name', productFormData.name);
+      data.append('main_price', productFormData.main_price);
+      data.append('special_price', productFormData.special_price || '');
+      data.append('preparation_time_minute', productFormData.preparation_time_minute);
+      data.append('packaging_charge', productFormData.packaging_charge);
+      data.append('vendor_id', productFormData.vendor_id);
+      data.append('module_id', productFormData.module_id);
+      data.append('isActive', productFormData.isActive);
+
+      if (productFormData.image) {
+        data.append('image', productFormData.image);
+      }
+
+      if (selectedProduct) {
+        await vendorService.updateProduct(selectedProduct._id, data);
+        setSuccess('Product updated successfully!');
+      } else {
+        await vendorService.createProduct(data);
+        setSuccess('Product created successfully!');
+      }
+
+      handleCloseProductForm();
+      await fetchVendorProducts(currentVendor._id);
+    } catch (err) {
+      setError(err.message || 'Failed to save product');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleProductDeleteClick = (product) => {
+    setSelectedProduct(product);
+    setProductDeleteDialog(true);
+  };
+
+  const handleProductDeleteConfirm = async () => {
+    try {
+      setSubmitting(true);
+      await vendorService.deleteProduct(selectedProduct._id);
+      setSuccess('Product deleted successfully!');
+      setProductDeleteDialog(false);
+      setSelectedProduct(null);
+      await fetchVendorProducts(currentVendor._id);
+    } catch (err) {
+      setError(err.message || 'Failed to delete product');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -538,7 +704,7 @@ const Vendors = () => {
   }
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
       {/* Success/Error Messages */}
       {success && (
         <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
@@ -552,8 +718,17 @@ const Vendors = () => {
       )}
 
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 800 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 4,
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
+      >
+        <Typography variant="h4" sx={{ fontWeight: 800, fontSize: { xs: '1.5rem', md: '2.125rem' } }}>
           Vendors Management
         </Typography>
         <Button
@@ -571,15 +746,15 @@ const Vendors = () => {
       </Box>
 
       {/* Vendors Table */}
-      <TableContainer component={Paper} sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-        <Table>
+      <TableContainer component={Paper} sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)', width: '100%', overflowX: 'auto' }}>
+        <Table sx={{ minWidth: { xs: 300, sm: 650 } }}>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f7fa' }}>
-              <TableCell sx={{ fontWeight: 700 }}>Image</TableCell>
+              <TableCell sx={{ fontWeight: 700, display: { xs: 'none', sm: 'table-cell' } }}>Image</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Vendor Name</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Phone</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>City</TableCell>
+              <TableCell sx={{ fontWeight: 700, display: { xs: 'none', md: 'table-cell' } }}>Email</TableCell>
+              <TableCell sx={{ fontWeight: 700, display: { xs: 'none', sm: 'table-cell' } }}>Phone</TableCell>
+              <TableCell sx={{ fontWeight: 700, display: { xs: 'none', lg: 'table-cell' } }}>City</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
             </TableRow>
@@ -594,13 +769,13 @@ const Vendors = () => {
             ) : (
               vendors.map((vendor) => (
                 <TableRow key={vendor._id} hover>
-                  <TableCell>
+                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                     <Avatar src={vendor.vendor_image} alt={vendor.name} />
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>{vendor.name}</TableCell>
-                  <TableCell>{vendor.email}</TableCell>
-                  <TableCell>{vendor.mobile_number}</TableCell>
-                  <TableCell>{vendor.city}</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{vendor.email}</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{vendor.mobile_number}</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>{vendor.city}</TableCell>
                   <TableCell>
                     <Chip
                       label={vendor.isBlocked ? 'Blocked' : 'Active'}
@@ -610,12 +785,22 @@ const Vendors = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    <IconButton size="small" color="info" onClick={() => handleOpenDialog(vendor)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" color="error" onClick={() => handleDeleteClick(vendor)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => handleOpenProductsDialog(vendor)}
+                        title="View Products"
+                      >
+                        <InventoryIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" color="info" onClick={() => handleOpenDialog(vendor)} title="Edit Vendor">
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" color="error" onClick={() => handleDeleteClick(vendor)} title="Delete Vendor">
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))
@@ -625,7 +810,18 @@ const Vendors = () => {
       </TableContainer>
 
       {/* Add/Edit Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        maxWidth="md"
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: { xs: 2, sm: 3 },
+            maxHeight: { xs: 'calc(100% - 32px)', sm: 'calc(100% - 64px)' },
+          },
+        }}
+      >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
             {selectedVendor ? 'Edit Vendor' : 'Add New Vendor'}
@@ -997,6 +1193,321 @@ const Vendors = () => {
             variant="contained"
             color="error"
             onClick={handleDeleteConfirm}
+            disabled={submitting}
+          >
+            {submitting ? <CircularProgress size={24} color="inherit" /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Products Management Dialog */}
+      <Dialog
+        open={productsDialog}
+        onClose={() => setProductsDialog(false)}
+        maxWidth="lg"
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: { xs: 1, sm: 3 },
+            maxHeight: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 64px)' },
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2, pb: 2 }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+              Products - {currentVendor?.name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Manage products for this vendor
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenProductForm()}
+              size="small"
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                textTransform: 'none',
+                fontWeight: 600,
+                display: { xs: 'none', sm: 'flex' },
+              }}
+            >
+              Add Product
+            </Button>
+            <IconButton
+              onClick={() => handleOpenProductForm()}
+              sx={{
+                display: { xs: 'flex', sm: 'none' },
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
+                },
+              }}
+              size="small"
+            >
+              <AddIcon />
+            </IconButton>
+            <IconButton onClick={() => setProductsDialog(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {loadingProducts ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress sx={{ color: '#667eea' }} />
+            </Box>
+          ) : products.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 6 }}>
+              <InventoryIcon sx={{ fontSize: 80, color: '#e0e0e0', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No Products Found
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Add your first product to get started
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => handleOpenProductForm()}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                Add Product
+              </Button>
+            </Box>
+          ) : (
+            <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
+              <Table sx={{ minWidth: { xs: 300, sm: 600 } }}>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: '#f5f7fa' }}>
+                    <TableCell sx={{ fontWeight: 700, display: { xs: 'none', sm: 'table-cell' } }}>Image</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>Product Name</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>Main Price</TableCell>
+                    <TableCell sx={{ fontWeight: 700, display: { xs: 'none', md: 'table-cell' } }}>Special Price</TableCell>
+                    <TableCell sx={{ fontWeight: 700, display: { xs: 'none', lg: 'table-cell' } }}>Prep Time</TableCell>
+                    <TableCell sx={{ fontWeight: 700, display: { xs: 'none', lg: 'table-cell' } }}>Pack Charge</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {products.map((product) => (
+                    <TableRow key={product._id} hover>
+                      <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                        <Avatar src={product.image} alt={product.name} variant="rounded" />
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{product.name}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>₹{product.main_price}</TableCell>
+                      <TableCell sx={{ fontWeight: 600, display: { xs: 'none', md: 'table-cell' } }}>
+                        {product.special_price ? `₹${product.special_price}` : '-'}
+                      </TableCell>
+                      <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
+                        {product.preparation_time_minute} min
+                      </TableCell>
+                      <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
+                        ₹{product.packaging_charge}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={product.isActive ? 'Active' : 'Inactive'}
+                          size="small"
+                          color={product.isActive ? 'success' : 'error'}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                          <IconButton size="small" color="info" onClick={() => handleOpenProductForm(product)} title="Edit Product">
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" color="error" onClick={() => handleProductDeleteClick(product)} title="Delete Product">
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Form Dialog (Add/Edit) */}
+      <Dialog
+        open={productFormDialog}
+        onClose={handleCloseProductForm}
+        maxWidth="sm"
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: { xs: 2, sm: 3 },
+            maxHeight: { xs: 'calc(100% - 32px)', sm: 'calc(100% - 64px)' },
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            {selectedProduct ? 'Edit Product' : 'Add New Product'}
+          </Typography>
+          <IconButton onClick={handleCloseProductForm}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Grid container spacing={2}>
+            {/* Image Upload */}
+            <Grid item xs={12} sx={{ textAlign: 'center' }}>
+              {productImagePreview && (
+                <Avatar
+                  src={productImagePreview}
+                  variant="rounded"
+                  sx={{ width: 150, height: 150, mx: 'auto', mb: 2 }}
+                />
+              )}
+              <Button
+                variant="outlined"
+                component="label"
+                startIcon={<UploadIcon />}
+                sx={{ width: '100%' }}
+              >
+                Upload Product Image
+                <input type="file" hidden accept="image/*" onChange={handleProductImageChange} />
+              </Button>
+            </Grid>
+
+            {/* Product Name */}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Product Name"
+                name="name"
+                value={productFormData.name}
+                onChange={handleProductInputChange}
+                required
+              />
+            </Grid>
+
+            {/* Main Price */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Main Price"
+                name="main_price"
+                type="number"
+                value={productFormData.main_price}
+                onChange={handleProductInputChange}
+                required
+                InputProps={{
+                  startAdornment: <Typography sx={{ mr: 1 }}>₹</Typography>,
+                }}
+              />
+            </Grid>
+
+            {/* Special Price */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Special Price (Optional)"
+                name="special_price"
+                type="number"
+                value={productFormData.special_price}
+                onChange={handleProductInputChange}
+                InputProps={{
+                  startAdornment: <Typography sx={{ mr: 1 }}>₹</Typography>,
+                }}
+                helperText="Leave empty if no special price"
+              />
+            </Grid>
+
+            {/* Preparation Time */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Preparation Time (minutes)"
+                name="preparation_time_minute"
+                type="number"
+                value={productFormData.preparation_time_minute}
+                onChange={handleProductInputChange}
+                helperText="Time required to prepare this product"
+              />
+            </Grid>
+
+            {/* Packaging Charge */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Packaging Charge"
+                name="packaging_charge"
+                type="number"
+                value={productFormData.packaging_charge}
+                onChange={handleProductInputChange}
+                InputProps={{
+                  startAdornment: <Typography sx={{ mr: 1 }}>₹</Typography>,
+                }}
+              />
+            </Grid>
+
+            {/* Status */}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                select
+                label="Status"
+                name="isActive"
+                value={productFormData.isActive.toString()}
+                onChange={(e) =>
+                  setProductFormData((prev) => ({ ...prev, isActive: e.target.value === 'true' }))
+                }
+              >
+                <MenuItem value="true">Active</MenuItem>
+                <MenuItem value="false">Inactive</MenuItem>
+              </TextField>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={handleCloseProductForm} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleProductSubmit}
+            disabled={submitting}
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            }}
+          >
+            {submitting ? <CircularProgress size={24} color="inherit" /> : selectedProduct ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Product Delete Confirmation Dialog */}
+      <Dialog open={productDeleteDialog} onClose={() => setProductDeleteDialog(false)}>
+        <DialogTitle>Delete Product?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete <strong>{selectedProduct?.name}</strong>? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setProductDeleteDialog(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleProductDeleteConfirm}
             disabled={submitting}
           >
             {submitting ? <CircularProgress size={24} color="inherit" /> : 'Delete'}

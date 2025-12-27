@@ -25,6 +25,37 @@ const vendorService = {
   deleteVendor: async (id) => {
     return await apiClient.delete(`/vendors/${id}`);
   },
+
+  // Product Management APIs
+  // Get all products for a specific vendor
+  getProductsByVendor: async (vendorId) => {
+    return await apiClient.get(`/vendors/${vendorId}/products`);
+  },
+
+  // Get all products
+  getAllProducts: async () => {
+    return await apiClient.get('/products');
+  },
+
+  // Get product by ID
+  getProductById: async (productId) => {
+    return await apiClient.get(`/products/${productId}`);
+  },
+
+  // Create new product
+  createProduct: async (formData) => {
+    return await apiClient.post('/products', formData);
+  },
+
+  // Update product
+  updateProduct: async (productId, formData) => {
+    return await apiClient.put(`/products/${productId}`, formData);
+  },
+
+  // Delete product
+  deleteProduct: async (productId) => {
+    return await apiClient.delete(`/products/${productId}`);
+  },
 };
 
 export default vendorService;

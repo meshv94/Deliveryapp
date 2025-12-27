@@ -13,8 +13,7 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // Add auth token if available
-    // const token = localStorage.getItem('authToken');
-    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTQyZjFkMmI1MGU5MGMzMjhmZTdhNGYiLCJ0aW1lc3RhbXAiOjE3NjU5OTUxOTg0NTYsImlhdCI6MTc2NTk5NTE5OCwiZXhwIjoxNzY2NTk5OTk4fQ.g8p35WQZUVjLaBvIvC2jVGpJiH_ri1-nX-NX9DgNwwA'
+    const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
