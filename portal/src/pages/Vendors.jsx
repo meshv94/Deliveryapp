@@ -34,6 +34,7 @@ import {
   Inventory as InventoryIcon,
 } from '@mui/icons-material';
 import vendorService from '../services/vendorService';
+import moduleService from '../services/moduleService';
 
 const Vendors = () => {
   const [vendors, setVendors] = useState([]);
@@ -247,10 +248,9 @@ const Vendors = () => {
 
   const fetchModules = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/admin/modules/active/list');
-      const data = await response.json();
-      if (data.success) {
-        setModules(data.data || []);
+      const response = await moduleService.getActiveModules();
+      if (response.success) {
+        setModules(response.data || []);
       }
     } catch (err) {
       console.error('Failed to fetch active modules:', err);

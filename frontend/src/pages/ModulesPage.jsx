@@ -272,8 +272,8 @@ const ModulesPage = () => {
                           {module.image ? (
                             <Box
                               sx={{
-                                width: 70,
-                                height: 70,
+                                width: 100,
+                                height: 100,
                                 borderRadius: '50%',
                                 mb: 3,
                                 overflow: 'hidden',

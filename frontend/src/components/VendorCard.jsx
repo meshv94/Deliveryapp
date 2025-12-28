@@ -40,7 +40,7 @@ const VendorCard = ({ vendor }) => {
       sx={{
         cursor: 'pointer',
         height: '100%',
-        minHeight: 400,
+        minHeight: 300,
         maxHeight: 400,
         display: 'flex',
         flexDirection: 'column',
@@ -75,8 +75,8 @@ const VendorCard = ({ vendor }) => {
             badgeContent="NEW"
             sx={{
               position: 'absolute',
-              top: 8,
-              right: 8,
+              top: 20,
+              right: 40,
               zIndex: 2,
               '& .MuiBadge-badge': {
                 backgroundColor: '#FF6B6B',
@@ -84,7 +84,7 @@ const VendorCard = ({ vendor }) => {
                 fontWeight: 700,
                 fontSize: '0.75rem',
                 borderRadius: '0 8px 0 8px',
-                padding: '4px 8px',
+                padding: '8px 15px',
                 minWidth: 'auto',
                 height: 'auto',
               },
@@ -186,14 +186,14 @@ const VendorCard = ({ vendor }) => {
         </Box>
 
         {/* Rating */}
-        {vendor.rating !== undefined && (
+        {/* {vendor.rating !== undefined && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Rating value={vendor.rating} readOnly size="small" />
             <Typography variant="caption" sx={{ color: '#999', fontWeight: 500 }}>
               {vendor.rating.toFixed(1)} ({vendor.reviewCount || 0})
             </Typography>
           </Box>
-        )}
+        )} */}
 
         {/* Distance */}
         {vendor.distance_km !== undefined && (
@@ -206,17 +206,17 @@ const VendorCard = ({ vendor }) => {
         )}
 
         {/* Open Time */}
-        {vendor.openTime && vendor.closeTime && (
+        {vendor.open_time && vendor.close_time && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#666' }}>
             <AccessTimeIcon sx={{ fontSize: '1rem', color: '#4caf50' }} />
             <Typography variant="caption" sx={{ fontWeight: 500 }}>
-              {formatTime(vendor.openTime)} – {formatTime(vendor.closeTime)}
+              {formatTime(vendor.open_time)} – {formatTime(vendor.close_time)}
             </Typography>
           </Box>
         )}
 
         {/* Delivery Info */}
-        <Stack
+        {/* <Stack
           direction="row"
           spacing={1}
           sx={{
@@ -225,7 +225,7 @@ const VendorCard = ({ vendor }) => {
             gap: 0.75,
           }}
         >
-          {/* {vendor.delivery_charge !== undefined && (
+          {vendor.delivery_charge !== undefined && (
             <Chip
               icon={<DeliveryDiningIcon sx={{ fontSize: '1rem !important' }} />}
               label={`$${vendor.delivery_charge.toFixed(2)}`}
@@ -238,7 +238,7 @@ const VendorCard = ({ vendor }) => {
                 height: 28,
               }}
             />
-          )} */}
+          )}
 
           {vendor.deliveryTime && (
             <Chip
@@ -254,7 +254,7 @@ const VendorCard = ({ vendor }) => {
               }}
             />
           )}
-        </Stack>
+        </Stack> */}
       </CardContent>
     </Card>
   );
