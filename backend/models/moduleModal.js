@@ -10,6 +10,10 @@ const moduleSchema = new mongoose.Schema(
     active: {
       type: Boolean,
       default: true
+    },
+    image: {
+      type: String,
+      default: '',
     }
   },
   {

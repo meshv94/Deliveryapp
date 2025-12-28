@@ -20,12 +20,14 @@ import {
   CircularProgress,
   Alert,
   Switch,
+  Avatar,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Close as CloseIcon,
+  CloudUpload as UploadIcon,
 } from '@mui/icons-material';
 import moduleService from '../services/moduleService';
 
@@ -45,7 +47,10 @@ const Modules = () => {
   const [formData, setFormData] = useState({
     name: '',
     active: true,
+    image: null,
   });
+
+  const [imagePreview, setImagePreview] = useState(null);
 
   // Fetch modules on mount
   useEffect(() => {
@@ -72,14 +77,18 @@ const Modules = () => {
       setFormData({
         name: module.name || '',
         active: module.active !== undefined ? module.active : true,
+        image: null,
       });
+      setImagePreview(module.image || null);
     } else {
       // Add mode
       setSelectedModule(null);
       setFormData({
         name: '',
         active: true,
+        image: null,
       });
+      setImagePreview(null);
     }
     setOpenDialog(true);
   };
@@ -90,7 +99,9 @@ const Modules = () => {
     setFormData({
       name: '',
       active: true,
+      image: null,
     });
+    setImagePreview(null);
   };
 
   const handleInputChange = (e) => {
@@ -101,15 +112,30 @@ const Modules = () => {
     }));
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData((prev) => ({
+        ...prev,
+        image: file,
+      }));
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
       setError(null);
 
-      const data = {
-        name: formData.name,
-        active: formData.active,
-      };
+      // Create FormData for file upload
+      const data = new FormData();
+      data.append('name', formData.name);
+      data.append('active', formData.active);
+
+      if (formData.image) {
+        data.append('image', formData.image);
+      }
 
       if (selectedModule) {
         // Update
@@ -224,6 +250,7 @@ const Modules = () => {
         <Table sx={{ minWidth: { xs: 300, sm: 650 } }}>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f7fa' }}>
+              <TableCell sx={{ fontWeight: 700 }}>Image</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Module Name</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
               <TableCell sx={{ fontWeight: 700, display: { xs: 'none', sm: 'table-cell' } }}>Created At</TableCell>
@@ -234,13 +261,28 @@ const Modules = () => {
           <TableBody>
             {modules.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                   <Typography color="text.secondary">No modules found</Typography>
                 </TableCell>
               </TableRow>
             ) : (
               modules.map((module) => (
                 <TableRow key={module._id} hover>
+                  <TableCell>
+                    <Avatar
+                      src={module.image || ''}
+                      alt={module.name}
+                      sx={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: 2,
+                        bgcolor: '#667eea',
+                      }}
+                      variant="rounded"
+                    >
+                      {!module.image && module.name.charAt(0).toUpperCase()}
+                    </Avatar>
+                  </TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>{module.name}</TableCell>
                   <TableCell>
                     <Chip
@@ -310,6 +352,52 @@ const Modules = () => {
               required
               placeholder="Enter module name"
             />
+
+            {/* Image Upload */}
+            <Box>
+              <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                Module Image
+              </Typography>
+              <Button
+                variant="outlined"
+                component="label"
+                startIcon={<UploadIcon />}
+                fullWidth
+                sx={{ mb: 2 }}
+              >
+                {formData.image ? 'Change Image' : 'Upload Image'}
+                <input
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+              </Button>
+
+              {imagePreview && (
+                <Box
+                  sx={{
+                    width: '100%',
+                    maxWidth: 200,
+                    height: 150,
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    border: '2px solid #e0e0e0',
+                    mx: 'auto',
+                  }}
+                >
+                  <img
+                    src={imagePreview}
+                    alt="Module preview"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
+                  />
+                </Box>
+              )}
+            </Box>
 
             {/* Active Status */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

@@ -269,21 +269,45 @@ const ModulesPage = () => {
                             p: 4,
                           }}
                         >
-                          <Box
-                            sx={{
-                              width: 70,
-                              height: 70,
-                              borderRadius: '50%',
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              mb: 3,
-                              boxShadow: '0 8px 16px rgba(102, 126, 234, 0.3)',
-                            }}
-                          >
-                            <StorefrontIcon sx={{ fontSize: 36, color: '#fff' }} />
-                          </Box>
+                          {module.image ? (
+                            <Box
+                              sx={{
+                                width: 70,
+                                height: 70,
+                                borderRadius: '50%',
+                                mb: 3,
+                                overflow: 'hidden',
+                                border: '3px solid #667eea',
+                                boxShadow: '0 8px 16px rgba(102, 126, 234, 0.3)',
+                              }}
+                            >
+                              <img
+                                src={module.image}
+                                alt={module.name}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'cover',
+                                }}
+                              />
+                            </Box>
+                          ) : (
+                            <Box
+                              sx={{
+                                width: 70,
+                                height: 70,
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 3,
+                                boxShadow: '0 8px 16px rgba(102, 126, 234, 0.3)',
+                              }}
+                            >
+                              <StorefrontIcon sx={{ fontSize: 36, color: '#fff' }} />
+                            </Box>
+                          )}
 
                           <Typography
                             variant="h5"

@@ -7,13 +7,17 @@ const createModuleSchema = Joi.object({
     'string.empty': 'Module name is required',
     'any.required': 'Module name is required'
   }),
-  active: Joi.boolean().optional()
+  active: Joi.boolean().optional(),
+  image: Joi.string().optional().default('').messages({
+      'string.base': 'image must be a string'
+    }),
 });
 
 const updateModuleSchema = Joi.object({
   name: Joi.string().trim().optional(),
-  active: Joi.boolean().optional()
-}).or('name', 'active').messages({
+  active: Joi.boolean().optional(),
+  image: Joi.string().optional().default(''),
+}).or('name', 'active', 'image').messages({
   'object.missing': 'At least one field (name or active) is required to update'
 });
 
@@ -43,7 +47,8 @@ exports.createModule = async (req, res) => {
 
     const module = new Module({
       name,
-      active: active !== undefined ? active : true
+      active: active !== undefined ? active : true,
+      image: req.file ? req.file.fileUrl : ''
     });
 
     const savedModule = await module.save();
@@ -150,6 +155,11 @@ exports.updateModule = async (req, res) => {
 
     if (active !== undefined) {
       module.active = active;
+    }
+
+    // Update image if a new file is uploaded
+    if (req.file) {
+      module.image = req.file.fileUrl;
     }
 
     const updatedModule = await module.save();
