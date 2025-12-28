@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import AddressPage from './pages/AddressPage';
 import MyOrdersPage from './pages/MyOrdersPage';
+import ModulesPage from './pages/ModulesPage';
 
 // Create Material UI theme with modern, trustworthy colors
 const theme = createTheme({
@@ -139,8 +140,11 @@ function App() {
             <Route path="*" element={
               <Layout>
                 <Routes>
-                  {/* Home - Vendor Listing */}
-                  <Route path="/" element={<VendorListPage />} />
+                  {/* Home - Modules Selection */}
+                  <Route path="/" element={<ModulesPage />} />
+                  <Route path="/modules" element={<ModulesPage />} />
+
+                  {/* Vendor Listing */}
                   <Route path="/vendors" element={<VendorListPage />} />
 
                   {/* Vendor Details & Products */}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import apiClient from '../services/api';
 
 /**
@@ -9,14 +10,21 @@ export const useVendors = () => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     const fetchVendors = async () => {
       try {
         setLoading(true);
         setError(null);
-        
-        const response = await apiClient.get('/app/vendors/active');
+
+        // Get moduleId from URL query params if present
+        const moduleId = searchParams.get('moduleId');
+        const url = moduleId
+          ? `/app/vendors/active?moduleId=${moduleId}`
+          : '/app/vendors/active';
+
+        const response = await apiClient.get(url);
         
         // Handle different response formats
         let vendorData = [];
@@ -42,7 +50,7 @@ export const useVendors = () => {
     };
 
     fetchVendors();
-  }, []);
+  }, [searchParams]);
 
   return { vendors, loading, error };
 };

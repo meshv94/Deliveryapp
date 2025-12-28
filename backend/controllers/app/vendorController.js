@@ -8,6 +8,9 @@ exports.getActiveVendors = async (req, res) => {
     // Require authenticated user
     const userId = req.user?._id;
 
+    // Get module ID from query params if provided
+    const moduleId = req.query.moduleId;
+
     let lat, lng;
 
     // First, check headers for coordinates (sent from frontend)
@@ -43,6 +46,13 @@ exports.getActiveVendors = async (req, res) => {
       lng = parseFloat(userAddress.longitude);
     }
 
+    // Build query object - filter by status and optionally by module
+    const query = { status: 1 };
+    if (moduleId) {
+      const mongoose = require('mongoose');
+      query.module = new mongoose.Types.ObjectId(moduleId);
+    }
+
     // Use aggregation with $geoNear to sort by distance (requires 2dsphere index on vendor.location)
     const vendors = await Vendor.aggregate([
       {
@@ -50,7 +60,7 @@ exports.getActiveVendors = async (req, res) => {
           near: { type: 'Point', coordinates: [lng, lat] },
           distanceField: 'distance',
           spherical: true,
-          query: { status: 1 }
+          query: query
         }
       },
       {
@@ -86,13 +96,14 @@ exports.getActiveVendors = async (req, res) => {
 
     // What's new: vendors registered within last 7 days (also include distance)
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const newVendorsQuery = { ...query, createdAt: { $gte: weekAgo } };
     const newVendors = await Vendor.aggregate([
       {
         $geoNear: {
           near: { type: 'Point', coordinates: [lng, lat] },
           distanceField: 'distance',
           spherical: true,
-          query: { status: 1, createdAt: { $gte: weekAgo } }
+          query: newVendorsQuery
         }
       },
       {

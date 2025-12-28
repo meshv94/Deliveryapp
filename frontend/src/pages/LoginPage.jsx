@@ -29,7 +29,7 @@ const LoginPage = () => {
   // Check if already authenticated
   useEffect(() => {
     if (isAuthenticated()) {
-      navigate('/vendors');
+      navigate('/modules');
     }
   }, [isAuthenticated, navigate]);
 
@@ -82,7 +82,7 @@ const LoginPage = () => {
     if (result.success) {
       setSuccessMessage('Login successful! Redirecting...');
       setTimeout(() => {
-        navigate('/vendors');
+        navigate('/modules');
       }, 1000);
     } else {
       setLocalError(result.message);
