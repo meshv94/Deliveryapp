@@ -49,7 +49,7 @@ const AddressFormDialog = ({
   const markerRef = useRef(null);
 
   // Google Maps API Key - Replace with your actual API key
-  const GOOGLE_MAPS_API_KEY = 'AIzaSyBnzO_1BU-nwW1gvjMZ_ZqHvPn3vEJfczI'; // You need to add your API key here
+  const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_API_BASE_URL; // You need to add your API key here
 
   useEffect(() => {
     if (initialData) {

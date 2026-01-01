@@ -107,7 +107,7 @@ const Vendors = () => {
   const mapRef = useRef(null);
   const markerRef = useRef(null);
 
-  const GOOGLE_MAPS_API_KEY = 'AIzaSyCt-3lkaKLavZB1iAu_yjkO3tTjBOCvrpM';
+  const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_API_BASE_URL;
 
   // Fetch vendors and modules on mount
   useEffect(() => {
