@@ -4,18 +4,18 @@ const addressController = require('../../controllers/app/addressController');
 const { verifyToken } = require('../../middlewares/authMiddleware');
 
 // All routes require authentication
-router.use(verifyToken);
+// router.use(verifyToken);
 
 // Get all addresses for user
-router.get('/addresses', addressController.getAddresses);
+router.get('/addresses', verifyToken, addressController.getAddresses);
 
 // Add new address
-router.post('/addresses', addressController.addAddress);
+router.post('/addresses', verifyToken, addressController.addAddress);
 
 // Update address
-router.put('/addresses/:id', addressController.updateAddress);
+router.put('/addresses/:id', verifyToken, addressController.updateAddress);
 
 // Delete address
-router.delete('/addresses/:id', addressController.deleteAddress);
+router.delete('/addresses/:id', verifyToken, addressController.deleteAddress);
 
 module.exports = router;
