@@ -11,7 +11,8 @@ const sendOtpSchema = Joi.object({
     'any.required': 'Mobile number is required',
     'string.pattern.base': 'Please provide a valid 10-digit mobile number'
   }),
-  name: Joi.string().trim().optional().min(2).max(50).messages({
+  name: Joi.string().trim().required().min(2).max(50).messages({
+    'any.required': 'Name is required if you are login for first time',
     'string.min': 'Name must be at least 2 characters',
     'string.max': 'Name cannot exceed 50 characters'
   }),
