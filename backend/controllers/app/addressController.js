@@ -101,10 +101,10 @@ exports.deleteAddress = async (req, res) => {
 
     const address = await Address.findById(id);
     if (!address) return res.status(404).json({ success:false, message: 'Address not found' });
-    if (address.user.toString() !== userId) return res.status(403).json({ success:false, message: 'Forbidden' });
+    if (address.user.toString() !== userId.toString()) return res.status(403).json({ success:false, message: 'Forbidden' });
 
     const wasDefault = address.isDefault;
-    await address.remove();
+    await address.deleteOne();
 
     // If deleted address was default, set another address as default (if any)
     if (wasDefault) {

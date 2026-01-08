@@ -55,6 +55,65 @@ const CartPage = () => {
   const [deliveryType, setDeliveryType] = useState('today'); // 'today' or 'schedule'
   const [deliveryDate, setDeliveryDate] = useState('');
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [isPayButtonDisabled, setIsPayButtonDisabled] = useState(true);
+  const [disableMessage, setDisableMessage] = useState('');
+
+  // Fetch checkout data with optional address
+  const fetchCheckoutWithAddress = async (addressId = null) => {
+    try {
+      setCheckoutLoading(true);
+      setError(null);
+
+      // Get cart from localStorage
+      const cartData = JSON.parse(localStorage.getItem('deliveryCart') || '[]');
+
+      // Check if cart is empty
+      if (!cartData.cart || cartData.cart.length === 0) {
+        setCheckoutLoading(false);
+        return;
+      }
+
+      // Prepare checkout payload
+      const checkoutPayload = {
+        cart: cartData.cart || [],
+      };
+
+      // Add selectedAddressId if provided
+      if (addressId) {
+        checkoutPayload.selectedAddressId = addressId;
+      }
+
+      // Get token from localStorage
+      const token = localStorage.getItem('authToken');
+
+      // Call checkout API with Bearer token
+      const response = await apiClient.post('/app/checkout', checkoutPayload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // Handle successful response
+      if (response?.success) {
+        setCheckoutData(response.data);
+        // Set pay button disabled state based on API response
+        setIsPayButtonDisabled(response.is_disable_pay_button || false);
+        // Set disable message if present
+        setDisableMessage(response.disable_message || '');
+      } else {
+        setError(response?.message || 'Failed to load checkout data.');
+      }
+    } catch (err) {
+      console.error('Checkout error:', err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to load checkout data. Please try again.'
+      );
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
 
   // Fetch addresses
   const fetchAddresses = async () => {
@@ -74,6 +133,8 @@ const CartPage = () => {
         const defaultAddr = response.data?.find((addr) => addr.isDefault);
         if (defaultAddr) {
           setSelectedAddress(defaultAddr._id);
+          // Fetch checkout with default address to calculate delivery charge
+          await fetchCheckoutWithAddress(defaultAddr._id);
         }
       }
     } catch (err) {
@@ -83,55 +144,8 @@ const CartPage = () => {
 
   // Call checkout API and fetch addresses on page load
   useEffect(() => {
-    const fetchCheckout = async () => {
-      try {
-        setCheckoutLoading(true);
-        setError(null);
-
-        // Get cart from localStorage
-        const cartData = JSON.parse(localStorage.getItem('deliveryCart') || '[]');
-
-        // Check if cart is empty
-        if (!cartData.cart || cartData.cart.length === 0) {
-          setCheckoutLoading(false);
-          return;
-        }
-
-        // Prepare checkout payload
-        const checkoutPayload = {
-          cart: cartData.cart || [],
-        };
-
-        // Get token from localStorage
-        const token = localStorage.getItem('authToken');
-
-        // Call checkout API with Bearer token
-        const response = await apiClient.post('/app/checkout', checkoutPayload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        // Handle successful response
-        if (response?.success) {
-          setCheckoutData(response.data);
-        } else {
-          setError(response?.message || 'Failed to load checkout data.');
-        }
-      } catch (err) {
-        console.error('Checkout error:', err);
-        setError(
-          err.response?.data?.message ||
-            err.message ||
-            'Failed to load checkout data. Please try again.'
-        );
-      } finally {
-        setCheckoutLoading(false);
-      }
-    };
-
     if (cart.length > 0) {
-      fetchCheckout();
+      fetchCheckoutWithAddress();
       fetchAddresses();
     }
   }, [cart]);
@@ -163,9 +177,10 @@ const CartPage = () => {
       if (response.success) {
         setAddressDialogOpen(false);
         fetchAddresses();
-        // Auto-select newly added address
+        // Auto-select newly added address and recalculate delivery
         if (response.data?._id) {
           setSelectedAddress(response.data._id);
+          await fetchCheckoutWithAddress(response.data._id);
         }
       }
     } catch (err) {
@@ -174,6 +189,13 @@ const CartPage = () => {
     } finally {
       setSubmittingAddress(false);
     }
+  };
+
+  // Handle address change
+  const handleAddressChange = async (addressId) => {
+    setSelectedAddress(addressId);
+    // Recalculate delivery charge with new address
+    await fetchCheckoutWithAddress(addressId);
   };
 
   const handlePay = async () => {
@@ -542,6 +564,7 @@ const CartPage = () => {
     );
   }
 
+  // Checkout View (existing code)
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 1, sm: 2, md: 3 } }}>
       {/* Header */}
@@ -615,6 +638,29 @@ const CartPage = () => {
             onClose={() => setError(null)}
           >
             {error}
+          </Alert>
+        </Slide>
+      )}
+
+      {/* Disable Payment Warning */}
+      {isPayButtonDisabled && disableMessage && (
+        <Slide direction="down" in mountOnEnter unmountOnExit>
+          <Alert
+            severity="warning"
+            sx={{
+              mb: 3,
+              borderRadius: '12px',
+              fontSize: { xs: '0.85rem', md: '0.875rem' },
+              backgroundColor: '#fff8e1',
+              border: '2px solid #ffc107',
+              color: '#f57f17',
+              fontWeight: 600,
+              '& .MuiAlert-icon': {
+                color: '#ffc107',
+              },
+            }}
+          >
+            {disableMessage}
           </Alert>
         </Slide>
       )}
@@ -973,7 +1019,7 @@ const CartPage = () => {
                               transform: 'translateY(-2px)',
                             },
                           }}
-                          onClick={() => setSelectedAddress(address._id)}
+                          onClick={() => handleAddressChange(address._id)}
                         >
                           <CardContent sx={{ p: { xs: 2, md: 2.5 }, '&:last-child': { pb: { xs: 2, md: 2.5 } } }}>
                             <Box sx={{ mb: 1 }}>
@@ -1286,24 +1332,38 @@ const CartPage = () => {
                 fullWidth
                 size="large"
                 onClick={handlePay}
+                disabled={isPayButtonDisabled}
                 sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: isPayButtonDisabled
+                    ? 'linear-gradient(135deg, #cccccc 0%, #999999 100%)'
+                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: '#fff',
                   fontWeight: 700,
                   py: { xs: 1.5, md: 1.75 },
                   borderRadius: '12px',
                   fontSize: { xs: '0.95rem', md: '1rem' },
                   textTransform: 'none',
-                  boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
+                  boxShadow: isPayButtonDisabled
+                    ? '0 4px 12px rgba(0, 0, 0, 0.2)'
+                    : '0 8px 24px rgba(102, 126, 234, 0.4)',
                   transition: 'all 0.3s ease',
+                  cursor: isPayButtonDisabled ? 'not-allowed' : 'pointer',
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 12px 32px rgba(102, 126, 234, 0.5)',
+                    background: isPayButtonDisabled
+                      ? 'linear-gradient(135deg, #cccccc 0%, #999999 100%)'
+                      : 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
+                    transform: isPayButtonDisabled ? 'none' : 'translateY(-2px)',
+                    boxShadow: isPayButtonDisabled
+                      ? '0 4px 12px rgba(0, 0, 0, 0.2)'
+                      : '0 12px 32px rgba(102, 126, 234, 0.5)',
+                  },
+                  '&.Mui-disabled': {
+                    color: '#fff',
+                    opacity: 0.7,
                   },
                 }}
               >
-                Pay Now
+                {isPayButtonDisabled ? 'Select Address to Pay' : 'Pay Now'}
               </Button>
 
               <Button
