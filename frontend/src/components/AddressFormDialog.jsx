@@ -289,14 +289,16 @@ const AddressFormDialog = ({
     >
       <DialogTitle
         sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          backgroundColor: '#087F5B',
           color: '#fff',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          px: 3,
+          py: 2,
         }}
       >
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+        <Typography variant="h6" sx={{ fontWeight: 800 }}>
           {initialData ? 'Edit Address' : 'Add New Address'}
         </Typography>
         <IconButton onClick={onClose} sx={{ color: '#fff' }} size="small">
@@ -332,7 +334,7 @@ const AddressFormDialog = ({
                   }
                 }}
                 InputProps={{
-                  startAdornment: <SearchIcon sx={{ mr: 1, color: '#667eea' }} />,
+                  startAdornment: <SearchIcon sx={{ mr: 1, color: '#087F5B' }} />,
                 }}
               />
               <Button
@@ -341,11 +343,14 @@ const AddressFormDialog = ({
                 disabled={searching || !searchQuery.trim()}
                 sx={{
                   minWidth: 100,
-                  borderColor: '#667eea',
-                  color: '#667eea',
+                  borderColor: '#087F5B',
+                  color: '#087F5B',
+                  borderRadius: '10px',
+                  fontWeight: 600,
+                  textTransform: 'none',
                   '&:hover': {
-                    borderColor: '#5568d3',
-                    backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                    borderColor: '#075B43',
+                    backgroundColor: 'rgba(8, 127, 91, 0.05)',
                   },
                 }}
               >
@@ -356,9 +361,10 @@ const AddressFormDialog = ({
                 onClick={getCurrentLocation}
                 sx={{
                   minWidth: 50,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  backgroundColor: '#087F5B',
+                  borderRadius: '10px',
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
+                    backgroundColor: '#075B43',
                   },
                 }}
               >
@@ -493,11 +499,14 @@ const AddressFormDialog = ({
           variant="outlined"
           disabled={submitting}
           sx={{
-            borderColor: '#e0e0e0',
-            color: '#666',
+            borderColor: '#E5E7EB',
+            color: '#6B7280',
+            borderRadius: '10px',
+            textTransform: 'none',
+            fontWeight: 600,
             '&:hover': {
-              borderColor: '#667eea',
-              backgroundColor: 'rgba(102, 126, 234, 0.05)',
+              borderColor: '#9CA3AF',
+              backgroundColor: '#FAFAF7',
             },
           }}
         >
@@ -508,12 +517,16 @@ const AddressFormDialog = ({
           variant="contained"
           disabled={submitting}
           sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            backgroundColor: '#087F5B',
             color: '#fff',
             fontWeight: 700,
-            minWidth: 120,
+            borderRadius: '10px',
+            textTransform: 'none',
+            minWidth: 130,
+            boxShadow: '0 4px 12px rgba(8, 127, 91, 0.25)',
             '&:hover': {
-              background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
+              backgroundColor: '#075B43',
+              boxShadow: '0 6px 16px rgba(8, 127, 91, 0.35)',
             },
           }}
         >

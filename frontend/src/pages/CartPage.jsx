@@ -283,7 +283,7 @@ const CartPage = () => {
     return (
       <Container sx={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Box sx={{ textAlign: 'center' }}>
-          <CircularProgress size={60} thickness={4} sx={{ color: '#667eea' }} />
+          <CircularProgress size={60} thickness={4} sx={{ color: '#087F5B' }} />
           <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
             Loading your cart...
           </Typography>
@@ -324,38 +324,23 @@ const CartPage = () => {
                 mb: 4,
               }}
             >
-              <Zoom in timeout={800} style={{ transitionDelay: '200ms' }}>
+              <Zoom in timeout={600}>
                 <Box
                   sx={{
                     width: '100%',
                     height: '100%',
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)',
+                    backgroundColor: '#087F5B',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 15px 50px rgba(76, 175, 80, 0.4)',
-                    animation: 'pulse 2s ease-in-out infinite',
-                    '@keyframes pulse': {
-                      '0%': {
-                        transform: 'scale(1)',
-                        boxShadow: '0 15px 50px rgba(76, 175, 80, 0.4)',
-                      },
-                      '50%': {
-                        transform: 'scale(1.05)',
-                        boxShadow: '0 20px 60px rgba(76, 175, 80, 0.6)',
-                      },
-                      '100%': {
-                        transform: 'scale(1)',
-                        boxShadow: '0 15px 50px rgba(76, 175, 80, 0.4)',
-                      },
-                    },
+                    boxShadow: '0 12px 28px rgba(8, 127, 91, 0.25)',
                   }}
                 >
                   <CheckCircleIcon
                     sx={{
-                      fontSize: { xs: 80, md: 100 },
-                      color: '#fff',
+                      fontSize: { xs: 72, md: 88 },
+                      color: '#FFFFFF',
                     }}
                   />
                 </Box>
@@ -363,68 +348,55 @@ const CartPage = () => {
             </Box>
 
             {/* Success Message */}
-            <Fade in timeout={1000} style={{ transitionDelay: '400ms' }}>
+            <Fade in timeout={800}>
               <Box>
                 <Typography
                   variant="h3"
                   sx={{
-                    mb: 2,
+                    mb: 1.5,
                     fontWeight: 800,
-                    fontSize: { xs: '2rem', md: '2.5rem' },
-                    background: 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)',
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    animation: 'slideUp 0.8s ease-out',
-                    '@keyframes slideUp': {
-                      '0%': {
-                        opacity: 0,
-                        transform: 'translateY(20px)',
-                      },
-                      '100%': {
-                        opacity: 1,
-                        transform: 'translateY(0)',
-                      },
-                    },
+                    fontSize: { xs: '1.75rem', md: '2.25rem' },
+                    color: '#151515',
                   }}
                 >
                   Order Placed!
                 </Typography>
                 <Typography
-                  variant="h6"
-                  color="textSecondary"
+                  variant="body1"
                   sx={{
-                    mb: 4,
-                    fontSize: { xs: '1rem', md: '1.25rem' },
+                    mb: 3,
+                    fontSize: { xs: '0.95rem', md: '1.1rem' },
+                    color: '#6B7280',
                     fontWeight: 500,
                   }}
                 >
-                  Your order has been successfully placed
+                  Your order has been successfully placed with the store.
                 </Typography>
               </Box>
             </Fade>
 
-            {/* Animated Decorative Elements */}
-            <Grow in timeout={1200} style={{ transitionDelay: '600ms' }}>
+            {/* Order Confirmation Card */}
+            <Grow in timeout={900}>
               <Box
                 sx={{
-                  mb: 4,
-                  py: 3,
-                  px: 2,
+                  mb: 3.5,
+                  py: 2.5,
+                  px: 3,
                   borderRadius: '16px',
-                  background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                  border: '2px solid #bae6fd',
+                  backgroundColor: '#EBFBEE',
+                  border: '1px solid #B2F2BB',
                 }}
               >
                 <Typography
                   variant="body1"
-                  color="textSecondary"
                   sx={{
-                    fontSize: { xs: '0.95rem', md: '1.1rem' },
-                    lineHeight: 1.8,
+                    fontSize: { xs: '0.9rem', md: '1rem' },
+                    lineHeight: 1.6,
+                    color: '#075B43',
+                    fontWeight: 600,
                   }}
                 >
-                  Thank you for your order! We're preparing your items and will have them delivered soon.
+                  Thank you for shopping local! We're preparing your items and will have them delivered to you shortly.
                 </Typography>
               </Box>
             </Grow>
@@ -437,7 +409,7 @@ const CartPage = () => {
                   size="large"
                   onClick={() => navigate('/my-orders')}
                   sx={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    backgroundColor: '#087F5B',
                     color: '#fff',
                     fontWeight: 700,
                     px: { xs: 4, md: 5 },
@@ -445,12 +417,12 @@ const CartPage = () => {
                     borderRadius: '12px',
                     fontSize: { xs: '1rem', md: '1.1rem' },
                     textTransform: 'none',
-                    boxShadow: '0 10px 30px rgba(102, 126, 234, 0.4)',
-                    transition: 'all 0.3s ease',
+                    boxShadow: '0 8px 24px rgba(8, 127, 91, 0.3)',
+                    transition: 'all 0.25s ease',
                     '&:hover': {
-                      background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
-                      transform: 'translateY(-3px)',
-                      boxShadow: '0 15px 40px rgba(102, 126, 234, 0.5)',
+                      backgroundColor: '#075B43',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 12px 30px rgba(8, 127, 91, 0.4)',
                     },
                   }}
                 >
@@ -461,18 +433,18 @@ const CartPage = () => {
                   size="large"
                   onClick={() => navigate('/vendors')}
                   sx={{
-                    borderColor: '#667eea',
-                    color: '#667eea',
+                    borderColor: '#087F5B',
+                    color: '#087F5B',
                     fontWeight: 600,
                     px: { xs: 4, md: 5 },
                     py: { xs: 1.5, md: 2 },
                     borderRadius: '12px',
                     fontSize: { xs: '0.95rem', md: '1rem' },
                     textTransform: 'none',
-                    transition: 'all 0.3s ease',
+                    transition: 'all 0.25s ease',
                     '&:hover': {
-                      borderColor: '#667eea',
-                      backgroundColor: '#667eea10',
+                      borderColor: '#075B43',
+                      backgroundColor: 'rgba(8, 127, 91, 0.05)',
                       transform: 'translateY(-2px)',
                     },
                   }}
@@ -501,26 +473,26 @@ const CartPage = () => {
           >
             <Box
               sx={{
-                width: { xs: 120, md: 160 },
-                height: { xs: 120, md: 160 },
+                width: { xs: 100, md: 120 },
+                height: { xs: 100, md: 120 },
                 margin: '0 auto',
                 mb: 3,
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                backgroundColor: 'rgba(8, 127, 91, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 10px 40px rgba(102, 126, 234, 0.3)',
               }}
             >
-              <ShoppingCartIcon sx={{ fontSize: { xs: 60, md: 80 }, color: '#fff' }} />
+              <ShoppingCartIcon sx={{ fontSize: { xs: 48, md: 60 }, color: '#087F5B' }} />
             </Box>
             <Typography
               variant="h4"
               sx={{
-                mb: 2,
-                fontWeight: 700,
-                fontSize: { xs: '1.75rem', md: '2.125rem' },
+                mb: 1.5,
+                fontWeight: 800,
+                color: '#151515',
+                fontSize: { xs: '1.6rem', md: '2rem' },
               }}
             >
               Your Cart is Empty
@@ -532,31 +504,28 @@ const CartPage = () => {
             >
               Looks like you haven't added anything to your cart yet.
               <br />
-              Start exploring delicious food from our vendors!
+              Start discovering fresh local essentials from nearby shops!
             </Typography>
             <Button
               variant="contained"
               size="large"
               onClick={() => navigate('/vendors')}
               sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                backgroundColor: '#087F5B',
                 color: '#fff',
-                fontWeight: 600,
-                px: { xs: 3, md: 4 },
-                py: { xs: 1.5, md: 1.75 },
+                fontWeight: 700,
+                px: { xs: 3.5, md: 4.5 },
+                py: { xs: 1.25, md: 1.5 },
                 borderRadius: '12px',
-                fontSize: { xs: '0.9rem', md: '1rem' },
+                fontSize: { xs: '0.95rem', md: '1rem' },
                 textTransform: 'none',
-                boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
-                transition: 'all 0.3s ease',
+                boxShadow: '0 6px 20px rgba(8, 127, 91, 0.25)',
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 12px 32px rgba(102, 126, 234, 0.5)',
+                  backgroundColor: '#075B43',
                 },
               }}
             >
-              Browse Vendors
+              Discover Stores
             </Button>
           </Box>
         </Fade>
@@ -585,11 +554,8 @@ const CartPage = () => {
             sx={{
               fontWeight: 800,
               fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' },
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              mb: 1,
+              color: '#151515',
+              mb: 0.5,
             }}
           >
             Order Summary
@@ -815,7 +781,7 @@ const CartPage = () => {
                               variant="body2"
                               sx={{
                                 fontWeight: 700,
-                                color: '#667eea',
+                                color: '#087F5B',
                                 fontSize: { xs: '0.9rem', md: '1rem' },
                               }}
                             >
@@ -846,7 +812,7 @@ const CartPage = () => {
                         </Typography>
                         <Typography
                           variant="body2"
-                          sx={{ color: '#4caf50', fontWeight: 600, fontSize: { xs: '0.8rem', md: '0.875rem' } }}
+                          sx={{ color: '#087F5B', fontWeight: 600, fontSize: { xs: '0.8rem', md: '0.875rem' } }}
                         >
                           -₹ {order.discount.toFixed(2)}
                         </Typography>
@@ -882,22 +848,21 @@ const CartPage = () => {
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
+                        alignItems: 'center',
                         p: { xs: 1.5, md: 2 },
                         borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
+                        backgroundColor: 'rgba(8, 127, 91, 0.06)',
+                        border: '1px solid rgba(8, 127, 91, 0.15)',
                       }}
                     >
-                      <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1rem', md: '1.125rem' } }}>
+                      <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1rem', md: '1.125rem' }, color: '#151515' }}>
                         Total Payable:
                       </Typography>
                       <Typography
                         variant="h6"
                         sx={{
                           fontWeight: 800,
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          backgroundClip: 'text',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
+                          color: '#087F5B',
                           fontSize: { xs: '1.1rem', md: '1.25rem' },
                         }}
                       >
@@ -925,9 +890,10 @@ const CartPage = () => {
           <Card
             sx={{
               borderRadius: '16px',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
               mb: 3,
-              background: 'linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%)',
+              backgroundColor: '#FFFFFF',
             }}
           >
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
@@ -963,11 +929,14 @@ const CartPage = () => {
                       startIcon={<AddIcon />}
                       onClick={handleAddAddress}
                       sx={{
-                        borderColor: '#667eea',
-                        color: '#667eea',
+                        borderColor: '#087F5B',
+                        color: '#087F5B',
+                        borderRadius: '10px',
+                        textTransform: 'none',
+                        fontWeight: 600,
                         '&:hover': {
-                          borderColor: '#5568d3',
-                          backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                          borderColor: '#075B43',
+                          backgroundColor: 'rgba(8, 127, 91, 0.05)',
                         },
                       }}
                     >
@@ -985,20 +954,17 @@ const CartPage = () => {
                         pb: 1.5,
                         mb: 2,
                         scrollbarWidth: 'thin',
-                        scrollbarColor: '#667eea #f0f0f0',
+                        scrollbarColor: '#087F5B #f0f0f0',
                         '&::-webkit-scrollbar': {
-                          height: '8px',
+                          height: '6px',
                         },
                         '&::-webkit-scrollbar-track': {
                           backgroundColor: '#f0f0f0',
                           borderRadius: '10px',
                         },
                         '&::-webkit-scrollbar-thumb': {
-                          backgroundColor: '#667eea',
+                          backgroundColor: '#087F5B',
                           borderRadius: '10px',
-                          '&:hover': {
-                            backgroundColor: '#5568d3',
-                          },
                         },
                       }}
                     >
@@ -1008,15 +974,15 @@ const CartPage = () => {
                           sx={{
                             minWidth: { xs: 240, md: 280 },
                             maxWidth: { xs: 240, md: 280 },
-                            border: selectedAddress === address._id ? '2px solid #667eea' : '1px solid #e0e0e0',
-                            borderRadius: 2,
+                            border: selectedAddress === address._id ? '2px solid #087F5B' : '1px solid #E5E7EB',
+                            borderRadius: '12px',
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
                             flexShrink: 0,
-                            backgroundColor: selectedAddress === address._id ? 'rgba(102, 126, 234, 0.05)' : '#fff',
+                            backgroundColor: selectedAddress === address._id ? 'rgba(8, 127, 91, 0.04)' : '#fff',
                             '&:hover': {
-                              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                              transform: 'translateY(-2px)',
+                              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+                              borderColor: '#087F5B',
                             },
                           }}
                           onClick={() => handleAddressChange(address._id)}
@@ -1035,8 +1001,9 @@ const CartPage = () => {
                                     sx={{
                                       height: 18,
                                       fontSize: '0.65rem',
-                                      backgroundColor: '#e8f5e9',
-                                      color: '#2e7d32',
+                                      backgroundColor: 'rgba(8, 127, 91, 0.1)',
+                                      color: '#087F5B',
+                                      fontWeight: 700,
                                     }}
                                   />
                                 )}
@@ -1065,7 +1032,7 @@ const CartPage = () => {
                                 sx={{
                                   mt: 1,
                                   pt: 1,
-                                  borderTop: '1px solid #e0e0e0',
+                                  borderTop: '1px solid #E5E7EB',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
@@ -1077,9 +1044,9 @@ const CartPage = () => {
                                   sx={{
                                     height: 20,
                                     fontSize: '0.7rem',
-                                    backgroundColor: '#667eea',
+                                    backgroundColor: '#087F5B',
                                     color: '#fff',
-                                    fontWeight: 600,
+                                    fontWeight: 700,
                                   }}
                                 />
                               </Box>
@@ -1096,12 +1063,15 @@ const CartPage = () => {
                       startIcon={<AddIcon />}
                       onClick={handleAddAddress}
                       sx={{
-                        mt: 2,
-                        borderColor: '#667eea',
-                        color: '#667eea',
+                        mt: 1,
+                        borderColor: '#087F5B',
+                        color: '#087F5B',
+                        borderRadius: '10px',
+                        textTransform: 'none',
+                        fontWeight: 600,
                         '&:hover': {
-                          borderColor: '#5568d3',
-                          backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                          borderColor: '#075B43',
+                          backgroundColor: 'rgba(8, 127, 91, 0.05)',
                         },
                       }}
                     >
@@ -1139,12 +1109,13 @@ const CartPage = () => {
                     {/* Today Delivery */}
                     <Card
                       sx={{
-                        border: deliveryType === 'today' ? '2px solid #667eea' : '1px solid #e0e0e0',
-                        borderRadius: 2,
+                        border: deliveryType === 'today' ? '2px solid #087F5B' : '1px solid #E5E7EB',
+                        borderRadius: '12px',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
+                        backgroundColor: deliveryType === 'today' ? 'rgba(8, 127, 91, 0.04)' : '#fff',
                         '&:hover': {
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.06)',
                         },
                       }}
                       onClick={() => {
@@ -1157,7 +1128,7 @@ const CartPage = () => {
                           <Radio
                             value="today"
                             size="small"
-                            sx={{ p: 0, mr: 1 }}
+                            sx={{ p: 0, mr: 1, color: '#087F5B', '&.Mui-checked': { color: '#087F5B' } }}
                           />
                           <Box sx={{ flex: 1 }}>
                             <Typography variant="body2" sx={{ fontWeight: 700 }}>
@@ -1174,12 +1145,13 @@ const CartPage = () => {
                     {/* Schedule Delivery */}
                     <Card
                       sx={{
-                        border: deliveryType === 'schedule' ? '2px solid #667eea' : '1px solid #e0e0e0',
-                        borderRadius: 2,
+                        border: deliveryType === 'schedule' ? '2px solid #087F5B' : '1px solid #E5E7EB',
+                        borderRadius: '12px',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
+                        backgroundColor: deliveryType === 'schedule' ? 'rgba(8, 127, 91, 0.04)' : '#fff',
                         '&:hover': {
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.06)',
                         },
                       }}
                       onClick={() => setDeliveryType('schedule')}
@@ -1189,7 +1161,7 @@ const CartPage = () => {
                           <Radio
                             value="schedule"
                             size="small"
-                            sx={{ p: 0, mr: 1 }}
+                            sx={{ p: 0, mr: 1, color: '#087F5B', '&.Mui-checked': { color: '#087F5B' } }}
                           />
                           <Box sx={{ flex: 1 }}>
                             <Typography variant="body2" sx={{ fontWeight: 700 }}>
@@ -1238,10 +1210,11 @@ const CartPage = () => {
           <Card
             sx={{
               borderRadius: '16px',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
               position: { md: 'sticky' },
               top: { md: 20 },
-              background: 'linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%)',
+              backgroundColor: '#FFFFFF',
             }}
           >
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
@@ -1304,14 +1277,14 @@ const CartPage = () => {
                 sx={{
                   mb: 3,
                   p: { xs: 2, md: 2.5 },
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  boxShadow: '0 8px 24px rgba(102, 126, 234, 0.3)',
+                  borderRadius: '14px',
+                  backgroundColor: '#087F5B',
+                  boxShadow: '0 6px 20px rgba(8, 127, 91, 0.25)',
                 }}
               >
                 <Typography
                   variant="body2"
-                  sx={{ color: '#fff', opacity: 0.9, mb: 1, fontSize: { xs: '0.75rem', md: '0.8rem' } }}
+                  sx={{ color: 'rgba(255, 255, 255, 0.85)', mb: 0.5, fontSize: { xs: '0.75rem', md: '0.8rem' }, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}
                 >
                   Grand Total
                 </Typography>
@@ -1334,32 +1307,24 @@ const CartPage = () => {
                 onClick={handlePay}
                 disabled={isPayButtonDisabled}
                 sx={{
-                  background: isPayButtonDisabled
-                    ? 'linear-gradient(135deg, #cccccc 0%, #999999 100%)'
-                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: '#fff',
+                  backgroundColor: isPayButtonDisabled ? '#E5E7EB' : '#087F5B',
+                  color: isPayButtonDisabled ? '#9CA3AF' : '#fff',
                   fontWeight: 700,
                   py: { xs: 1.5, md: 1.75 },
                   borderRadius: '12px',
                   fontSize: { xs: '0.95rem', md: '1rem' },
                   textTransform: 'none',
-                  boxShadow: isPayButtonDisabled
-                    ? '0 4px 12px rgba(0, 0, 0, 0.2)'
-                    : '0 8px 24px rgba(102, 126, 234, 0.4)',
-                  transition: 'all 0.3s ease',
+                  boxShadow: isPayButtonDisabled ? 'none' : '0 6px 20px rgba(8, 127, 91, 0.35)',
+                  transition: 'all 0.25s ease',
                   cursor: isPayButtonDisabled ? 'not-allowed' : 'pointer',
                   '&:hover': {
-                    background: isPayButtonDisabled
-                      ? 'linear-gradient(135deg, #cccccc 0%, #999999 100%)'
-                      : 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
+                    backgroundColor: isPayButtonDisabled ? '#E5E7EB' : '#075B43',
                     transform: isPayButtonDisabled ? 'none' : 'translateY(-2px)',
-                    boxShadow: isPayButtonDisabled
-                      ? '0 4px 12px rgba(0, 0, 0, 0.2)'
-                      : '0 12px 32px rgba(102, 126, 234, 0.5)',
+                    boxShadow: isPayButtonDisabled ? 'none' : '0 8px 24px rgba(8, 127, 91, 0.45)',
                   },
                   '&.Mui-disabled': {
-                    color: '#fff',
-                    opacity: 0.7,
+                    color: '#9CA3AF',
+                    backgroundColor: '#E5E7EB',
                   },
                 }}
               >
@@ -1374,17 +1339,17 @@ const CartPage = () => {
                 sx={{
                   mt: 2,
                   borderRadius: '12px',
-                  borderColor: '#667eea',
-                  color: '#667eea',
+                  borderColor: '#E5E7EB',
+                  color: '#151515',
                   fontWeight: 600,
                   py: { xs: 1, md: 1.25 },
                   fontSize: { xs: '0.85rem', md: '0.9rem' },
                   textTransform: 'none',
-                  transition: 'all 0.3s ease',
+                  transition: 'all 0.2s ease',
                   '&:hover': {
-                    borderColor: '#667eea',
-                    backgroundColor: '#667eea10',
-                    transform: 'translateY(-2px)',
+                    borderColor: '#087F5B',
+                    color: '#087F5B',
+                    backgroundColor: 'rgba(8, 127, 91, 0.05)',
                   },
                 }}
               >

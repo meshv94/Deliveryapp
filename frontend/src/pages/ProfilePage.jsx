@@ -168,7 +168,7 @@ const ProfilePage = () => {
         }}
       >
         <Box sx={{ textAlign: 'center' }}>
-          <CircularProgress size={60} thickness={4} sx={{ color: '#667eea' }} />
+          <CircularProgress size={60} thickness={4} sx={{ color: '#087F5B' }} />
           <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
             Loading your profile...
           </Typography>
@@ -199,11 +199,8 @@ const ProfilePage = () => {
               sx={{
                 fontWeight: 800,
                 fontSize: { xs: '1.75rem', md: '2.125rem' },
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                mb: 1,
+                color: '#151515',
+                mb: 0.5,
               }}
             >
               My Profile
@@ -235,16 +232,18 @@ const ProfilePage = () => {
 
           {/* Profile Card */}
           <Card
+            elevation={0}
             sx={{
-              borderRadius: 3,
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+              borderRadius: '16px',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
               overflow: 'hidden',
             }}
           >
-            {/* Card Header with Gradient */}
+            {/* Card Header with AapnuBazaar Identity */}
             <Box
               sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                backgroundColor: '#087F5B',
                 p: 4,
                 textAlign: 'center',
                 position: 'relative',
@@ -252,14 +251,15 @@ const ProfilePage = () => {
             >
               <Avatar
                 sx={{
-                  width: { xs: 100, md: 120 },
-                  height: { xs: 100, md: 120 },
+                  width: { xs: 96, md: 110 },
+                  height: { xs: 96, md: 110 },
                   margin: '0 auto',
-                  backgroundColor: '#fff',
-                  color: '#667eea',
-                  fontSize: { xs: '2.5rem', md: '3rem' },
-                  fontWeight: 700,
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)',
+                  backgroundColor: '#FFFFFF',
+                  color: '#087F5B',
+                  fontSize: { xs: '2.25rem', md: '2.75rem' },
+                  fontWeight: 800,
+                  boxShadow: '0 6px 18px rgba(0, 0, 0, 0.1)',
+                  border: '3px solid #FFFFFF',
                 }}
               >
                 {userData.name
@@ -303,10 +303,11 @@ const ProfilePage = () => {
                       gap: 2,
                       p: 2,
                       borderRadius: 2,
-                      backgroundColor: '#f5f5f5',
+                      backgroundColor: '#FAFAF7',
+                      border: '1px solid #E5E7EB',
                     }}
                   >
-                    <PhoneIcon sx={{ color: '#667eea', fontSize: '1.5rem' }} />
+                    <PhoneIcon sx={{ color: '#087F5B', fontSize: '1.5rem' }} />
                     <Typography variant="body1" sx={{ fontWeight: 600 }}>
                       {userData.mobile_number}
                     </Typography>
@@ -340,7 +341,7 @@ const ProfilePage = () => {
                       variant="outlined"
                       InputProps={{
                         startAdornment: (
-                          <PersonIcon sx={{ color: '#667eea', mr: 1 }} />
+                          <PersonIcon sx={{ color: '#087F5B', mr: 1 }} />
                         ),
                       }}
                       sx={{
@@ -357,10 +358,11 @@ const ProfilePage = () => {
                         gap: 2,
                         p: 2,
                         borderRadius: 2,
-                        backgroundColor: '#f5f5f5',
+                        backgroundColor: '#FAFAF7',
+                        border: '1px solid #E5E7EB',
                       }}
                     >
-                      <PersonIcon sx={{ color: '#667eea', fontSize: '1.5rem' }} />
+                      <PersonIcon sx={{ color: '#087F5B', fontSize: '1.5rem' }} />
                       <Typography variant="body1" sx={{ fontWeight: 600 }}>
                         {userData.name || 'Not provided'}
                       </Typography>
@@ -394,7 +396,7 @@ const ProfilePage = () => {
                       variant="outlined"
                       InputProps={{
                         startAdornment: (
-                          <EmailIcon sx={{ color: '#667eea', mr: 1 }} />
+                          <EmailIcon sx={{ color: '#087F5B', mr: 1 }} />
                         ),
                       }}
                       sx={{
@@ -411,10 +413,11 @@ const ProfilePage = () => {
                         gap: 2,
                         p: 2,
                         borderRadius: 2,
-                        backgroundColor: '#f5f5f5',
+                        backgroundColor: '#FAFAF7',
+                        border: '1px solid #E5E7EB',
                       }}
                     >
-                      <EmailIcon sx={{ color: '#667eea', fontSize: '1.5rem' }} />
+                      <EmailIcon sx={{ color: '#087F5B', fontSize: '1.5rem' }} />
                       <Typography variant="body1" sx={{ fontWeight: 600 }}>
                         {userData.email || 'Not provided'}
                       </Typography>
@@ -435,16 +438,15 @@ const ProfilePage = () => {
                         onClick={handleSave}
                         disabled={saving}
                         sx={{
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          backgroundColor: '#087F5B',
                           color: '#fff',
                           fontWeight: 700,
                           py: 1.5,
-                          borderRadius: 2,
+                          borderRadius: '10px',
                           textTransform: 'none',
-                          boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                          boxShadow: '0 4px 12px rgba(8, 127, 91, 0.25)',
                           '&:hover': {
-                            background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
-                            boxShadow: '0 6px 16px rgba(102, 126, 234, 0.4)',
+                            backgroundColor: '#075B43',
                           },
                         }}
                       >
@@ -457,15 +459,15 @@ const ProfilePage = () => {
                         onClick={handleCancel}
                         disabled={saving}
                         sx={{
-                          borderColor: '#e0e0e0',
-                          color: '#666',
+                          borderColor: '#E5E7EB',
+                          color: '#6B7280',
                           fontWeight: 600,
                           py: 1.5,
-                          borderRadius: 2,
+                          borderRadius: '10px',
                           textTransform: 'none',
                           '&:hover': {
-                            borderColor: '#667eea',
-                            backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                            borderColor: '#9CA3AF',
+                            backgroundColor: '#FAFAF7',
                           },
                         }}
                       >
@@ -479,16 +481,15 @@ const ProfilePage = () => {
                       startIcon={<EditIcon />}
                       onClick={handleEdit}
                       sx={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        backgroundColor: '#087F5B',
                         color: '#fff',
                         fontWeight: 700,
                         py: 1.5,
-                        borderRadius: 2,
+                        borderRadius: '10px',
                         textTransform: 'none',
-                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                        boxShadow: '0 4px 12px rgba(8, 127, 91, 0.25)',
                         '&:hover': {
-                          background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
-                          boxShadow: '0 6px 16px rgba(102, 126, 234, 0.4)',
+                          backgroundColor: '#075B43',
                         },
                       }}
                     >

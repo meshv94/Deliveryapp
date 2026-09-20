@@ -22,6 +22,11 @@ import {
   Alert,
   Avatar,
   MenuItem,
+  Checkbox,
+  Menu,
+  InputBase,
+  Tooltip,
+  ListItemIcon,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -32,9 +37,18 @@ import {
   MyLocation as MyLocationIcon,
   Search as SearchIcon,
   Inventory as InventoryIcon,
+  MoreHoriz as MoreHorizIcon,
+  FilterList as FilterListIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  Storefront as StorefrontIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  LocationOn as LocationIcon,
 } from '@mui/icons-material';
 import vendorService from '../services/vendorService';
 import moduleService from '../services/moduleService';
+import DashboardBanner from '../components/DashboardBanner';
 
 const Vendors = () => {
   const [vendors, setVendors] = useState([]);
@@ -42,6 +56,17 @@ const Vendors = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  // Table state
+  const [tableSearch, setTableSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [moduleFilter, setModuleFilter] = useState('all');
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [actionAnchor, setActionAnchor] = useState(null);
+  const [actionVendor, setActionVendor] = useState(null);
+  const [filterAnchor, setFilterAnchor] = useState(null);
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 10;
 
   // Dialog states
   const [openDialog, setOpenDialog] = useState(false);
@@ -69,6 +94,18 @@ const Vendors = () => {
     image: null,
   });
   const [productImagePreview, setProductImagePreview] = useState(null);
+
+  // Admin Role & Permissions
+  const adminData = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('adminData') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+  const isSuperAdmin = adminData.role === 'super_admin';
+  const canUpdateVendor = isSuperAdmin || Boolean(adminData.permissions?.canUpdateVendor);
+  const canManageProducts = isSuperAdmin || Boolean(adminData.permissions?.canManageProducts);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -695,135 +732,361 @@ const Vendors = () => {
     }
   };
 
-  if (loading) {
+    // Filter logic
+    const filteredVendors = vendors.filter((v) => {
+      const matchesSearch =
+        !tableSearch ||
+        v.name?.toLowerCase().includes(tableSearch.toLowerCase()) ||
+        v.email?.toLowerCase().includes(tableSearch.toLowerCase()) ||
+        v.mobile_number?.includes(tableSearch) ||
+        v.city?.toLowerCase().includes(tableSearch.toLowerCase()) ||
+        v.address?.toLowerCase().includes(tableSearch.toLowerCase());
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && !v.isBlocked) ||
+        (statusFilter === 'blocked' && v.isBlocked);
+      const matchesModule =
+        moduleFilter === 'all' ||
+        v.module?._id === moduleFilter ||
+        v.module === moduleFilter;
+      return matchesSearch && matchesStatus && matchesModule;
+    });
+
+    const totalPages = Math.max(1, Math.ceil(filteredVendors.length / rowsPerPage));
+    const paginatedVendors = filteredVendors.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+    const activeCount = vendors.filter((v) => !v.isBlocked).length;
+    const blockedCount = vendors.filter((v) => v.isBlocked).length;
+
+    const handleSelectAll = (e) => {
+      if (e.target.checked) {
+        setSelectedIds(paginatedVendors.map((v) => v._id));
+      } else {
+        setSelectedIds([]);
+      }
+    };
+
+    const handleSelectRow = (id) => {
+      setSelectedIds((prev) =>
+        prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+      );
+    };
+
+    const handleActionOpen = (event, vendor) => {
+      setActionAnchor(event.currentTarget);
+      setActionVendor(vendor);
+    };
+
+    const handleActionClose = () => {
+      setActionAnchor(null);
+      setActionVendor(null);
+    };
+
+    if (loading) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', flexDirection: 'column', gap: 2 }}>
+          <CircularProgress size={44} thickness={4} sx={{ color: '#087F5B' }} />
+          <Typography sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.9rem' }}>Loading vendors…</Typography>
+        </Box>
+      );
+    }
+
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <CircularProgress size={60} thickness={4} sx={{ color: '#667eea' }} />
-      </Box>
-    );
-  }
+      <Box sx={{ width: '100%', maxWidth: '100%' }}>
+        {/* Alerts */}
+        {success && (
+          <Alert severity="success" sx={{ mb: 2.5, borderRadius: '14px' }} onClose={() => setSuccess(null)}>
+            {success}
+          </Alert>
+        )}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2.5, borderRadius: '14px' }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
-  return (
-    <Box sx={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
-      {/* Success/Error Messages */}
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      )}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Header */}
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 4,
-          flexWrap: 'wrap',
-          gap: 2,
-        }}
-      >
-        <Typography variant="h4" sx={{ fontWeight: 800, fontSize: { xs: '1.5rem', md: '2.125rem' } }}>
-          Vendors Management
-        </Typography>
-        {(() => {
-          const adminData = JSON.parse(localStorage.getItem('adminData') || '{}');
-          return adminData.role === 'super_admin' && (
+        {/* ── Page Header ────────────────────────────────────────────────── */}
+        <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 3.5 }}>
+          <Box>
+            <Typography sx={{ fontWeight: 800, fontSize: { xs: '1.45rem', md: '1.75rem' }, color: '#14213D', letterSpacing: '-0.025em', lineHeight: 1.2 }}>
+              Vendor Management
+            </Typography>
+            <Typography sx={{ color: '#64748B', fontSize: '0.88rem', fontWeight: 500, mt: 0.4 }}>
+              Manage AapnuBazaar marketplace vendors and stores
+            </Typography>
+          </Box>
+          {isSuperAdmin && (
             <Button
               variant="contained"
-              startIcon={<AddIcon />}
+              startIcon={<AddIcon sx={{ fontSize: '18px !important' }} />}
               onClick={() => handleOpenDialog()}
-              sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                textTransform: 'none',
-                fontWeight: 600,
-              }}
+              sx={{ backgroundColor: '#087F5B', color: '#FFFFFF', borderRadius: '12px', fontSize: '0.875rem', fontWeight: 700, px: 2.5, py: 1.2, minHeight: 44, boxShadow: '0 4px 14px rgba(8, 127, 91, 0.28)', textTransform: 'none', whiteSpace: 'nowrap', '&:hover': { backgroundColor: '#075B43', boxShadow: '0 6px 18px rgba(8, 127, 91, 0.38)' } }}
             >
               Add Vendor
             </Button>
-          );
-        })()}
-      </Box>
+          )}
+        </Box>
 
-      {/* Vendors Table */}
-      <TableContainer component={Paper} sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)', width: '100%', overflowX: 'auto' }}>
-        <Table sx={{ minWidth: { xs: 300, sm: 650 } }}>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f7fa' }}>
-              <TableCell sx={{ fontWeight: 700, display: { xs: 'none', sm: 'table-cell' } }}>Image</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Vendor Name</TableCell>
-              <TableCell sx={{ fontWeight: 700, display: { xs: 'none', md: 'table-cell' } }}>Email</TableCell>
-              <TableCell sx={{ fontWeight: 700, display: { xs: 'none', sm: 'table-cell' } }}>Phone</TableCell>
-              <TableCell sx={{ fontWeight: 700, display: { xs: 'none', lg: 'table-cell' } }}>City</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {vendors.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                  <Typography color="text.secondary">No vendors found</Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              vendors.map((vendor) => (
-                <TableRow key={vendor._id} hover>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                    <Avatar src={vendor.vendor_image} alt={vendor.name} />
+        {/* ── Summary chips ─────────────────────────────────────────────── */}
+        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 3 }}>
+          {[
+            { label: `All Vendors`, value: vendors.length, filter: 'all', bg: '#F1F5F9', color: '#475569', active: statusFilter === 'all' },
+            { label: 'Active', value: activeCount, filter: 'active', bg: '#DCFCE7', color: '#15803D', active: statusFilter === 'active' },
+            { label: 'Blocked', value: blockedCount, filter: 'blocked', bg: '#FEE2E2', color: '#B91C1C', active: statusFilter === 'blocked' },
+          ].map((c) => (
+            <Box
+              key={c.filter}
+              onClick={() => { setStatusFilter(c.filter); setPage(1); }}
+              sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 2, py: 0.9, borderRadius: '50px', backgroundColor: c.active ? c.bg : '#FFFFFF', color: c.active ? c.color : '#64748B', border: `1.5px solid ${c.active ? c.color + '50' : '#E2E8F0'}`, fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', transition: 'all 0.15s ease', '&:hover': { backgroundColor: c.bg, color: c.color } }}
+            >
+              <Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: c.active ? c.color : '#CBD5E1' }} />
+              {c.label}
+              <Box sx={{ px: 0.9, py: 0.1, borderRadius: '6px', backgroundColor: c.active ? `${c.color}20` : '#F1F5F9', color: c.active ? c.color : '#94A3B8', fontSize: '0.75rem', fontWeight: 800 }}>{c.value}</Box>
+            </Box>
+          ))}
+        </Box>
+
+        {/* ── Main Table Card ────────────────────────────────────────────── */}
+        <Paper
+          elevation={0}
+          sx={{ borderRadius: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(20, 33, 61, 0.04)', p: { xs: 2, sm: 3.5 }, overflow: 'hidden' }}
+        >
+          {/* ── Toolbar ── */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1rem', color: '#14213D', letterSpacing: '-0.02em' }}>Vendors</Typography>
+              <Typography sx={{ fontSize: '0.78rem', color: '#64748B', mt: 0.3 }}>{filteredVendors.length} results</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+              {/* Search */}
+              <Box sx={{ display: 'flex', alignItems: 'center', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', px: 1.8, py: 0.7, width: { xs: '100%', sm: 220 } }}>
+                <SearchIcon sx={{ color: '#94A3B8', fontSize: 18, mr: 1 }} />
+                <InputBase
+                  placeholder="Search vendors…"
+                  value={tableSearch}
+                  onChange={(e) => { setTableSearch(e.target.value); setPage(1); }}
+                  sx={{ fontSize: '13px', fontWeight: 500, color: '#1E293B', width: '100%', '& input::placeholder': { color: '#94A3B8', opacity: 1 } }}
+                />
+              </Box>
+              {/* Category filter */}
+              {modules.length > 0 && (
+                <Box
+                  component="select"
+                  value={moduleFilter}
+                  onChange={(e) => { setModuleFilter(e.target.value); setPage(1); }}
+                  sx={{ border: '1px solid #E2E8F0', borderRadius: '12px', px: 1.5, py: 0.85, fontSize: '13px', fontWeight: 600, color: '#64748B', backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none', minWidth: 140, '&:hover': { borderColor: '#CBD5E1' } }}
+                >
+                  <option value="all">All Categories</option>
+                  {modules.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
+                </Box>
+              )}
+              {/* Filter (status) button */}
+              <Button
+                variant="outlined"
+                startIcon={<FilterListIcon sx={{ fontSize: '17px !important' }} />}
+                onClick={(e) => setFilterAnchor(e.currentTarget)}
+                sx={{ borderColor: '#E2E8F0', color: '#64748B', borderRadius: '12px', fontSize: '13px', fontWeight: 700, px: 2, py: 0.85, textTransform: 'none', '&:hover': { borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' } }}
+              >
+                {statusFilter === 'all' ? 'Status' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+              </Button>
+              <Menu
+                anchorEl={filterAnchor}
+                open={Boolean(filterAnchor)}
+                onClose={() => setFilterAnchor(null)}
+                PaperProps={{ sx: { borderRadius: '16px', minWidth: 160, p: 0.5, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' } }}
+              >
+                {['all', 'active', 'blocked'].map((f) => (
+                  <MenuItem key={f} selected={statusFilter === f} onClick={() => { setStatusFilter(f); setFilterAnchor(null); setPage(1); }} sx={{ borderRadius: '8px', fontSize: '13px', fontWeight: 600, py: 1 }}>
+                    {f === 'all' ? 'All Statuses' : f.charAt(0).toUpperCase() + f.slice(1)}
+                  </MenuItem>
+                ))}
+              </Menu>
+            </Box>
+          </Box>
+
+          {/* ── Table ── */}
+          <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
+            <Table sx={{ minWidth: 820 }}>
+              <TableHead>
+                <TableRow sx={{ '& th': { borderBottom: '1.5px solid #F1F5F9', color: '#94A3B8', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', py: 1.6, backgroundColor: '#FAFBFC', whiteSpace: 'nowrap' } }}>
+                  <TableCell padding="checkbox">
+                    <Checkbox checked={paginatedVendors.length > 0 && paginatedVendors.every((v) => selectedIds.includes(v._id))} indeterminate={paginatedVendors.some((v) => selectedIds.includes(v._id)) && !paginatedVendors.every((v) => selectedIds.includes(v._id))} onChange={handleSelectAll} sx={{ color: '#CBD5E1', '&.Mui-checked': { color: '#087F5B' } }} />
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{vendor.name}</TableCell>
-                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{vendor.email}</TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{vendor.mobile_number}</TableCell>
-                  <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>{vendor.city}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={vendor.isBlocked ? 'Blocked' : 'Active'}
-                      size="small"
-                      color={vendor.isBlocked ? 'error' : 'success'}
-                      sx={{ fontWeight: 600 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={() => handleOpenProductsDialog(vendor)}
-                        title="View Products"
-                      >
-                        <InventoryIcon fontSize="small" />
-                      </IconButton>
-                      {(() => {
-                        const adminData = JSON.parse(localStorage.getItem('adminData') || '{}');
-                        const hasUpdatePermission = adminData.role === 'super_admin' || adminData.permissions?.canUpdateVendor;
-                        return hasUpdatePermission && (
-                          <IconButton size="small" color="info" onClick={() => handleOpenDialog(vendor)} title="Edit Vendor">
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        );
-                      })()}
-                      {(() => {
-                        const adminData = JSON.parse(localStorage.getItem('adminData') || '{}');
-                        return adminData.role === 'super_admin' && (
-                          <IconButton size="small" color="error" onClick={() => handleDeleteClick(vendor)} title="Delete Vendor">
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        );
-                      })()}
-                    </Box>
-                  </TableCell>
+                  <TableCell>Vendor / Store</TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell>Contact</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Location</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>Delivery</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              </TableHead>
+              <TableBody>
+                {paginatedVendors.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                      <StorefrontIcon sx={{ fontSize: 48, color: '#E2E8F0', mb: 1.5, display: 'block', mx: 'auto' }} />
+                      <Typography sx={{ color: '#64748B', fontWeight: 700, fontSize: '0.95rem' }}>No vendors found</Typography>
+                      <Typography sx={{ color: '#94A3B8', fontSize: '0.82rem', mt: 0.5 }}>
+                        {tableSearch ? `No results for "${tableSearch}"` : 'Add your first vendor to get started'}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedVendors.map((vendor) => {
+                    const isSelected = selectedIds.includes(vendor._id);
+                    const isActive = !vendor.isBlocked;
+                    return (
+                      <TableRow
+                        key={vendor._id}
+                        hover
+                        selected={isSelected}
+                        sx={{ '& td': { borderBottom: '1px solid #F8FAFC', py: 1.6 }, '&.Mui-selected': { backgroundColor: 'rgba(8,127,91,0.03)' }, '&:hover': { backgroundColor: '#FAFCFF' }, transition: 'background-color 0.12s ease' }}
+                      >
+                        {/* Checkbox */}
+                        <TableCell padding="checkbox">
+                          <Checkbox checked={isSelected} onChange={() => handleSelectRow(vendor._id)} sx={{ color: '#CBD5E1', '&.Mui-checked': { color: '#087F5B' } }} />
+                        </TableCell>
+
+                        {/* Vendor / Store */}
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.8 }}>
+                            <Avatar
+                              src={vendor.vendor_image}
+                              alt={vendor.name}
+                              variant="rounded"
+                              sx={{ width: 44, height: 44, borderRadius: '12px', backgroundColor: '#F1F5F9', border: '1px solid #E2E8F0' }}
+                            >
+                              <StorefrontIcon sx={{ color: '#94A3B8', fontSize: 22 }} />
+                            </Avatar>
+                            <Box>
+                              <Typography sx={{ fontWeight: 700, fontSize: '13.5px', color: '#14213D', lineHeight: 1.3 }}>{vendor.name}</Typography>
+                              {vendor.open_time && vendor.close_time && (
+                                <Typography sx={{ fontSize: '11px', color: '#94A3B8', mt: 0.2 }}>
+                                  {vendor.open_time} – {vendor.close_time}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                        </TableCell>
+
+                        {/* Category */}
+                        <TableCell>
+                          <Box sx={{ display: 'inline-flex', alignItems: 'center', px: 1.4, py: 0.4, borderRadius: '8px', backgroundColor: '#EBFBEE', color: '#087F5B', fontSize: '12px', fontWeight: 700 }}>
+                            {vendor.module?.name || '—'}
+                          </Box>
+                        </TableCell>
+
+                        {/* Contact */}
+                        <TableCell>
+                          <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>{vendor.email || '—'}</Typography>
+                          <Typography sx={{ fontSize: '12px', color: '#64748B', mt: 0.2 }}>{vendor.mobile_number || '—'}</Typography>
+                        </TableCell>
+
+                        {/* Location */}
+                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                          <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>{vendor.city || 'Surat'}</Typography>
+                          <Typography sx={{ fontSize: '11.5px', color: '#94A3B8', maxWidth: 160, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={vendor.address || ''}>
+                            {vendor.address || 'Address not set'}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Delivery Charge */}
+                        <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
+                          <Typography sx={{ fontSize: '13px', fontWeight: 700, color: '#14213D' }}>₹{vendor.delivery_charge || 0}</Typography>
+                          <Typography sx={{ fontSize: '11.5px', color: '#64748B' }}>delivery charge</Typography>
+                        </TableCell>
+
+                        {/* Status */}
+                        <TableCell>
+                          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.8, px: 1.4, py: 0.4, borderRadius: '50px', backgroundColor: isActive ? '#DCFCE7' : '#FEE2E2', color: isActive ? '#15803D' : '#B91C1C', fontSize: '12px', fontWeight: 700 }}>
+                            <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: isActive ? '#16A34A' : '#EF4444' }} />
+                            {isActive ? 'Active' : 'Blocked'}
+                          </Box>
+                        </TableCell>
+
+                        {/* Actions */}
+                        <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                          <Tooltip title="Manage Products">
+                            <IconButton size="small" onClick={() => handleOpenProductsDialog(vendor)} sx={{ color: '#087F5B', backgroundColor: '#EBFBEE', borderRadius: '10px', mr: 0.8, '&:hover': { backgroundColor: '#DCFCE7' } }}>
+                              <InventoryIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          {canUpdateVendor && (
+                            <Tooltip title="Edit Vendor">
+                              <IconButton size="small" onClick={() => handleOpenDialog(vendor)} sx={{ color: '#64748B', backgroundColor: '#F1F5F9', borderRadius: '10px', mr: 0.8, '&:hover': { backgroundColor: '#E2E8F0', color: '#14213D' } }}>
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          {isSuperAdmin && (
+                            <Tooltip title="Delete Vendor">
+                              <IconButton size="small" onClick={() => handleDeleteClick(vendor)} sx={{ color: '#EF4444', backgroundColor: '#FEE2E2', borderRadius: '10px', mr: 0.8, '&:hover': { backgroundColor: '#FECACA' } }}>
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          <IconButton size="small" onClick={(e) => handleActionOpen(e, vendor)} sx={{ color: '#94A3B8', borderRadius: '10px', '&:hover': { color: '#087F5B', backgroundColor: '#EBFBEE' } }}>
+                            <MoreHorizIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* ── Pagination ── */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mt: 3, pt: 2.5, borderTop: '1px solid #F1F5F9' }}>
+            <Box sx={{ px: 2, py: 0.7, borderRadius: '50px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#64748B', fontSize: '12px', fontWeight: 700 }}>
+              {filteredVendors.length} vendor{filteredVendors.length !== 1 ? 's' : ''} · Page {page} of {totalPages}
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+              <IconButton size="small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} sx={{ border: '1px solid #E2E8F0', borderRadius: '10px', width: 34, height: 34, color: '#64748B', '&:disabled': { opacity: 0.35 } }}>
+                <ChevronLeftIcon fontSize="small" />
+              </IconButton>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+                const n = start + i;
+                if (n > totalPages) return null;
+                return (
+                  <IconButton key={n} size="small" onClick={() => setPage(n)} sx={{ border: `1px solid ${n === page ? '#087F5B' : '#E2E8F0'}`, borderRadius: '10px', width: 34, height: 34, backgroundColor: n === page ? '#087F5B' : '#FFFFFF', color: n === page ? '#FFFFFF' : '#64748B', fontWeight: 700, fontSize: '13px', '&:hover': { backgroundColor: n === page ? '#075B43' : '#F8FAFC' } }}>
+                    {n}
+                  </IconButton>
+                );
+              })}
+              <IconButton size="small" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} sx={{ border: '1px solid #E2E8F0', borderRadius: '10px', width: 34, height: 34, backgroundColor: '#087F5B', color: '#FFFFFF', '&:hover': { backgroundColor: '#075B43' }, '&:disabled': { backgroundColor: '#E2E8F0', color: '#94A3B8' } }}>
+                <ChevronRightIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          </Box>
+        </Paper>
+
+        {/* ── Action Dropdown Menu ── */}
+        <Menu
+          anchorEl={actionAnchor}
+          open={Boolean(actionAnchor)}
+          onClose={handleActionClose}
+          PaperProps={{ sx: { borderRadius: '16px', minWidth: 190, boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: '1px solid #F1F5F9', p: 0.5 } }}
+        >
+          <MenuItem onClick={() => { const v = actionVendor; handleActionClose(); if (v) handleOpenProductsDialog(v); }} sx={{ borderRadius: '10px', fontSize: '13px', fontWeight: 600, py: 1 }}>
+            <ListItemIcon sx={{ color: '#087F5B', minWidth: 32 }}><InventoryIcon fontSize="small" /></ListItemIcon>
+            Manage Products
+          </MenuItem>
+          {canUpdateVendor && (
+            <MenuItem onClick={() => { const v = actionVendor; handleActionClose(); if (v) handleOpenDialog(v); }} sx={{ borderRadius: '10px', fontSize: '13px', fontWeight: 600, py: 1 }}>
+              <ListItemIcon sx={{ color: '#64748B', minWidth: 32 }}><EditIcon fontSize="small" /></ListItemIcon>
+              Edit Vendor
+            </MenuItem>
+          )}
+          {isSuperAdmin && (
+            <MenuItem onClick={() => { const v = actionVendor; handleActionClose(); if (v) handleDeleteClick(v); }} sx={{ borderRadius: '10px', fontSize: '13px', fontWeight: 600, py: 1, color: '#EF4444', '&:hover': { backgroundColor: '#FEF2F2' } }}>
+              <ListItemIcon sx={{ color: '#EF4444', minWidth: 32 }}><DeleteIcon fontSize="small" /></ListItemIcon>
+              Delete Vendor
+            </MenuItem>
+          )}
+        </Menu>
 
       {/* Add/Edit Dialog */}
       <Dialog
@@ -868,7 +1131,7 @@ const Vendors = () => {
                     }
                   }}
                   InputProps={{
-                    startAdornment: <SearchIcon sx={{ mr: 1, color: '#667eea' }} />,
+                    startAdornment: <SearchIcon sx={{ mr: 1, color: '#0088FF' }} />,
                   }}
                 />
                 <Button
@@ -877,8 +1140,8 @@ const Vendors = () => {
                   disabled={searching || !searchQuery.trim()}
                   sx={{
                     minWidth: 100,
-                    borderColor: '#667eea',
-                    color: '#667eea',
+                    borderColor: '#0088FF',
+                    color: '#0088FF',
                     textTransform: 'none',
                     fontWeight: 600,
                     '&:hover': {
@@ -894,7 +1157,7 @@ const Vendors = () => {
                   onClick={getCurrentLocation}
                   sx={{
                     minWidth: 50,
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: '#0088FF',
                     '&:hover': {
                       background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
                     },
@@ -943,7 +1206,7 @@ const Vendors = () => {
 
             {/* Basic Information */}
             <Grid item xs={12}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#667eea', mb: 1, mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0088FF', mb: 1, mt: 2 }}>
                 Basic Information
               </Typography>
             </Grid>
@@ -1015,7 +1278,7 @@ const Vendors = () => {
 
             {/* Location Information */}
             <Grid item xs={12}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#667eea', mb: 1, mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0088FF', mb: 1, mt: 2 }}>
                 Location Information
               </Typography>
             </Grid>
@@ -1035,7 +1298,7 @@ const Vendors = () => {
 
             {/* Pricing */}
             <Grid item xs={12}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#667eea', mb: 1, mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0088FF', mb: 1, mt: 2 }}>
                 Pricing & Charges
               </Typography>
             </Grid>
@@ -1073,7 +1336,7 @@ const Vendors = () => {
 
             {/* Operating Hours */}
             <Grid item xs={12}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#667eea', mb: 1, mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0088FF', mb: 1, mt: 2 }}>
                 Operating Hours
               </Typography>
             </Grid>
@@ -1107,7 +1370,7 @@ const Vendors = () => {
 
             {/* Module & Configuration */}
             <Grid item xs={12}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#667eea', mb: 1, mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0088FF', mb: 1, mt: 2 }}>
                 Module & Configuration
               </Typography>
             </Grid>
@@ -1177,18 +1440,9 @@ const Vendors = () => {
           </Grid>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleCloseDialog} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={submitting}
-            sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            }}
-          >
-            {submitting ? <CircularProgress size={24} color="inherit" /> : selectedVendor ? 'Update' : 'Create'}
+          <Button onClick={handleCloseDialog} disabled={submitting} sx={{ textTransform: 'none', borderRadius: '10px' }}>Cancel</Button>
+          <Button variant="contained" onClick={handleSubmit} disabled={submitting} sx={{ backgroundColor: '#087F5B', textTransform: 'none', borderRadius: '10px', fontWeight: 700, '&:hover': { backgroundColor: '#075B43' } }}>
+            {submitting ? <CircularProgress size={22} color="inherit" /> : selectedVendor ? 'Update Vendor' : 'Create Vendor'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1249,27 +1503,11 @@ const Vendors = () => {
                     startIcon={<AddIcon />}
                     onClick={() => handleOpenProductForm()}
                     size="small"
-                    sx={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      display: { xs: 'none', sm: 'flex' },
-                    }}
+                    sx={{ backgroundColor: '#087F5B', textTransform: 'none', fontWeight: 700, borderRadius: '10px', display: { xs: 'none', sm: 'flex' }, '&:hover': { backgroundColor: '#075B43' } }}
                   >
                     Add Product
                   </Button>
-                  <IconButton
-                    onClick={() => handleOpenProductForm()}
-                    sx={{
-                      display: { xs: 'flex', sm: 'none' },
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: 'white',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
-                      },
-                    }}
-                    size="small"
-                  >
+                  <IconButton onClick={() => handleOpenProductForm()} sx={{ display: { xs: 'flex', sm: 'none' }, backgroundColor: '#087F5B', color: 'white', borderRadius: '10px', '&:hover': { backgroundColor: '#075B43' } }} size="small">
                     <AddIcon />
                   </IconButton>
                 </>
@@ -1283,7 +1521,7 @@ const Vendors = () => {
         <DialogContent dividers>
           {loadingProducts ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress sx={{ color: '#667eea' }} />
+              <CircularProgress sx={{ color: '#0088FF' }} />
             </Box>
           ) : products.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 6 }}>
@@ -1307,7 +1545,7 @@ const Vendors = () => {
                     startIcon={<AddIcon />}
                     onClick={() => handleOpenProductForm()}
                     sx={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      background: '#0088FF',
                       textTransform: 'none',
                       fontWeight: 600,
                     }}
@@ -1523,15 +1761,8 @@ const Vendors = () => {
           <Button onClick={handleCloseProductForm} disabled={submitting}>
             Cancel
           </Button>
-          <Button
-            variant="contained"
-            onClick={handleProductSubmit}
-            disabled={submitting}
-            sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            }}
-          >
-            {submitting ? <CircularProgress size={24} color="inherit" /> : selectedProduct ? 'Update' : 'Create'}
+          <Button variant="contained" onClick={handleProductSubmit} disabled={submitting} sx={{ backgroundColor: '#087F5B', textTransform: 'none', borderRadius: '10px', fontWeight: 700, '&:hover': { backgroundColor: '#075B43' } }}>
+            {submitting ? <CircularProgress size={22} color="inherit" /> : selectedProduct ? 'Update Product' : 'Create Product'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -316,47 +316,68 @@ const AdminManagement = () => {
       )}
 
       {/* Header */}
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography
-          variant="h4"
-          sx={{
-            fontWeight: 800,
-            fontSize: { xs: '1.5rem', md: '2.125rem' },
-          }}
-        >
-          Admin Management
-        </Typography>
+      <Box sx={{ mb: 3.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: '1.5rem', md: '2rem' },
+              color: '#0F172A',
+            }}
+          >
+            Admin Management
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5, fontWeight: 500 }}>
+            Configure administrators, system permissions, and vendor assignments
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={handleOpenAddDialog}
           sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+            background: '#0088FF',
+            color: '#fff',
+            textTransform: 'none',
+            fontWeight: 700,
+            borderRadius: '12px',
+            px: 2.5,
+            py: 1.1,
+            boxShadow: '0 4px 14px rgba(0, 136, 255, 0.25)',
+            '&:hover': {
+              background: '#0077E6',
+            },
           }}
         >
           Add Admin
         </Button>
       </Box>
 
-      {/* Statistics Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      {/* Statistics Bento Cards */}
+      <Grid container spacing={2.5} sx={{ mb: 3.5 }}>
         <Grid item xs={12} sm={6} md={3}>
           <Card
             sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
+              borderRadius: '20px',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #F1F5F9',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.03)',
             }}
           >
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <AdminIcon sx={{ fontSize: 40 }} />
+            <CardContent sx={{ p: 2.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', mb: 0.5 }}>
+                    Total Admins
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A' }}>
                     {admins.length}
                   </Typography>
-                  <Typography variant="body2">Total Admins</Typography>
                 </Box>
+                <Avatar sx={{ bgcolor: '#EBF5FF', color: '#0088FF', width: 48, height: 48, borderRadius: '14px' }}>
+                  <AdminIcon sx={{ fontSize: 26 }} />
+                </Avatar>
               </Box>
             </CardContent>
           </Card>
@@ -365,19 +386,25 @@ const AdminManagement = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card
             sx={{
-              background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-              color: 'white',
+              borderRadius: '20px',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #F1F5F9',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.03)',
             }}
           >
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <CheckCircleIcon sx={{ fontSize: 40 }} />
+            <CardContent sx={{ p: 2.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                    {admins.filter(a => a.isActive).length}
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', mb: 0.5 }}>
+                    Active Admins
                   </Typography>
-                  <Typography variant="body2">Active Admins</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A' }}>
+                    {admins.filter((a) => a.isActive).length}
+                  </Typography>
                 </Box>
+                <Avatar sx={{ bgcolor: '#DCFCE7', color: '#16A34A', width: 48, height: 48, borderRadius: '14px' }}>
+                  <CheckCircleIcon sx={{ fontSize: 26 }} />
+                </Avatar>
               </Box>
             </CardContent>
           </Card>
@@ -386,19 +413,25 @@ const AdminManagement = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card
             sx={{
-              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-              color: 'white',
+              borderRadius: '20px',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #F1F5F9',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.03)',
             }}
           >
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <SuperAdminIcon sx={{ fontSize: 40 }} />
+            <CardContent sx={{ p: 2.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                    {admins.filter(a => a.role === 'super_admin').length}
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', mb: 0.5 }}>
+                    Super Admins
                   </Typography>
-                  <Typography variant="body2">Super Admins</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A' }}>
+                    {admins.filter((a) => a.role === 'super_admin').length}
+                  </Typography>
                 </Box>
+                <Avatar sx={{ bgcolor: '#F3E8FF', color: '#9333EA', width: 48, height: 48, borderRadius: '14px' }}>
+                  <SuperAdminIcon sx={{ fontSize: 26 }} />
+                </Avatar>
               </Box>
             </CardContent>
           </Card>
@@ -407,120 +440,185 @@ const AdminManagement = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card
             sx={{
-              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-              color: 'white',
+              borderRadius: '20px',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #F1F5F9',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.03)',
             }}
           >
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <BlockIcon sx={{ fontSize: 40 }} />
+            <CardContent sx={{ p: 2.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                    {admins.filter(a => a.isBlocked).length}
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', mb: 0.5 }}>
+                    Blocked Admins
                   </Typography>
-                  <Typography variant="body2">Blocked Admins</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A' }}>
+                    {admins.filter((a) => a.isBlocked).length}
+                  </Typography>
                 </Box>
+                <Avatar sx={{ bgcolor: '#FEE2E2', color: '#DC2626', width: 48, height: 48, borderRadius: '14px' }}>
+                  <BlockIcon sx={{ fontSize: 26 }} />
+                </Avatar>
               </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Admins Table */}
-      <TableContainer
-        component={Paper}
-        sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)', width: '100%', overflowX: 'auto' }}
+      {/* Admins Table Bento Card */}
+      <Paper
+        sx={{
+          borderRadius: '24px',
+          border: '1px solid #F1F5F9',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.03)',
+          backgroundColor: '#FFFFFF',
+          overflow: 'hidden',
+          width: '100%',
+        }}
       >
-        <Table sx={{ minWidth: { xs: 300, sm: 650 } }}>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f7fa' }}>
-              <TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Role</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Assigned Vendors</TableCell>
-              <TableCell sx={{ fontWeight: 700, display: { xs: 'none', lg: 'table-cell' } }}>
-                Last Login
-              </TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {admins.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                  <Typography color="text.secondary">No admins found</Typography>
-                </TableCell>
+        <TableContainer>
+          <Table sx={{ minWidth: { xs: 300, sm: 650 } }}>
+            <TableHead>
+              <TableRow sx={{ '& th': { borderBottom: '1px solid #F1F5F9', color: '#64748B', fontWeight: 700, fontSize: '0.82rem', py: 2, px: 2.5, backgroundColor: '#FFFFFF' } }}>
+                <TableCell>Name</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Role</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Assigned Vendors</TableCell>
+                <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>Last Login</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
-            ) : (
-              admins.map((admin) => (
-                <TableRow key={admin._id} hover>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Avatar sx={{ bgcolor: '#667eea' }}>
-                        {admin.name[0].toUpperCase()}
-                      </Avatar>
-                      <Typography sx={{ fontWeight: 600 }}>
-                        {admin.name}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>{admin.email}</TableCell>
-                  <TableCell>
-                    <Chip
-                      icon={getRoleIcon(admin.role)}
-                      label={admin.role.replace('_', ' ').toUpperCase()}
-                      size="small"
-                      color={getRoleBadgeColor(admin.role)}
-                      sx={{ fontWeight: 600 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={admin.isBlocked ? 'Blocked' : (admin.isActive ? 'Active' : 'Inactive')}
-                      size="small"
-                      color={admin.isBlocked ? 'error' : (admin.isActive ? 'success' : 'warning')}
-                      sx={{ fontWeight: 600 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={`${admin.vendor_ids?.length || 0} vendors`}
-                      size="small"
-                      variant="outlined"
-                      onClick={() => handleOpenAssignVendors(admin)}
-                      sx={{ cursor: 'pointer' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
-                    {admin.lastLogin ? new Date(admin.lastLogin).toLocaleDateString() : 'Never'}
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      <IconButton
-                        size="small"
-                        color="info"
-                        onClick={() => handleOpenEditDialog(admin)}
-                        title="Edit Admin"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDeleteClick(admin)}
-                        title="Delete Admin"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
+            </TableHead>
+            <TableBody>
+              {admins.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                    <Typography sx={{ color: '#64748B', fontWeight: 500 }}>No admins found</Typography>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                admins.map((admin) => (
+                  <TableRow key={admin._id} hover sx={{ '& td': { borderBottom: '1px solid #F8FAFC', py: 2, px: 2.5 } }}>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar
+                          sx={{
+                            bgcolor: '#EBF5FF',
+                            color: '#0088FF',
+                            fontWeight: 800,
+                            borderRadius: '12px',
+                            width: 38,
+                            height: 38,
+                            fontSize: '0.9rem',
+                          }}
+                        >
+                          {admin.name ? admin.name[0].toUpperCase() : 'A'}
+                        </Avatar>
+                        <Typography sx={{ fontWeight: 700, color: '#0F172A', fontSize: '0.92rem' }}>
+                          {admin.name}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ color: '#64748B' }}>{admin.email}</TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.75,
+                          px: 1.5,
+                          py: 0.5,
+                          borderRadius: '50px',
+                          backgroundColor: admin.role === 'super_admin' ? '#F3E8FF' : '#EBF5FF',
+                          color: admin.role === 'super_admin' ? '#7E22CE' : '#0088FF',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {admin.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.75,
+                          px: 1.5,
+                          py: 0.5,
+                          borderRadius: '50px',
+                          backgroundColor: admin.isBlocked ? '#FEE2E2' : admin.isActive ? '#DCFCE7' : '#FEF3C7',
+                          color: admin.isBlocked ? '#B91C1C' : admin.isActive ? '#15803D' : '#B45309',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            backgroundColor: admin.isBlocked ? '#EF4444' : admin.isActive ? '#22C55E' : '#F59E0B',
+                          }}
+                        />
+                        {admin.isBlocked ? 'Blocked' : admin.isActive ? 'Active' : 'Inactive'}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={`${admin.vendor_ids?.length || 0} vendors`}
+                        size="small"
+                        onClick={() => handleOpenAssignVendors(admin)}
+                        sx={{
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          backgroundColor: '#F1F5F9',
+                          color: '#475569',
+                          borderRadius: '8px',
+                          '&:hover': { backgroundColor: '#E2E8F0' },
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' }, color: '#64748B', fontSize: '0.85rem' }}>
+                      {admin.lastLogin ? new Date(admin.lastLogin).toLocaleDateString() : 'Never'}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenEditDialog(admin)}
+                          title="Edit Admin"
+                          sx={{
+                            color: '#0088FF',
+                            backgroundColor: '#EBF5FF',
+                            borderRadius: '10px',
+                            '&:hover': { backgroundColor: '#D6EBFF' },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteClick(admin)}
+                          title="Delete Admin"
+                          sx={{
+                            color: '#EF4444',
+                            backgroundColor: '#FEE2E2',
+                            borderRadius: '10px',
+                            '&:hover': { backgroundColor: '#FECACA' },
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
 
       {/* Add Admin Dialog */}
       <Dialog open={addDialog} onClose={handleCloseAddDialog} maxWidth="md" fullWidth>
@@ -659,7 +757,12 @@ const AdminManagement = () => {
             onClick={handleAddAdmin}
             disabled={submitting || !formData.name || !formData.email || !formData.password}
             sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: '#0088FF',
+              color: '#fff',
+              fontWeight: 700,
+              borderRadius: '12px',
+              px: 2.5,
+              '&:hover': { background: '#0077E6' },
             }}
           >
             {submitting ? <CircularProgress size={24} color="inherit" /> : 'Create Admin'}
@@ -793,7 +896,12 @@ const AdminManagement = () => {
             onClick={handleUpdateAdmin}
             disabled={submitting}
             sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: '#0088FF',
+              color: '#fff',
+              fontWeight: 700,
+              borderRadius: '12px',
+              px: 2.5,
+              '&:hover': { background: '#0077E6' },
             }}
           >
             {submitting ? <CircularProgress size={24} color="inherit" /> : 'Update'}
@@ -859,7 +967,7 @@ const AdminManagement = () => {
             renderOption={(props, option) => (
               <li {...props}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Avatar sx={{ width: 32, height: 32, bgcolor: '#667eea' }}>
+                  <Avatar sx={{ width: 32, height: 32, bgcolor: '#EBF5FF', color: '#0088FF', fontWeight: 700 }}>
                     {option.name[0]}
                   </Avatar>
                   <Box>
@@ -884,7 +992,12 @@ const AdminManagement = () => {
             onClick={handleAssignVendors}
             disabled={submitting}
             sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: '#0088FF',
+              color: '#fff',
+              fontWeight: 700,
+              borderRadius: '12px',
+              px: 2.5,
+              '&:hover': { background: '#0077E6' },
             }}
           >
             {submitting ? <CircularProgress size={24} color="inherit" /> : 'Assign'}

@@ -7,16 +7,16 @@ import {
   Box,
   Stack,
   Chip,
-  Badge,
   Rating,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import DeliveryDiningIcon from '@mui/icons-material/DeliveryDining';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import DeliveryDiningIcon from '@mui/icons-material/DeliveryDining';
+import VerifiedIcon from '@mui/icons-material/Verified';
 
 // Fallback image
-const FALLBACK_IMAGE = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23e0e0e0" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" font-size="24" fill="%23999" text-anchor="middle" dy=".3em"%3ENo Image Available%3C/text%3E%3C/svg%3E';
+const FALLBACK_IMAGE = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23FAFAF7" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" font-size="20" fill="%236B7280" text-anchor="middle" dy=".3em"%3EAapnuBazaar Store%3C/text%3E%3C/svg%3E';
 
 const VendorCard = ({ vendor }) => {
   const navigate = useNavigate();
@@ -25,73 +25,40 @@ const VendorCard = ({ vendor }) => {
     navigate(`/vendors/${vendor._id || vendor.id}`);
   };
 
-  // Format time (assuming HH:mm format)
   const formatTime = (time) => {
     if (!time) return '';
-    return time.substring(0, 5); // HH:mm
+    return time.substring(0, 5);
   };
 
-  // Check if vendor is open (simple check - you can enhance this logic)
-  const isOpen = vendor.isOpen !== false;
+  const isOpen = vendor.isOpen !== false && vendor.status !== 0;
 
   return (
     <Card
       onClick={handleClick}
+      elevation={0}
       sx={{
         cursor: 'pointer',
         height: '100%',
-        minHeight: { xs: 340, sm: 360 },
         display: 'flex',
         flexDirection: 'column',
-        borderRadius: 2.5,
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        backgroundColor: '#fff',
+        borderRadius: '16px',
+        border: '1px solid #E5E7EB',
+        backgroundColor: '#FFFFFF',
         position: 'relative',
         overflow: 'hidden',
+        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         '&:hover': {
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
-          transform: 'translateY(-2px)',
-        },
-        '&:active': {
-          transform: 'translateY(0)',
+          transform: 'translateY(-4px)',
+          boxShadow: '0 12px 24px -4px rgba(0, 0, 0, 0.08)',
+          borderColor: '#087F5B',
+          '& .vendor-name': {
+            color: '#087F5B',
+          },
         },
       }}
     >
-      {/* Image Container with Badge */}
-      <Box
-        sx={{
-          position: 'relative',
-          width: '20rem',
-          height: 250,
-          overflow: 'hidden',
-          flexShrink: 0,
-        }}
-      >
-        {/* NEW Badge */}
-        {vendor.isNew && (
-          <Badge
-            badgeContent="NEW"
-            sx={{
-              position: 'absolute',
-              top: 20,
-              right: 80,
-              zIndex: 2,
-              '& .MuiBadge-badge': {
-                backgroundColor: '#FF6B6B',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: '0.75rem',
-                borderRadius: '0 8px 0 8px',
-                padding: '8px 15px',
-                minWidth: 'auto',
-                height: 'auto',
-              },
-            }}
-          />
-        )}
-
-        {/* Vendor Image */}
+      {/* Thumbnail Container with Badges */}
+      <Box sx={{ position: 'relative', width: '100%', height: 180, overflow: 'hidden', backgroundColor: '#F3F4F6' }}>
         <CardMedia
           component="img"
           image={vendor.vendor_image || FALLBACK_IMAGE}
@@ -101,159 +68,155 @@ const VendorCard = ({ vendor }) => {
             width: '100%',
             height: '100%',
             objectFit: 'cover',
-            objectPosition: 'center',
-            backgroundColor: '#f5f5f5',
+            transition: 'transform 0.3s ease',
+            '&:hover': { transform: 'scale(1.04)' },
+          }}
+          onError={(e) => {
+            e.target.src = FALLBACK_IMAGE;
           }}
         />
 
-        {/* Status Overlay */}
+        {/* Top Badges */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 12,
+            left: 12,
+            right: 12,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            zIndex: 2,
+          }}
+        >
+          {/* Status Badge */}
+          <Chip
+            size="small"
+            label={isOpen ? 'Open Now' : 'Closed'}
+            sx={{
+              backgroundColor: isOpen ? '#EBFBEE' : 'rgba(255, 255, 255, 0.95)',
+              color: isOpen ? '#087F5B' : '#6B7280',
+              fontWeight: 700,
+              fontSize: '11px',
+              border: isOpen ? '1px solid #B2F2BB' : '1px solid #E5E7EB',
+              backdropFilter: 'blur(4px)',
+            }}
+          />
+
+          {/* Module / Category Tag */}
+          {vendor.module?.name && (
+            <Chip
+              size="small"
+              label={vendor.module.name}
+              sx={{
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                color: '#151515',
+                fontWeight: 600,
+                fontSize: '11px',
+                border: '1px solid #E5E7EB',
+                backdropFilter: 'blur(4px)',
+              }}
+            />
+          )}
+        </Box>
+
+        {/* Closed Overlay */}
         {!isOpen && (
           <Box
             sx={{
               position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.35)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Typography
-              variant="body2"
-              sx={{
-                color: '#fff',
-                fontWeight: 700,
-                textAlign: 'center',
-              }}
-            >
-              Closed
+            <Typography sx={{ color: '#FFFFFF', fontWeight: 700, fontSize: '14px', px: 2, py: 0.5, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: '6px' }}>
+              Currently Closed
             </Typography>
           </Box>
         )}
       </Box>
 
-      {/* Content */}
-      <CardContent
-        sx={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '16px',
-          gap: 1,
-          minHeight: 0,
-          overflow: 'hidden',
-        }}
-      >
-        {/* Vendor Name and Category */}
-        <Box>
+      {/* Card Content */}
+      <CardContent sx={{ p: 2, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* Title and Verified */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
           <Typography
-            variant="h6"
-            component="div"
+            className="vendor-name"
             sx={{
               fontWeight: 700,
-              fontSize: '1rem',
+              fontSize: '17px',
+              color: '#151515',
               lineHeight: 1.3,
-              color: '#1a1a1a',
-              mb: 0.5,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              transition: 'color 0.2s ease',
+            }}
+          >
+            {vendor.name}
+          </Typography>
+          <VerifiedIcon sx={{ fontSize: '16px', color: '#087F5B', flexShrink: 0 }} />
+        </Box>
+
+        {/* Address snippet */}
+        {vendor.address && (
+          <Typography
+            sx={{
+              fontSize: '12.5px',
+              color: '#6B7280',
+              mb: 1.5,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}
           >
-            {vendor.name}
+            {vendor.address}
           </Typography>
-
-          {/* Category */}
-          {vendor.module?.name && (
-            <Typography
-              variant="caption"
-              sx={{
-                color: '#666',
-                fontWeight: 500,
-                display: 'block',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {vendor.module.name}
-            </Typography>
-          )}
-        </Box>
-
-        {/* Rating */}
-        {/* {vendor.rating !== undefined && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Rating value={vendor.rating} readOnly size="small" />
-            <Typography variant="caption" sx={{ color: '#999', fontWeight: 500 }}>
-              {vendor.rating.toFixed(1)} ({vendor.reviewCount || 0})
-            </Typography>
-          </Box>
-        )} */}
-
-        {/* Distance */}
-        {vendor.distance_km !== undefined && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#666' }}>
-            <LocationOnIcon sx={{ fontSize: '1rem', color: '#1976d2' }} />
-            <Typography variant="caption" sx={{ fontWeight: 500 }}>
-              {vendor.distance_km} km away
-            </Typography>
-          </Box>
         )}
 
-        {/* Open Time */}
-        {vendor.open_time && vendor.close_time && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#666' }}>
-            <AccessTimeIcon sx={{ fontSize: '1rem', color: '#4caf50' }} />
-            <Typography variant="caption" sx={{ fontWeight: 500 }}>
-              {formatTime(vendor.open_time)} – {formatTime(vendor.close_time)}
-            </Typography>
-          </Box>
-        )}
-
-        {/* Delivery Info */}
-        {/* <Stack
-          direction="row"
-          spacing={1}
+        {/* Store Key Info Row */}
+        <Box
           sx={{
-            mt: 'auto',
+            display: 'flex',
             flexWrap: 'wrap',
-            gap: 0.75,
+            alignItems: 'center',
+            gap: 1.5,
+            pt: 1,
+            mt: 'auto',
+            borderTop: '1px solid #F3F4F6',
+            fontSize: '12.5px',
+            color: '#6B7280',
           }}
         >
-          {vendor.delivery_charge !== undefined && (
-            <Chip
-              icon={<DeliveryDiningIcon sx={{ fontSize: '1rem !important' }} />}
-              label={`$${vendor.delivery_charge.toFixed(2)}`}
-              size="small"
-              variant="filled"
-              sx={{
-                backgroundColor: '#f5f5f5',
-                color: '#333',
-                fontWeight: 600,
-                height: 28,
-              }}
-            />
+          {/* Prep time */}
+          {vendor.preparation_time_minute ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+              <AccessTimeIcon sx={{ fontSize: '15px', color: '#087F5B' }} />
+              <span>{vendor.preparation_time_minute} min</span>
+            </Box>
+          ) : null}
+
+          {/* Distance */}
+          {vendor.distance_km !== undefined && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+              <LocationOnIcon sx={{ fontSize: '15px', color: '#FF6B00' }} />
+              <span>{vendor.distance_km} km</span>
+            </Box>
           )}
 
-          {vendor.deliveryTime && (
-            <Chip
-              icon={<AccessTimeIcon sx={{ fontSize: '1rem !important' }} />}
-              label={`${vendor.deliveryTime} min`}
-              size="small"
-              variant="filled"
-              sx={{
-                backgroundColor: '#f5f5f5',
-                color: '#333',
-                fontWeight: 600,
-                height: 28,
-              }}
-            />
-          )}
-        </Stack> */}
+          {/* Delivery charge */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, ml: 'auto' }}>
+            <DeliveryDiningIcon sx={{ fontSize: '16px', color: '#087F5B' }} />
+            <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: '#151515' }}>
+              {vendor.delivery_charge && vendor.delivery_charge > 0
+                ? `₹${vendor.delivery_charge}`
+                : 'Free Delivery'}
+            </Typography>
+          </Box>
+        </Box>
       </CardContent>
     </Card>
   );

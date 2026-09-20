@@ -213,37 +213,47 @@ const Users = () => {
       )}
 
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 3.5 }}>
         <Typography
           variant="h4"
           sx={{
             fontWeight: 800,
-            fontSize: { xs: '1.5rem', md: '2.125rem' },
-            mb: 3,
+            fontSize: { xs: '1.5rem', md: '2rem' },
+            color: '#0F172A',
+            mb: 0.5,
           }}
         >
           Users Management
         </Typography>
+        <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 500, mb: 3 }}>
+          Monitor, verify, and manage registered marketplace customers
+        </Typography>
 
-        {/* Statistics Cards */}
+        {/* Statistics Bento Cards */}
         {stats && (
-          <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid container spacing={2.5} sx={{ mb: 3.5 }}>
             <Grid item xs={12} sm={6} md={3}>
               <Card
                 sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
+                  borderRadius: '20px',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #F1F5F9',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.03)',
                 }}
               >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <GroupsIcon sx={{ fontSize: 40 }} />
+                <CardContent sx={{ p: 2.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box>
-                      <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                      <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', mb: 0.5 }}>
+                        Total Users
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A' }}>
                         {stats.totalUsers}
                       </Typography>
-                      <Typography variant="body2">Total Users</Typography>
                     </Box>
+                    <Avatar sx={{ bgcolor: '#EBF5FF', color: '#0088FF', width: 48, height: 48, borderRadius: '14px' }}>
+                      <GroupsIcon sx={{ fontSize: 26 }} />
+                    </Avatar>
                   </Box>
                 </CardContent>
               </Card>
@@ -252,19 +262,25 @@ const Users = () => {
             <Grid item xs={12} sm={6} md={3}>
               <Card
                 sx={{
-                  background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-                  color: 'white',
+                  borderRadius: '20px',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #F1F5F9',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.03)',
                 }}
               >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <VerifiedUserIcon sx={{ fontSize: 40 }} />
+                <CardContent sx={{ p: 2.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box>
-                      <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                      <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', mb: 0.5 }}>
+                        Verified Users
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A' }}>
                         {stats.verifiedUsers}
                       </Typography>
-                      <Typography variant="body2">Verified Users</Typography>
                     </Box>
+                    <Avatar sx={{ bgcolor: '#DCFCE7', color: '#16A34A', width: 48, height: 48, borderRadius: '14px' }}>
+                      <VerifiedUserIcon sx={{ fontSize: 26 }} />
+                    </Avatar>
                   </Box>
                 </CardContent>
               </Card>
@@ -273,19 +289,25 @@ const Users = () => {
             <Grid item xs={12} sm={6} md={3}>
               <Card
                 sx={{
-                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                  color: 'white',
+                  borderRadius: '20px',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #F1F5F9',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.03)',
                 }}
               >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <PersonOffIcon sx={{ fontSize: 40 }} />
+                <CardContent sx={{ p: 2.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box>
-                      <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                      <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', mb: 0.5 }}>
+                        Blocked Users
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A' }}>
                         {stats.blockedUsers}
                       </Typography>
-                      <Typography variant="body2">Blocked Users</Typography>
                     </Box>
+                    <Avatar sx={{ bgcolor: '#FEE2E2', color: '#DC2626', width: 48, height: 48, borderRadius: '14px' }}>
+                      <PersonOffIcon sx={{ fontSize: 26 }} />
+                    </Avatar>
                   </Box>
                 </CardContent>
               </Card>
@@ -294,19 +316,25 @@ const Users = () => {
             <Grid item xs={12} sm={6} md={3}>
               <Card
                 sx={{
-                  background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                  color: 'white',
+                  borderRadius: '20px',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #F1F5F9',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.03)',
                 }}
               >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <PersonIcon sx={{ fontSize: 40 }} />
+                <CardContent sx={{ p: 2.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box>
-                      <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                      <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748B', mb: 0.5 }}>
+                        Active Users
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A' }}>
                         {stats.activeUsers}
                       </Typography>
-                      <Typography variant="body2">Active Users</Typography>
                     </Box>
+                    <Avatar sx={{ bgcolor: '#F3E8FF', color: '#9333EA', width: 48, height: 48, borderRadius: '14px' }}>
+                      <PersonIcon sx={{ fontSize: 26 }} />
+                    </Avatar>
                   </Box>
                 </CardContent>
               </Card>
@@ -315,106 +343,169 @@ const Users = () => {
         )}
       </Box>
 
-      {/* Users Table */}
-      <TableContainer
-        component={Paper}
-        sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)', width: '100%', overflowX: 'auto' }}
+      {/* Users Table Bento Card */}
+      <Paper
+        sx={{
+          borderRadius: '24px',
+          border: '1px solid #F1F5F9',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.03)',
+          backgroundColor: '#FFFFFF',
+          overflow: 'hidden',
+          width: '100%',
+        }}
       >
-        <Table sx={{ minWidth: { xs: 300, sm: 650 } }}>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f7fa' }}>
-              <TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Mobile Number</TableCell>
-              <TableCell sx={{ fontWeight: 700, display: { xs: 'none', md: 'table-cell' } }}>
-                Email
-              </TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Verified</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 700, display: { xs: 'none', lg: 'table-cell' } }}>
-                Joined
-              </TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                  <Typography color="text.secondary">No users found</Typography>
-                </TableCell>
+        <TableContainer>
+          <Table sx={{ minWidth: { xs: 300, sm: 650 } }}>
+            <TableHead>
+              <TableRow sx={{ '& th': { borderBottom: '1px solid #F1F5F9', color: '#64748B', fontWeight: 700, fontSize: '0.82rem', py: 2, px: 2.5, backgroundColor: '#FFFFFF' } }}>
+                <TableCell>Name</TableCell>
+                <TableCell>Mobile Number</TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Email</TableCell>
+                <TableCell>Verified</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>Joined</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
-            ) : (
-              users.map((user) => (
-                <TableRow key={user._id} hover>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Avatar sx={{ bgcolor: '#667eea' }}>
-                        {user.name ? user.name[0].toUpperCase() : 'U'}
-                      </Avatar>
-                      <Typography sx={{ fontWeight: 600 }}>
-                        {user.name || 'No Name'}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>{user.mobile_number}</TableCell>
-                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                    {user.email || '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      icon={user.isVerified ? <CheckCircleIcon /> : undefined}
-                      label={user.isVerified ? 'Verified' : 'Unverified'}
-                      size="small"
-                      color={user.isVerified ? 'success' : 'warning'}
-                      variant="outlined"
-                      sx={{ fontWeight: 600 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={user.isBlocked ? 'Blocked' : 'Active'}
-                      size="small"
-                      color={user.isBlocked ? 'error' : 'success'}
-                      sx={{ fontWeight: 600 }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      <IconButton
-                        size="small"
-                        color="info"
-                        onClick={() => handleOpenEditDialog(user)}
-                        title="Edit User"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color={user.isBlocked ? 'success' : 'warning'}
-                        onClick={() => handleBlockClick(user)}
-                        title={user.isBlocked ? 'Unblock User' : 'Block User'}
-                      >
-                        <BlockIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDeleteClick(user)}
-                        title="Delete User"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
+            </TableHead>
+            <TableBody>
+              {users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                    <Typography sx={{ color: '#64748B', fontWeight: 500 }}>No users found</Typography>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                users.map((user) => (
+                  <TableRow key={user._id} hover sx={{ '& td': { borderBottom: '1px solid #F8FAFC', py: 2, px: 2.5 } }}>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar
+                          sx={{
+                            bgcolor: '#EBF5FF',
+                            color: '#0088FF',
+                            fontWeight: 800,
+                            borderRadius: '12px',
+                            width: 38,
+                            height: 38,
+                            fontSize: '0.9rem',
+                          }}
+                        >
+                          {user.name ? user.name[0].toUpperCase() : 'U'}
+                        </Avatar>
+                        <Typography sx={{ fontWeight: 700, color: '#0F172A', fontSize: '0.92rem' }}>
+                          {user.name || 'No Name'}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ color: '#475569', fontWeight: 600 }}>{user.mobile_number}</TableCell>
+                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, color: '#64748B' }}>
+                      {user.email || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.75,
+                          px: 1.5,
+                          py: 0.5,
+                          borderRadius: '50px',
+                          backgroundColor: user.isVerified ? '#DCFCE7' : '#FEF3C7',
+                          color: user.isVerified ? '#15803D' : '#B45309',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            backgroundColor: user.isVerified ? '#22C55E' : '#F59E0B',
+                          }}
+                        />
+                        {user.isVerified ? 'Verified' : 'Unverified'}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.75,
+                          px: 1.5,
+                          py: 0.5,
+                          borderRadius: '50px',
+                          backgroundColor: user.isBlocked ? '#FEE2E2' : '#DCFCE7',
+                          color: user.isBlocked ? '#B91C1C' : '#15803D',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            backgroundColor: user.isBlocked ? '#EF4444' : '#22C55E',
+                          }}
+                        />
+                        {user.isBlocked ? 'Blocked' : 'Active'}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' }, color: '#64748B', fontSize: '0.85rem' }}>
+                      {new Date(user.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenEditDialog(user)}
+                          title="Edit User"
+                          sx={{
+                            color: '#0088FF',
+                            backgroundColor: '#EBF5FF',
+                            borderRadius: '10px',
+                            '&:hover': { backgroundColor: '#D6EBFF' },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleBlockClick(user)}
+                          title={user.isBlocked ? 'Unblock User' : 'Block User'}
+                          sx={{
+                            color: user.isBlocked ? '#10B981' : '#F59E0B',
+                            backgroundColor: user.isBlocked ? '#DCFCE7' : '#FEF3C7',
+                            borderRadius: '10px',
+                            '&:hover': { backgroundColor: user.isBlocked ? '#BBF7D0' : '#FDE68A' },
+                          }}
+                        >
+                          <BlockIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteClick(user)}
+                          title="Delete User"
+                          sx={{
+                            color: '#EF4444',
+                            backgroundColor: '#FEE2E2',
+                            borderRadius: '10px',
+                            '&:hover': { backgroundColor: '#FECACA' },
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
 
       {/* Edit User Dialog */}
       <Dialog open={editDialog} onClose={handleCloseEditDialog} maxWidth="sm" fullWidth>

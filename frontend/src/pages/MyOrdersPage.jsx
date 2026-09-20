@@ -92,15 +92,15 @@ const MyOrdersPage = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'Placed':
-        return { bg: '#e3f2fd', color: '#1976d2' };
+        return { bg: '#EBFBEE', color: '#087F5B' };
       case 'Delivered':
-        return { bg: '#e8f5e9', color: '#2e7d32' };
+        return { bg: '#EBFBEE', color: '#087F5B' };
       case 'Cancelled':
-        return { bg: '#ffebee', color: '#c62828' };
+        return { bg: '#FFF5F5', color: '#E03131' };
       case 'Refunded':
-        return { bg: '#fff3e0', color: '#e65100' };
+        return { bg: '#FFF4E6', color: '#FF6B00' };
       default:
-        return { bg: '#f5f5f5', color: '#616161' };
+        return { bg: '#FAFAF7', color: '#6B7280' };
     }
   };
 
@@ -131,7 +131,7 @@ const MyOrdersPage = () => {
     return (
       <Container sx={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Box sx={{ textAlign: 'center' }}>
-          <CircularProgress size={60} thickness={4} sx={{ color: '#667eea' }} />
+          <CircularProgress size={60} thickness={4} sx={{ color: '#087F5B' }} />
           <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
             Loading your orders...
           </Typography>
@@ -146,13 +146,13 @@ const MyOrdersPage = () => {
       <Box sx={{ mb: { xs: 2, md: 4 }, px: { xs: 1, md: 0 } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
           <IconButton
-            onClick={() => navigate('/modules')}
+            onClick={() => navigate('/')}
             sx={{
-              bgcolor: 'rgba(102, 126, 234, 0.1)',
-              '&:hover': { bgcolor: 'rgba(102, 126, 234, 0.2)' },
+              bgcolor: 'rgba(8, 127, 91, 0.08)',
+              '&:hover': { bgcolor: 'rgba(8, 127, 91, 0.15)' },
             }}
           >
-            <ArrowBackIcon sx={{ color: '#667eea' }} />
+            <ArrowBackIcon sx={{ color: '#087F5B' }} />
           </IconButton>
           <Box>
             <Typography
@@ -160,10 +160,7 @@ const MyOrdersPage = () => {
               sx={{
                 fontWeight: 800,
                 fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' },
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                color: '#151515',
               }}
             >
               My Orders
@@ -194,50 +191,47 @@ const MyOrdersPage = () => {
           <Box sx={{ textAlign: 'center', py: { xs: 4, md: 8 } }}>
             <Box
               sx={{
-                width: { xs: 120, md: 160 },
-                height: { xs: 120, md: 160 },
+                width: { xs: 100, md: 120 },
+                height: { xs: 100, md: 120 },
                 margin: '0 auto',
                 mb: 3,
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                backgroundColor: 'rgba(8, 127, 91, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 10px 40px rgba(102, 126, 234, 0.3)',
               }}
             >
-              <ShoppingBagIcon sx={{ fontSize: { xs: 60, md: 80 }, color: '#fff' }} />
+              <ShoppingBagIcon sx={{ fontSize: { xs: 50, md: 64 }, color: '#087F5B' }} />
             </Box>
             <Typography
               variant="h5"
-              sx={{ mb: 2, fontWeight: 700, fontSize: { xs: '1.5rem', md: '1.75rem' } }}
+              sx={{ mb: 1.5, fontWeight: 700, fontSize: { xs: '1.4rem', md: '1.65rem' }, color: '#151515' }}
             >
               No Orders Yet
             </Typography>
             <Typography variant="body1" color="textSecondary" sx={{ mb: 4 }}>
-              Start ordering delicious food from our vendors!
+              Start discovering fresh local essentials from nearby shops!
             </Typography>
             <Button
               variant="contained"
               size="large"
-              onClick={() => navigate('/modules')}
+              onClick={() => navigate('/vendors')}
               sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                backgroundColor: '#087F5B',
                 color: '#fff',
-                fontWeight: 600,
+                fontWeight: 700,
                 px: 4,
                 py: 1.5,
                 borderRadius: '12px',
                 textTransform: 'none',
-                boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
+                boxShadow: '0 6px 20px rgba(8, 127, 91, 0.25)',
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 12px 32px rgba(102, 126, 234, 0.5)',
+                  backgroundColor: '#075B43',
                 },
               }}
             >
-              Browse Vendors
+              Browse Stores
             </Button>
           </Box>
         </Fade>
@@ -356,7 +350,8 @@ const MyOrdersPage = () => {
                           alignItems: 'center',
                           p: 1.5,
                           borderRadius: '8px',
-                          background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
+                          backgroundColor: 'rgba(8, 127, 91, 0.06)',
+                          border: '1px solid rgba(8, 127, 91, 0.12)',
                         }}
                       >
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -366,10 +361,7 @@ const MyOrdersPage = () => {
                           variant="h6"
                           sx={{
                             fontWeight: 800,
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            backgroundClip: 'text',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
+                            color: '#087F5B',
                           }}
                         >
                           ₹{order.total_payable_amount?.toFixed(2) || '0.00'}
@@ -382,11 +374,11 @@ const MyOrdersPage = () => {
                         size="small"
                         sx={{
                           mt: 2,
-                          color: '#667eea',
-                          fontWeight: 600,
+                          color: '#087F5B',
+                          fontWeight: 700,
                           textTransform: 'none',
                           '&:hover': {
-                            backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                            backgroundColor: 'rgba(8, 127, 91, 0.05)',
                           },
                         }}
                       >
@@ -449,15 +441,15 @@ const MyOrdersPage = () => {
             <DialogContent dividers>
               {/* Vendor Info */}
               <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#667eea' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#087F5B' }}>
                   Vendor Information
                 </Typography>
                 <Box
                   sx={{
                     p: 2.5,
-                    bgcolor: '#f5f5f5',
+                    bgcolor: '#FAFAF7',
                     borderRadius: 2,
-                    border: '1px solid #e0e0e0',
+                    border: '1px solid #E5E7EB',
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
@@ -479,7 +471,7 @@ const MyOrdersPage = () => {
                   <Stack spacing={1.5}>
                     {selectedOrder.vendor?.mobile_number && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <PhoneIcon sx={{ fontSize: 18, color: '#667eea' }} />
+                        <PhoneIcon sx={{ fontSize: 18, color: '#087F5B' }} />
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
                           {selectedOrder.vendor.mobile_number}
                         </Typography>
@@ -487,7 +479,7 @@ const MyOrdersPage = () => {
                     )}
                     {selectedOrder.vendor?.address && (
                       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                        <LocationIcon sx={{ fontSize: 18, color: '#667eea', mt: 0.2 }} />
+                        <LocationIcon sx={{ fontSize: 18, color: '#087F5B', mt: 0.2 }} />
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
                           {selectedOrder.vendor.address}
                         </Typography>
@@ -495,7 +487,7 @@ const MyOrdersPage = () => {
                     )}
                     {(selectedOrder.vendor?.open_time || selectedOrder.vendor?.close_time) && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <TimeIcon sx={{ fontSize: 18, color: '#667eea' }} />
+                        <TimeIcon sx={{ fontSize: 18, color: '#087F5B' }} />
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
                           {selectedOrder.vendor.open_time || 'N/A'} - {selectedOrder.vendor.close_time || 'N/A'}
                         </Typography>
@@ -508,12 +500,12 @@ const MyOrdersPage = () => {
               {/* Delivery Address */}
               {selectedOrder.address && (
                 <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#667eea' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#087F5B' }}>
                     Delivery Address
                   </Typography>
-                  <Box sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                  <Box sx={{ p: 2, bgcolor: '#FAFAF7', borderRadius: 2, border: '1px solid #E5E7EB' }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                      <LocationIcon sx={{ fontSize: 20, color: '#667eea', mt: 0.2 }} />
+                      <LocationIcon sx={{ fontSize: 20, color: '#087F5B', mt: 0.2 }} />
                       <Box>
                         <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
                           {selectedOrder.address.name}
@@ -535,7 +527,7 @@ const MyOrdersPage = () => {
 
               {/* Order Items */}
               <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#667eea' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#087F5B' }}>
                   Order Items ({selectedOrder.total_quantity})
                 </Typography>
                 <Stack spacing={1}>
@@ -547,8 +539,9 @@ const MyOrdersPage = () => {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         p: 1.5,
-                        bgcolor: index % 2 === 0 ? '#fafafa' : '#fff',
+                        bgcolor: index % 2 === 0 ? '#FAFAF7' : '#fff',
                         borderRadius: 1,
+                        border: '1px solid #E5E7EB',
                       }}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
@@ -568,7 +561,7 @@ const MyOrdersPage = () => {
                           </Typography>
                         </Box>
                       </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#667eea' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#087F5B' }}>
                         ₹{item.item_total.toFixed(2)}
                       </Typography>
                     </Box>
@@ -578,12 +571,12 @@ const MyOrdersPage = () => {
 
               {/* Order Dates */}
               <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#667eea' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#087F5B' }}>
                   Order Timeline
                 </Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                    <Box sx={{ p: 2, bgcolor: '#FAFAF7', borderRadius: 2, border: '1px solid #E5E7EB' }}>
                       <Typography variant="caption" color="textSecondary">
                         Order Placed
                       </Typography>
@@ -594,7 +587,7 @@ const MyOrdersPage = () => {
                   </Grid>
                   {selectedOrder.delivery_date && (
                     <Grid item xs={12} sm={6}>
-                      <Box sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                      <Box sx={{ p: 2, bgcolor: '#FAFAF7', borderRadius: 2, border: '1px solid #E5E7EB' }}>
                         <Typography variant="caption" color="textSecondary">
                           Delivery Date
                         </Typography>
@@ -610,7 +603,7 @@ const MyOrdersPage = () => {
 
               {/* Price Breakdown */}
               <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#667eea' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#087F5B' }}>
                   Price Breakdown
                 </Typography>
                 <Stack spacing={1}>
@@ -625,7 +618,7 @@ const MyOrdersPage = () => {
                       <Typography variant="body2" color="textSecondary">
                         Discount
                       </Typography>
-                      <Typography variant="body2" sx={{ color: '#4caf50', fontWeight: 600 }}>
+                      <Typography variant="body2" sx={{ color: '#087F5B', fontWeight: 600 }}>
                         -₹{selectedOrder.discount?.toFixed(2)}
                       </Typography>
                     </Box>
@@ -653,22 +646,21 @@ const MyOrdersPage = () => {
                     sx={{
                       display: 'flex',
                       justifyContent: 'space-between',
+                      alignItems: 'center',
                       p: 2,
                       borderRadius: 2,
-                      background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
+                      backgroundColor: 'rgba(8, 127, 91, 0.06)',
+                      border: '1px solid rgba(8, 127, 91, 0.15)',
                     }}
                   >
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: '#151515' }}>
                       Total Paid
                     </Typography>
                     <Typography
                       variant="h6"
                       sx={{
                         fontWeight: 800,
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
+                        color: '#087F5B',
                       }}
                     >
                       ₹{selectedOrder.total_payable_amount?.toFixed(2)}

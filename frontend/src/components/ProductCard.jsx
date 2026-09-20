@@ -20,6 +20,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import TimerIcon from '@mui/icons-material/Timer';
+import StarIcon from '@mui/icons-material/Star';
 import { useCartContext } from '../context/CartContext';
 
 // Fallback product image
@@ -36,7 +37,7 @@ const FALLBACK_PRODUCT_IMAGE =
  * @param {function} onAddClick - Optional callback when add button is clicked
  */
 const ProductCard = ({ product, vendorId, onAddClick }) => {
-  const { addToCart, getProductQuantity } = useCartContext();
+  const { addToCart, getProductQuantity, updateQuantity, removeFromCart } = useCartContext();
   const [quantity, setQuantity] = useState(1);
   const [openDialog, setOpenDialog] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', type: 'success' });
@@ -99,21 +100,21 @@ const ProductCard = ({ product, vendorId, onAddClick }) => {
   return (
     <Card
       sx={{
-        width: '20rem',
+        width: '100%',
         height: '100%',
-        minHeight: { xs: 160, sm: 170 },
+        minHeight: { xs: 150, sm: 160 },
         display: 'flex',
         flexDirection: 'row',
-        borderRadius: 2,
-        boxShadow: '0 1px 4px rgba(0, 0, 0, 0.08)',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        borderRadius: '16px',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         backgroundColor: '#fff',
         overflow: 'hidden',
-        border: '1px solid #f0f0f0',
+        border: '1px solid #E5E7EB',
         '&:hover': {
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
+          boxShadow: '0 8px 24px rgba(8, 127, 91, 0.12)',
           transform: 'translateY(-2px)',
-          borderColor: '#667eea',
+          borderColor: '#087F5B',
         },
       }}
     >
@@ -123,111 +124,138 @@ const ProductCard = ({ product, vendorId, onAddClick }) => {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          padding: '12px 14px',
-          gap: 0.5,
+          justifyContent: 'space-between',
+          padding: '14px 16px',
+          gap: 0.75,
           minWidth: 0,
         }}
       >
-        {/* Product Name */}
-        <Typography
-          variant="subtitle1"
-          sx={{
-            fontWeight: 700,
-            fontSize: '0.9rem',
-            lineHeight: 1.3,
-            color: '#1a1a1a',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            mb: 0.5,
-          }}
-        >
-          {product.name}
-        </Typography>
-
-        {/* Description (optional) */}
-        {product.description && (
+        <Box>
+          {/* Product Name */}
           <Typography
-            variant="caption"
+            variant="subtitle1"
             sx={{
-              color: '#888',
-              fontSize: '0.75rem',
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              lineHeight: 1.3,
+              color: '#151515',
               display: '-webkit-box',
-              WebkitLineClamp: 1,
+              WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
               mb: 0.5,
             }}
           >
-            {product.description}
+            {product.name}
           </Typography>
-        )}
 
-        {/* Price Section */}
-        <Box sx={{ display: 'flex', flexFlow: 'column', alignItems: 'center', gap: 1, mb: 0.5 }}>
-          {hasSpecialPrice ? (
-            <>
-              <Typography
-                variant="body2"
-                sx={{
-                  textDecoration: 'line-through',
-                  color: '#999',
-                  fontWeight: 500,
-                  fontSize: '0.8rem',
-                }}
-              >
-                ₹ {mainPrice.toFixed(2)}
+          {/* Description (optional) */}
+          {product.description && (
+            <Typography
+              variant="caption"
+              sx={{
+                color: '#6B7280',
+                fontSize: '0.78rem',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                mb: 0.5,
+              }}
+            >
+              {product.description}
+            </Typography>
+          )}
+
+          {/* Rating if available */}
+          {(product.rating || product.avgRating) && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mb: 0.5 }}>
+              <StarIcon sx={{ fontSize: '0.85rem', color: '#FF922B' }} />
+              <Typography variant="caption" sx={{ fontWeight: 700, color: '#151515', fontSize: '0.75rem' }}>
+                {product.rating || product.avgRating}
               </Typography>
+            </Box>
+          )}
+        </Box>
+
+        {/* Price & Prep Info Section */}
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.75 }}>
+            {hasSpecialPrice ? (
+              <>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 800,
+                    color: '#087F5B',
+                    fontSize: '1.05rem',
+                  }}
+                >
+                  ₹{specialPrice.toFixed(2)}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    textDecoration: 'line-through',
+                    color: '#9CA3AF',
+                    fontWeight: 500,
+                    fontSize: '0.8rem',
+                  }}
+                >
+                  ₹{mainPrice.toFixed(2)}
+                </Typography>
+                <Chip
+                  label={`${Math.round(((mainPrice - specialPrice) / mainPrice) * 100)}% OFF`}
+                  size="small"
+                  sx={{
+                    backgroundColor: 'rgba(255, 107, 0, 0.1)',
+                    color: '#FF6B00',
+                    fontWeight: 700,
+                    fontSize: '0.65rem',
+                    height: 18,
+                    '& .MuiChip-label': { px: 0.75 },
+                  }}
+                />
+              </>
+            ) : (
               <Typography
                 variant="h6"
                 sx={{
                   fontWeight: 800,
-                  color: '#FF6B6B',
-                  fontSize: '1rem',
+                  color: '#151515',
+                  fontSize: '1.05rem',
                 }}
               >
-                ₹ {specialPrice.toFixed(2)}
+                ₹{mainPrice.toFixed(2)}
               </Typography>
-            </>
-          ) : (
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 800,
-                color: '#667eea',
-                fontSize: '1rem',
-              }}
-            >
-              ₹ {mainPrice.toFixed(2)}
-            </Typography>
-          )}
-        </Box>
+            )}
+          </Box>
 
-        {/* Preparation Time & Cart Badge */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {product.preparation_time_min && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <TimerIcon sx={{ fontSize: '0.9rem', color: '#ff9800' }} />
-              <Typography variant="caption" sx={{ color: '#666', fontWeight: 500, fontSize: '0.7rem' }}>
-                {product.preparation_time_min} min
-              </Typography>
-            </Box>
-          )}
-          {cartQuantity > 0 && (
-            <Chip
-              label={`${cartQuantity} in cart`}
-              size="small"
-              sx={{
-                backgroundColor: '#4CAF50',
-                color: '#fff',
-                height: 20,
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                '& .MuiChip-label': { px: 1 },
-              }}
-            />
-          )}
+          {/* Preparation Time & Cart Badge */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {product.preparation_time_min && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <TimerIcon sx={{ fontSize: '0.9rem', color: '#FF6B00' }} />
+                <Typography variant="caption" sx={{ color: '#6B7280', fontWeight: 600, fontSize: '0.72rem' }}>
+                  {product.preparation_time_min} min
+                </Typography>
+              </Box>
+            )}
+            {cartQuantity > 0 && (
+              <Chip
+                label={`${cartQuantity} in cart`}
+                size="small"
+                sx={{
+                  backgroundColor: '#087F5B',
+                  color: '#fff',
+                  height: 20,
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  '& .MuiChip-label': { px: 1 },
+                }}
+              />
+            )}
+          </Box>
         </Box>
       </CardContent>
 
@@ -236,137 +264,246 @@ const ProductCard = ({ product, vendorId, onAddClick }) => {
         sx={{
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 1.5,
+          width: { xs: 110, sm: 125 },
           flexShrink: 0,
         }}
       >
-        {/* Image */}
+        {/* Image Container */}
         <Box
           sx={{
             position: 'relative',
-            width: 120,
-            height: 120,
+            width: '100%',
+            height: { xs: 80, sm: 88 },
+            borderRadius: '12px',
             overflow: 'hidden',
+            backgroundColor: '#FAFAF7',
+            mb: 1,
           }}
         >
-          { product.image && <CardMedia
-            component="img"
-            image={product.image}
-            alt={""}
-            loading="lazy"
-            sx={{
-              marginTop: '1rem',
-              borderRadius: '12%',
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              backgroundColor: '#f5f5f5',
-              transition: 'transform 0.3s ease-in-out',
-              '&:hover': {
-                transform: 'scale(1.1)',
-              },
-            }}
-          />}
-
-          {/* Special Price Badge - Top of Image */}
-          {/* {hasSpecialPrice && (
+          {product.image ? (
+            <CardMedia
+              component="img"
+              image={product.image}
+              alt={product.name || 'Product'}
+              loading="lazy"
+              sx={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                transition: 'transform 0.3s ease-in-out',
+                '&:hover': {
+                  transform: 'scale(1.08)',
+                },
+              }}
+            />
+          ) : (
             <Box
               sx={{
-                position: 'absolute',
-                top: 6,
-                left: 6,
-                right: 6,
-                backgroundColor: '#FF6B6B',
-                color: '#fff',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                textAlign: 'center',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#9CA3AF',
+                fontSize: '0.75rem',
+                fontWeight: 600,
               }}
             >
-              Sale
+              AapnuBazaar
             </Box>
-          )} */}
+          )}
         </Box>
 
-        {/* Add Button - Below Image */}
-        <Button
-          variant="contained"
-          size="small"
-          fullWidth
-          startIcon={<AddIcon sx={{ fontSize: '0.85rem' }} />}
-          onClick={handleAddClick}
-          sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: '#fff',
-            fontWeight: 700,
-            textTransform: 'none',
-            borderRadius: '5%',
-            padding: '6px 8px',
-            fontSize: '0.7rem',
-            boxShadow: 'none',
-            minHeight: 'auto',
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #5568d3 0%, #6a3d8f 100%)',
-            },
-          }}
-        >
-          Add
-        </Button>
+        {/* Add Button or Stepper Controls */}
+        {cartQuantity > 0 ? (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              backgroundColor: '#087F5B',
+              borderRadius: '10px',
+              color: '#fff',
+              px: 0.6,
+              py: 0.3,
+              minHeight: 38,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (cartQuantity === 1) {
+                  removeFromCart(vendorId, product._id);
+                } else {
+                  updateQuantity(vendorId, product._id, cartQuantity - 1);
+                }
+              }}
+              sx={{ color: '#fff', p: 0.6, width: 32, height: 32 }}
+            >
+              <RemoveIcon sx={{ fontSize: '0.95rem' }} />
+            </IconButton>
+            <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', px: 0.5 }}>
+              {cartQuantity}
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                updateQuantity(vendorId, product._id, cartQuantity + 1);
+              }}
+              sx={{ color: '#fff', p: 0.6, width: 32, height: 32 }}
+            >
+              <AddIcon sx={{ fontSize: '0.95rem' }} />
+            </IconButton>
+          </Box>
+        ) : (
+          <Button
+            variant="contained"
+            size="small"
+            fullWidth
+            startIcon={<AddIcon sx={{ fontSize: '0.95rem' }} />}
+            onClick={(e) => {
+              e.stopPropagation();
+              addToCart(vendorId, product, 1);
+              setSnackbar({
+                open: true,
+                message: `${product.name} added to cart!`,
+                type: 'success',
+              });
+            }}
+            sx={{
+              backgroundColor: '#087F5B',
+              color: '#fff',
+              fontWeight: 800,
+              textTransform: 'none',
+              borderRadius: '10px',
+              py: 0.8,
+              minHeight: 38,
+              fontSize: '0.82rem',
+              boxShadow: 'none',
+              '&:hover': {
+                backgroundColor: '#075B43',
+                boxShadow: '0 4px 12px rgba(8, 127, 91, 0.25)',
+              },
+            }}
+          >
+            ADD
+          </Button>
+        )}
       </Box>
 
       {/* Add to Cart Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem' }}>
+      <Dialog 
+        open={openDialog} 
+        onClose={() => setOpenDialog(false)} 
+        maxWidth="xs" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            p: 1,
+            border: '1px solid #E5E7EB',
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.2rem', color: '#151515' }}>
           {product.name}
         </DialogTitle>
-        <DialogContent sx={{ pt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Box>
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-              Price: <strong>₹ {displayPrice.toFixed(2)}</strong>
+        <DialogContent sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ p: 1.5, backgroundColor: '#FAFAF7', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
+            <Typography variant="body2" sx={{ color: '#6B7280', mb: 0.5 }}>
+              Price per item: <strong style={{ color: '#151515', fontSize: '1.05rem' }}>₹{displayPrice.toFixed(2)}</strong>
             </Typography>
             {hasSpecialPrice && (
-              <Typography variant="caption" sx={{ color: '#FF6B6B' }}>
-                Save ₹ {(mainPrice - specialPrice).toFixed(2)}
+              <Typography variant="caption" sx={{ color: '#087F5B', fontWeight: 700, display: 'block' }}>
+                🎉 You save ₹{(mainPrice - specialPrice).toFixed(2)} per item!
               </Typography>
             )}
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2">Quantity:</Typography>
-            <IconButton size="small" onClick={decrementQuantity} disabled={quantity === 1}>
-              <RemoveIcon />
-            </IconButton>
-            <TextField
-              type="number"
-              size="small"
-              value={quantity}
-              onChange={handleQuantityChange}
-              inputProps={{ min: 1, max: 100, style: { textAlign: 'center', width: '50px' } }}
-            />
-            <IconButton size="small" onClick={incrementQuantity}>
-              <AddIcon />
-            </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1 }}>
+            <Typography variant="body1" sx={{ fontWeight: 600, color: '#151515' }}>
+              Select Quantity:
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <IconButton 
+                size="small" 
+                onClick={decrementQuantity} 
+                disabled={quantity === 1}
+                sx={{
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '8px',
+                  p: 0.75,
+                  '&:hover': { backgroundColor: '#FAFAF7' },
+                }}
+              >
+                <RemoveIcon fontSize="small" />
+              </IconButton>
+              <TextField
+                type="number"
+                size="small"
+                value={quantity}
+                onChange={handleQuantityChange}
+                inputProps={{ min: 1, max: 100, style: { textAlign: 'center', width: '45px', fontWeight: 700 } }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px',
+                  }
+                }}
+              />
+              <IconButton 
+                size="small" 
+                onClick={incrementQuantity}
+                sx={{
+                  border: '1px solid #087F5B',
+                  backgroundColor: 'rgba(8, 127, 91, 0.08)',
+                  color: '#087F5B',
+                  borderRadius: '8px',
+                  p: 0.75,
+                  '&:hover': { backgroundColor: 'rgba(8, 127, 91, 0.15)' },
+                }}
+              >
+                <AddIcon fontSize="small" />
+              </IconButton>
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, gap: 1 }}>
-          <Button onClick={() => setOpenDialog(false)} variant="outlined">
+          <Button 
+            onClick={() => setOpenDialog(false)} 
+            variant="outlined"
+            sx={{
+              borderRadius: '10px',
+              textTransform: 'none',
+              fontWeight: 600,
+              borderColor: '#E5E7EB',
+              color: '#6B7280',
+              '&:hover': { borderColor: '#9CA3AF', backgroundColor: '#FAFAF7' }
+            }}
+          >
             Cancel
           </Button>
           <Button
             onClick={handleAddToCart}
             variant="contained"
             sx={{
-              backgroundColor: '#667eea',
+              backgroundColor: '#087F5B',
+              borderRadius: '10px',
+              textTransform: 'none',
+              fontWeight: 700,
+              px: 3,
               '&:hover': {
-                backgroundColor: '#5568d3',
+                backgroundColor: '#075B43',
               },
             }}
           >
-            Add to Cart
+            Add to Cart • ₹{(displayPrice * quantity).toFixed(2)}
           </Button>
         </DialogActions>
       </Dialog>

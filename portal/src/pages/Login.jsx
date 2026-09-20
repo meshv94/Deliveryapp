@@ -90,92 +90,92 @@ const Login = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        backgroundColor: '#EDF4FA',
         position: 'relative',
         overflow: 'hidden',
+        p: 2,
         '&::before': {
           content: '""',
           position: 'absolute',
-          width: '200%',
-          height: '200%',
-          background: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
-          backgroundSize: '50px 50px',
-          animation: 'moveBackground 20s linear infinite',
-        },
-        '@keyframes moveBackground': {
-          '0%': {
-            transform: 'translate(0, 0)',
-          },
-          '100%': {
-            transform: 'translate(50px, 50px)',
-          },
+          top: '20%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 600,
+          height: 600,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(0, 136, 255, 0.08) 0%, rgba(237, 244, 250, 0) 70%)',
+          pointerEvents: 'none',
         },
       }}
     >
-      <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
+      <Container maxWidth="xs" sx={{ position: 'relative', zIndex: 1 }}>
         <Paper
-          elevation={24}
+          elevation={0}
           sx={{
-            p: { xs: 3, sm: 5 },
-            borderRadius: 4,
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            p: { xs: 3.5, sm: 4.5 },
+            borderRadius: '24px',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.04)',
           }}
         >
-          {/* Logo/Icon */}
+          {/* GoodWell 4-dot Icon */}
           <Box
             sx={{
               display: 'flex',
-              justifyContent: 'center',
+              flexDirection: 'column',
+              alignItems: 'center',
               mb: 3,
             }}
           >
             <Box
               sx={{
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
+                width: 54,
+                height: 54,
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, #00A3FF 0%, #0077E6 100%)',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '4px',
+                p: '13px',
+                boxShadow: '0 8px 24px rgba(0, 136, 255, 0.3)',
+                mb: 2,
               }}
             >
-              <AdminPanelSettings sx={{ fontSize: 40, color: '#fff' }} />
+              <Box sx={{ bgcolor: '#fff', borderRadius: '3px' }} />
+              <Box sx={{ bgcolor: '#fff', borderRadius: '3px' }} />
+              <Box sx={{ bgcolor: '#fff', borderRadius: '3px' }} />
+              <Box sx={{ bgcolor: '#fff', borderRadius: '3px' }} />
             </Box>
-          </Box>
 
-          {/* Title */}
-          <Typography
-            variant="h4"
-            align="center"
-            sx={{
-              fontWeight: 800,
-              mb: 1,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            Admin Portal
-          </Typography>
-          <Typography
-            variant="body2"
-            align="center"
-            color="text.secondary"
-            sx={{ mb: 4 }}
-          >
-            Sign in to manage your delivery platform
-          </Typography>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 800,
+                color: '#0F172A',
+                letterSpacing: '-0.02em',
+                mb: 0.5,
+              }}
+            >
+              GoodWell
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: '#64748B',
+                fontWeight: 500,
+                textAlign: 'center',
+              }}
+            >
+              Sign in to manage AapnuBazaar portal
+            </Typography>
+          </Box>
 
           {/* Error Alert */}
           {error && (
             <Alert
               severity="error"
-              sx={{ mb: 3, borderRadius: 2 }}
+              sx={{ mb: 3, borderRadius: '14px' }}
               onClose={() => setError(null)}
             >
               {error}
@@ -184,7 +184,7 @@ const Login = () => {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit}>
-            <Stack spacing={3}>
+            <Stack spacing={2.5}>
               {/* Email Field */}
               <TextField
                 fullWidth
@@ -198,13 +198,17 @@ const Login = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Email color="action" />
+                      <Email sx={{ color: '#94A3B8', fontSize: 20 }} />
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: '14px',
+                    backgroundColor: '#F8FAFC',
+                    '& fieldset': { borderColor: '#E2E8F0' },
+                    '&:hover fieldset': { borderColor: '#CBD5E1' },
+                    '&.Mui-focused fieldset': { borderColor: '#0088FF' },
                   },
                 }}
               />
@@ -222,7 +226,7 @@ const Login = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Lock color="action" />
+                      <Lock sx={{ color: '#94A3B8', fontSize: 20 }} />
                     </InputAdornment>
                   ),
                   endAdornment: (
@@ -231,15 +235,21 @@ const Login = () => {
                         onClick={handleTogglePassword}
                         edge="end"
                         disabled={loading}
+                        size="small"
+                        sx={{ color: '#94A3B8' }}
                       >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                        {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                       </IconButton>
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: '14px',
+                    backgroundColor: '#F8FAFC',
+                    '& fieldset': { borderColor: '#E2E8F0' },
+                    '&:hover fieldset': { borderColor: '#CBD5E1' },
+                    '&.Mui-focused fieldset': { borderColor: '#0088FF' },
                   },
                 }}
               />
@@ -252,24 +262,26 @@ const Login = () => {
                 size="large"
                 disabled={loading}
                 sx={{
-                  py: 1.5,
-                  borderRadius: 2,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  boxShadow: '0 4px 16px rgba(102, 126, 234, 0.4)',
+                  py: 1.4,
+                  borderRadius: '50px',
+                  backgroundColor: '#0088FF',
+                  boxShadow: '0 8px 24px rgba(0, 136, 255, 0.3)',
                   textTransform: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 600,
+                  fontSize: '0.98rem',
+                  fontWeight: 700,
+                  mt: 1,
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
-                    boxShadow: '0 6px 20px rgba(102, 126, 234, 0.5)',
+                    backgroundColor: '#0077E6',
+                    boxShadow: '0 10px 28px rgba(0, 136, 255, 0.4)',
                   },
                   '&:disabled': {
-                    background: '#ccc',
+                    background: '#CBD5E1',
+                    color: '#94A3B8',
                   },
                 }}
               >
                 {loading ? (
-                  <CircularProgress size={24} color="inherit" />
+                  <CircularProgress size={22} color="inherit" />
                 ) : (
                   'Sign In'
                 )}
@@ -279,8 +291,8 @@ const Login = () => {
 
           {/* Footer */}
           <Box sx={{ mt: 4, textAlign: 'center' }}>
-            <Typography variant="caption" color="text.secondary">
-              © 2025 DeliveryApp. All rights reserved.
+            <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 500 }}>
+              © 2026 AapnuBazaar • GoodWell System
             </Typography>
           </Box>
         </Paper>

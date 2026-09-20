@@ -50,11 +50,11 @@ const FloatingParticles = () => {
       <Points ref={particlesRef} stride={3} frustumCulled={false}>
         <PointMaterial
           transparent
-          color="#667eea" // Primary color from theme
+          color="#087F5B" // Primary color from AapnuBazaar theme
           size={0.08}
           sizeAttenuation
           depthWrite={false}
-          opacity={0.3} // Low opacity for ambient feel
+          opacity={0.25} // Low opacity for ambient feel
         />
       </Points>
     </group>
@@ -82,13 +82,13 @@ const AnimatedGradientMesh = () => {
     <mesh ref={meshRef} scale={[1, 1, 1]} position={[0, 0, 0]}>
       <icosahedronGeometry args={[20, 4]} />
       <meshPhongMaterial
-        color="#764ba2"
+        color="#075B43"
         wireframe={false}
         wireframeLinewidth={1}
-        opacity={0.05}
+        opacity={0.04}
         transparent
-        emissive="#667eea"
-        emissiveIntensity={0.1}
+        emissive="#087F5B"
+        emissiveIntensity={0.08}
       />
     </mesh>
   );

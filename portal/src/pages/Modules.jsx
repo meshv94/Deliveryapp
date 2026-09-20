@@ -202,12 +202,12 @@ const Modules = () => {
     <Box sx={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
       {/* Success/Error Messages */}
       {success && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
+        <Alert severity="success" sx={{ mb: 3, borderRadius: '16px' }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
       )}
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: '16px' }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
@@ -218,17 +218,17 @@ const Modules = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          mb: 4,
+          mb: 3.5,
           flexWrap: 'wrap',
           gap: 2,
         }}
       >
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, fontSize: { xs: '1.5rem', md: '2.125rem' } }}>
+          <Typography variant="h4" sx={{ fontWeight: 800, fontSize: { xs: '1.5rem', md: '2rem' }, color: '#0F172A' }}>
             Modules Management
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Manage application modules and their status
+          <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5, fontWeight: 500 }}>
+            Manage marketplace business verticals and categories
           </Typography>
         </Box>
         <Button
@@ -236,88 +236,156 @@ const Modules = () => {
           startIcon={<AddIcon />}
           onClick={() => handleOpenDialog()}
           sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: '#0088FF',
+            color: '#fff',
             textTransform: 'none',
-            fontWeight: 600,
+            fontWeight: 700,
+            borderRadius: '12px',
+            px: 2.5,
+            py: 1.1,
+            boxShadow: '0 4px 14px rgba(0, 136, 255, 0.25)',
+            '&:hover': {
+              background: '#0077E6',
+            },
           }}
         >
           Add Module
         </Button>
       </Box>
 
-      {/* Modules Table */}
-      <TableContainer component={Paper} sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)', width: '100%', overflowX: 'auto' }}>
-        <Table sx={{ minWidth: { xs: 300, sm: 650 } }}>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f7fa' }}>
-              <TableCell sx={{ fontWeight: 700 }}>Image</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Module Name</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 700, display: { xs: 'none', sm: 'table-cell' } }}>Created At</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Active</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {modules.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                  <Typography color="text.secondary">No modules found</Typography>
-                </TableCell>
+      {/* Modules Table Bento Card */}
+      <Paper
+        sx={{
+          borderRadius: '24px',
+          border: '1px solid #F1F5F9',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.03)',
+          backgroundColor: '#FFFFFF',
+          overflow: 'hidden',
+          width: '100%',
+        }}
+      >
+        <TableContainer>
+          <Table sx={{ minWidth: { xs: 300, sm: 650 } }}>
+            <TableHead>
+              <TableRow sx={{ '& th': { borderBottom: '1px solid #F1F5F9', color: '#64748B', fontWeight: 700, fontSize: '0.82rem', py: 2, px: 2.5, backgroundColor: '#FFFFFF' } }}>
+                <TableCell>Icon / Image</TableCell>
+                <TableCell>Module Name</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Created At</TableCell>
+                <TableCell>Active</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
-            ) : (
-              modules.map((module) => (
-                <TableRow key={module._id} hover>
-                  <TableCell>
-                    <Avatar
-                      src={module.image || ''}
-                      alt={module.name}
-                      sx={{
-                        width: 50,
-                        height: 50,
-                        borderRadius: 2,
-                        bgcolor: '#667eea',
-                      }}
-                      variant="rounded"
-                    >
-                      {!module.image && module.name.charAt(0).toUpperCase()}
-                    </Avatar>
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{module.name}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={module.active ? 'Active' : 'Inactive'}
-                      size="small"
-                      color={module.active ? 'success' : 'default'}
-                      sx={{ fontWeight: 600 }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                    {new Date(module.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={module.active}
-                      onChange={() => handleToggleActive(module)}
-                      color="primary"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      <IconButton size="small" color="info" onClick={() => handleOpenDialog(module)} title="Edit Module">
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton size="small" color="error" onClick={() => handleDeleteClick(module)} title="Delete Module">
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
+            </TableHead>
+            <TableBody>
+              {modules.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                    <Typography sx={{ color: '#64748B', fontWeight: 500 }}>No modules found</Typography>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                modules.map((module) => (
+                  <TableRow key={module._id} hover sx={{ '& td': { borderBottom: '1px solid #F8FAFC', py: 2, px: 2.5 } }}>
+                    <TableCell>
+                      <Avatar
+                        src={module.image || ''}
+                        alt={module.name}
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: '14px',
+                          bgcolor: '#EBF5FF',
+                          color: '#0088FF',
+                          fontWeight: 800,
+                          fontSize: '1.1rem',
+                        }}
+                      >
+                        {!module.image && module.name.charAt(0).toUpperCase()}
+                      </Avatar>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: '#0F172A', fontSize: '0.95rem' }}>
+                      {module.name}
+                    </TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.75,
+                          px: 1.5,
+                          py: 0.5,
+                          borderRadius: '50px',
+                          backgroundColor: module.active ? '#DCFCE7' : '#F1F5F9',
+                          color: module.active ? '#15803D' : '#64748B',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            backgroundColor: module.active ? '#22C55E' : '#94A3B8',
+                          }}
+                        />
+                        {module.active ? 'Active' : 'Inactive'}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, color: '#64748B', fontSize: '0.85rem' }}>
+                      {new Date(module.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={module.active}
+                        onChange={() => handleToggleActive(module)}
+                        sx={{
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: '#0088FF',
+                          },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            backgroundColor: '#0088FF',
+                          },
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenDialog(module)}
+                          title="Edit Module"
+                          sx={{
+                            color: '#0088FF',
+                            backgroundColor: '#EBF5FF',
+                            borderRadius: '10px',
+                            '&:hover': { backgroundColor: '#D6EBFF' },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteClick(module)}
+                          title="Delete Module"
+                          sx={{
+                            color: '#EF4444',
+                            backgroundColor: '#FEE2E2',
+                            borderRadius: '10px',
+                            '&:hover': { backgroundColor: '#FECACA' },
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
 
       {/* Add/Edit Dialog */}
       <Dialog
@@ -426,7 +494,14 @@ const Modules = () => {
             onClick={handleSubmit}
             disabled={submitting || !formData.name.trim()}
             sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: '#0088FF',
+              color: '#fff',
+              fontWeight: 700,
+              borderRadius: '12px',
+              px: 2.5,
+              '&:hover': {
+                background: '#0077E6',
+              },
             }}
           >
             {submitting ? <CircularProgress size={24} color="inherit" /> : selectedModule ? 'Update' : 'Create'}
