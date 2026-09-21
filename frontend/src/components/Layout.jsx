@@ -1,40 +1,195 @@
-import React, { useState, useEffect } from 'react';
-import { Box, AppBar, Toolbar, Typography, Container, IconButton, Badge, Stack, Drawer, List, ListItem, ListItemIcon, ListItemText, ListItemButton, Divider, Fade, Zoom } from '@mui/material';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import SettingsIcon from '@mui/icons-material/Settings';
-import PersonIcon from '@mui/icons-material/Person';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
-import LogoutIcon from '@mui/icons-material/Logout';
+import React, { useState, useEffect, useCallback } from 'react';
+import apiClient from '../api/apiClient';
+import {
+  Box,
+  AppBar,
+  Toolbar,
+  Typography,
+  Container,
+  IconButton,
+  Badge,
+  Stack,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  ListItemButton,
+  Divider,
+  Button,
+  Avatar,
+  Grid,
+  Paper,
+  Menu,
+  MenuItem,
+} from '@mui/material';
+import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
+import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import CloseIcon from '@mui/icons-material/Close';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { useNavigate } from 'react-router-dom';
+import MenuIcon from '@mui/icons-material/Menu';
+import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
+import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlined';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import HomeIcon from '@mui/icons-material/Home';
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import PersonIcon from '@mui/icons-material/Person';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useCartContext } from '../context/CartContext';
+import CompleteProfileModal from './CompleteProfileModal';
 
 const Layout = ({ children }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { getCartTotals } = useCartContext();
   const { totalItems } = getCartTotals();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [showScrollTop, setShowScrollTop] = useState(false);
 
-  // Handle scroll effect for header
+  // Read logged in user if available
+  const userData = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('userData') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+
+  const token = localStorage.getItem('authToken');
+
+  // Mandatory Profile Completion Modal State
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileModalData, setProfileModalData] = useState({ mobile: '', name: '', email: '' });
+
+  const checkUserProfile = useCallback(async () => {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      setShowProfileModal(false);
+      return;
+    }
+
+    try {
+      const res = await apiClient.get('/app/profile');
+      if (res?.success && res?.data) {
+        const p = res.data;
+        const isNameEmpty = !p.name || p.name.trim() === '' || p.name.trim().toLowerCase() === 'customer';
+        const isEmailEmpty = !p.email || p.email.trim() === '';
+
+        if (isNameEmpty || isEmailEmpty) {
+          setProfileModalData({
+            mobile: p.mobile_number || '',
+            name: p.name && p.name.toLowerCase() !== 'customer' ? p.name : '',
+            email: p.email || '',
+          });
+          setShowProfileModal(true);
+        } else {
+          setShowProfileModal(false);
+        }
+      }
+    } catch (err) {
+      // If unauthorized or network error, don't crash
+      console.warn('Profile check error in Layout:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkUserProfile();
+
+    const handleProfileUpdate = () => {
+      checkUserProfile();
+    };
+
+    window.addEventListener('profile_updated', handleProfileUpdate);
+    window.addEventListener('storage', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('profile_updated', handleProfileUpdate);
+      window.removeEventListener('storage', handleProfileUpdate);
+    };
+  }, [checkUserProfile, location.pathname]);
+
+  // Dynamic Delivery Location / Address
+  const [deliveryLocation, setDeliveryLocation] = useState('Current Location');
+
+  const resolveDeliveryLocation = useCallback(async () => {
+    try {
+      // 1. Check activeDeliveryAddress in localStorage
+      const activeAddrStr = localStorage.getItem('activeDeliveryAddress');
+      if (activeAddrStr) {
+        const parsed = JSON.parse(activeAddrStr);
+        const label = parsed.city || parsed.displayLabel || parsed.address_line_1 || parsed.address;
+        if (label) {
+          setDeliveryLocation(label);
+          return;
+        }
+      }
+
+      // 2. Check userCity or userAddress in localStorage
+      const savedCity = localStorage.getItem('userCity') || localStorage.getItem('userAddress');
+      if (savedCity) {
+        setDeliveryLocation(savedCity);
+        return;
+      }
+
+      // 3. If logged in, fetch saved addresses from backend
+      const authToken = localStorage.getItem('authToken');
+      if (authToken) {
+        try {
+          const res = await apiClient.get('/app/addresses');
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            const defaultAddr = res.data.find((a) => a.isDefault) || res.data[0];
+            const label = defaultAddr.city || defaultAddr.address || 'Saved Address';
+            setDeliveryLocation(label);
+            localStorage.setItem('activeDeliveryAddress', JSON.stringify(defaultAddr));
+            return;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      // 4. Check if coordinates exist
+      const savedCoords = localStorage.getItem('userCoordinates');
+      if (savedCoords) {
+        setDeliveryLocation('Current Location');
+        return;
+      }
+
+      setDeliveryLocation('Select Location');
+    } catch {
+      setDeliveryLocation('Select Location');
+    }
+  }, []);
+
+  useEffect(() => {
+    resolveDeliveryLocation();
+
+    const handleAddressChange = () => {
+      resolveDeliveryLocation();
+    };
+
+    window.addEventListener('address_updated', handleAddressChange);
+    window.addEventListener('storage', handleAddressChange);
+    return () => {
+      window.removeEventListener('address_updated', handleAddressChange);
+      window.removeEventListener('storage', handleAddressChange);
+    };
+  }, [resolveDeliveryLocation]);
+
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-      setShowScrollTop(window.scrollY > 400);
+      setScrolled(window.scrollY > 15);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  // Scroll to top function
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
 
   const toggleDrawer = (open) => (event) => {
     if (event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) {
@@ -44,572 +199,810 @@ const Layout = ({ children }) => {
   };
 
   const handleLogout = () => {
-    // Clear authentication data
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
-
-    // Clear cart data
     localStorage.removeItem('deliveryCart');
-
-    // Close drawer and redirect to login
     setDrawerOpen(false);
     navigate('/login');
   };
 
+  const navLinks = [
+    { label: 'Home', path: '/', icon: <HomeOutlinedIcon fontSize="small" /> },
+    { label: 'Shops', path: '/vendors', icon: <StorefrontOutlinedIcon fontSize="small" /> },
+    { label: 'Categories', path: '/modules', icon: <AppsOutlinedIcon fontSize="small" /> },
+    { label: 'Offers', path: '/#offers', isAnchor: true, icon: <LocalOfferOutlinedIcon fontSize="small" /> },
+  ];
+
+  const handleNavClick = (link) => {
+    if (link.isAnchor) {
+      if (location.pathname === '/') {
+        const el = document.getElementById('offers');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+          return;
+        }
+      }
+      navigate('/#offers');
+      return;
+    }
+    navigate(link.path);
+  };
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#fafbfc' }}>
-      {/* Header/AppBar */}
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#FAFAF7' }}>
+      {/* Top Banner Notice (Optional subtle local notice) */}
+      <Box
+        sx={{
+          backgroundColor: '#075B43',
+          color: '#FFFFFF',
+          py: 0.6,
+          px: 2,
+          textAlign: 'center',
+          fontSize: '12px',
+          fontWeight: 600,
+          letterSpacing: '0.02em',
+          display: { xs: 'none', sm: 'block' },
+        }}
+      >
+        <span>🌱 AapnuBazaar: 100% Fresh Local Groceries, Food & Essentials Delivered in Minutes</span>
+      </Box>
+
+      {/* Main Navbar */}
       <AppBar
         position="sticky"
         elevation={0}
         sx={{
-          background: scrolled
-            ? 'rgba(102, 126, 234, 0.95)'
-            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
-          boxShadow: scrolled
-            ? '0 8px 32px rgba(102, 126, 234, 0.25)'
-            : '0 4px 24px rgba(102, 126, 234, 0.15)',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          backgroundColor: '#FFFFFF',
+          borderBottom: '1px solid #E5E7EB',
+          boxShadow: scrolled ? '0 4px 20px rgba(0, 0, 0, 0.04)' : 'none',
+          transition: 'box-shadow 0.2s ease',
+          zIndex: 1100,
         }}
       >
         <Container maxWidth="lg">
           <Toolbar
             sx={{
-              px: { xs: 0, sm: 2 },
-              py: { xs: 1, sm: 1.5 },
-              minHeight: { xs: 64, sm: 70 },
+              px: { xs: 0.5, sm: 1 },
+              py: { xs: 0.5, sm: 1 },
+              minHeight: { xs: 58, sm: 66 },
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
             }}
           >
-            {/* Logo Section */}
+            {/* ── MOBILE HEADER (Menu | Logo | Cart | Profile) ── */}
             <Box
-              onClick={() => navigate('/')}
               sx={{
-                display: 'flex',
+                display: { xs: 'flex', md: 'none' },
                 alignItems: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  transform: 'scale(1.05)',
-                },
+                justifyContent: 'space-between',
+                width: '100%',
               }}
             >
+              {/* Left: Menu & Brand Logo */}
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <IconButton
+                  onClick={toggleDrawer(true)}
+                  aria-label="Open navigation menu"
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    color: '#151515',
+                    mr: 0.5,
+                  }}
+                >
+                  <MenuIcon />
+                </IconButton>
+
+                <Box
+                  onClick={() => navigate('/')}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: '8px',
+                      backgroundColor: '#EBFBEE',
+                      p: 0.4,
+                      mr: 0.8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <img
+                      src="/aapnubazaar-logo.png"
+                      alt="AapnuBazaar"
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                  </Box>
+                  <Typography
+                    component="div"
+                    sx={{
+                      fontWeight: 800,
+                      fontSize: '1.15rem',
+                      letterSpacing: '-0.02em',
+                      lineHeight: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span style={{ color: '#087F5B' }}>Aapnu</span>
+                    <span style={{ color: '#FF6B00' }}>Bazaar</span>
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Right: Cart & Profile */}
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                {/* Mobile Cart */}
+                <IconButton
+                  onClick={() => navigate('/cart')}
+                  aria-label="View Cart"
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    color: '#087F5B',
+                  }}
+                >
+                  <Badge
+                    badgeContent={totalItems}
+                    sx={{
+                      '& .MuiBadge-badge': {
+                        backgroundColor: '#FF6B00',
+                        color: '#FFFFFF',
+                        fontWeight: 700,
+                        fontSize: '10px',
+                        height: 18,
+                        minWidth: 18,
+                      },
+                    }}
+                  >
+                    <ShoppingBagOutlinedIcon sx={{ fontSize: 22 }} />
+                  </Badge>
+                </IconButton>
+
+                {/* Mobile Profile */}
+                <IconButton
+                  onClick={() => {
+                    if (token) navigate('/profile');
+                    else navigate('/login');
+                  }}
+                  aria-label="Profile"
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    color: '#151515',
+                  }}
+                >
+                  <PersonOutlineOutlinedIcon sx={{ fontSize: 22 }} />
+                </IconButton>
+              </Stack>
+            </Box>
+
+            {/* ── DESKTOP HEADER (Logo | Nav Links | Actions) ── */}
+            <Box
+              sx={{
+                display: { xs: 'none', md: 'flex' },
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+              }}
+            >
+              {/* Brand Logo Section */}
               <Box
+                onClick={() => navigate('/')}
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  width: { xs: 40, sm: 44 },
-                  height: { xs: 40, sm: 44 },
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  mr: 1.5,
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+                  cursor: 'pointer',
+                  userSelect: 'none',
                 }}
               >
-                <LocalShippingIcon
+                <Box
                   sx={{
-                    fontSize: { xs: '1.5rem', sm: '1.7rem' },
-                    color: '#fff',
+                    width: 40,
+                    height: 40,
+                    borderRadius: '10px',
+                    backgroundColor: '#EBFBEE',
+                    p: 0.5,
+                    mr: 1.2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
-                />
-              </Box>
-              <Typography
-                variant="h6"
-                component="div"
-                sx={{
-                  fontWeight: 800,
-                  fontSize: { xs: '1.1rem', sm: '1.3rem' },
-                  letterSpacing: '-0.02em',
-                  textShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                }}
-              >
-                DeliveryApp
-              </Typography>
-            </Box>
-
-            <Box sx={{ flexGrow: 1 }} />
-
-            {/* Action Buttons */}
-            <Stack direction="row" spacing={1.5}>
-              {/* Cart Button with Badge */}
-              <IconButton
-                color="inherit"
-                onClick={() => navigate('/cart')}
-                sx={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  width: { xs: 44, sm: 48 },
-                  height: { xs: 44, sm: 48 },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                    transform: 'scale(1.08)',
-                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-                  },
-                }}
-              >
-                <Badge
-                  badgeContent={totalItems}
-                  color="error"
-                  overlap="circular"
-                  sx={{
-                    '& .MuiBadge-badge': {
+                >
+                  <img
+                    src="/aapnubazaar-logo.png"
+                    alt="AapnuBazaar"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography
+                    component="div"
+                    sx={{
+                      fontWeight: 800,
+                      fontSize: '1.35rem',
+                      letterSpacing: '-0.02em',
+                      lineHeight: 1.05,
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span style={{ color: '#087F5B' }}>Aapnu</span>
+                    <span style={{ color: '#FF6B00' }}>Bazaar</span>
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: '8.5px',
                       fontWeight: 700,
-                      fontSize: '0.7rem',
-                      minWidth: '20px',
-                      height: '20px',
-                      padding: '0 4px',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                      letterSpacing: '0.08em',
+                      color: '#6B7280',
+                      textTransform: 'uppercase',
+                      mt: 0.2,
+                    }}
+                  >
+                    Our Local Marketplace
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Desktop Navigation Links */}
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                {navLinks.map((link) => {
+                  const isActive = location.pathname === link.path;
+                  return (
+                    <Button
+                      key={link.label}
+                      onClick={() => handleNavClick(link)}
+                      startIcon={link.icon}
+                      sx={{
+                        color: isActive ? '#087F5B' : '#151515',
+                        backgroundColor: isActive ? '#EBFBEE' : 'transparent',
+                        fontWeight: isActive ? 700 : 500,
+                        fontSize: '14px',
+                        px: 1.8,
+                        py: 0.8,
+                        borderRadius: '8px',
+                        '&:hover': {
+                          backgroundColor: isActive ? '#EBFBEE' : '#F3F4F6',
+                          color: '#087F5B',
+                        },
+                      }}
+                    >
+                      {link.label}
+                    </Button>
+                  );
+                })}
+              </Stack>
+
+              {/* Right Action Icons & Auth */}
+              <Stack direction="row" spacing={1.2} alignItems="center">
+                {/* Location Selector */}
+                <Button
+                  onClick={() => {
+                    if (token) navigate('/address');
+                    else navigate('/vendors');
+                  }}
+                  startIcon={<LocationOnOutlinedIcon sx={{ color: '#087F5B', fontSize: '18px' }} />}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    px: 1.5,
+                    py: 0.6,
+                    borderRadius: '8px',
+                    backgroundColor: '#FAFAF7',
+                    border: '1px solid #E5E7EB',
+                    color: '#151515',
+                    textTransform: 'none',
+                    '&:hover': {
+                      backgroundColor: '#EBFBEE',
+                      borderColor: '#087F5B',
                     },
                   }}
                 >
-                  <ShoppingCartIcon sx={{ fontSize: { xs: '1.3rem', sm: '1.4rem' } }} />
-                </Badge>
-              </IconButton>
+                  <Box sx={{ textAlign: 'left', lineHeight: 1.15 }}>
+                    <Typography sx={{ fontSize: '10px', fontWeight: 600, color: '#6B7280' }}>
+                      Deliver to
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: '#151515',
+                        maxWidth: 130,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {deliveryLocation}
+                    </Typography>
+                  </Box>
+                </Button>
 
-              {/* Settings Button */}
-              <IconButton
-                color="inherit"
-                onClick={toggleDrawer(true)}
-                sx={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  width: { xs: 44, sm: 48 },
-                  height: { xs: 44, sm: 48 },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                    transform: 'scale(1.08)',
-                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-                  },
-                }}
-              >
-                <SettingsIcon sx={{ fontSize: { xs: '1.3rem', sm: '1.4rem' } }} />
-              </IconButton>
-            </Stack>
+                {/* Cart Button with Counter */}
+                <Button
+                  variant="contained"
+                  onClick={() => navigate('/cart')}
+                  startIcon={
+                    <Badge
+                      badgeContent={totalItems}
+                      sx={{
+                        '& .MuiBadge-badge': {
+                          backgroundColor: '#FF6B00',
+                          color: '#FFFFFF',
+                          fontWeight: 700,
+                          fontSize: '11px',
+                          height: 18,
+                          minWidth: 18,
+                        },
+                      }}
+                    >
+                      <ShoppingBagOutlinedIcon sx={{ fontSize: '20px' }} />
+                    </Badge>
+                  }
+                  sx={{
+                    backgroundColor: '#087F5B',
+                    color: '#FFFFFF',
+                    borderRadius: '8px',
+                    px: 2,
+                    py: 0.9,
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    '&:hover': {
+                      backgroundColor: '#075B43',
+                    },
+                  }}
+                >
+                  Cart
+                </Button>
+
+                {/* Login / Profile CTA */}
+                {token ? (
+                  <IconButton
+                    onClick={toggleDrawer(true)}
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '8px',
+                      backgroundColor: '#F3F4F6',
+                      border: '1px solid #E5E7EB',
+                      color: '#151515',
+                      '&:hover': {
+                        backgroundColor: '#EBFBEE',
+                        color: '#087F5B',
+                        borderColor: '#087F5B',
+                      },
+                    }}
+                  >
+                    <PersonOutlineOutlinedIcon fontSize="small" />
+                  </IconButton>
+                ) : (
+                  <Button
+                    variant="outlined"
+                    onClick={() => navigate('/login')}
+                    sx={{
+                      borderColor: '#E5E7EB',
+                      color: '#151515',
+                      borderRadius: '8px',
+                      px: 2,
+                      py: 0.8,
+                      fontSize: '13.5px',
+                      fontWeight: 600,
+                      '&:hover': {
+                        borderColor: '#087F5B',
+                        backgroundColor: '#EBFBEE',
+                        color: '#087F5B',
+                      },
+                    }}
+                  >
+                    Login
+                  </Button>
+                )}
+              </Stack>
+            </Box>
           </Toolbar>
         </Container>
       </AppBar>
 
-      {/* Settings Drawer */}
+      {/* Clean Side Navigation Drawer */}
       <Drawer
         anchor="right"
         open={drawerOpen}
         onClose={toggleDrawer(false)}
         sx={{
           '& .MuiDrawer-paper': {
-            width: { xs: 280, sm: 320 },
-            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%)',
-            boxShadow: '0 0 40px rgba(0, 0, 0, 0.15)',
+            width: { xs: 290, sm: 340 },
+            backgroundColor: '#FFFFFF',
+            boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.08)',
           },
         }}
-        transitionDuration={400}
       >
-        <Box
-          sx={{ width: { xs: 280, sm: 320 } }}
-          role="presentation"
-        >
-          {/* Drawer Header */}
-          <Box
-            sx={{
-              p: 3,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: '#fff',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 700,
-                fontSize: { xs: '1.1rem', sm: '1.25rem' },
-              }}
-            >
-              Settings
-            </Typography>
-            <IconButton
-              onClick={toggleDrawer(false)}
-              sx={{
-                color: '#fff',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                },
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
+        <Box sx={{ p: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E5E7EB' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Avatar sx={{ bgcolor: '#EBFBEE', color: '#087F5B', width: 36, height: 36, fontWeight: 700 }}>
+              {userData.name ? userData.name.charAt(0).toUpperCase() : 'A'}
+            </Avatar>
+            <Box>
+              <Typography sx={{ fontWeight: 700, fontSize: '14px', color: '#151515' }}>
+                {userData.name || 'AapnuBazaar Customer'}
+              </Typography>
+              <Typography sx={{ fontSize: '12px', color: '#6B7280' }}>
+                {userData.mobile_number ? `+91 ${userData.mobile_number}` : 'Local Marketplace'}
+              </Typography>
+            </Box>
           </Box>
+          <IconButton onClick={toggleDrawer(false)} size="small" sx={{ color: '#6B7280' }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
 
-          {/* Menu Items */}
-          <List sx={{ pt: 2 }}>
-            {/* Profile */}
-            <ListItemButton
-              onClick={() => {
-                setDrawerOpen(false);
-                navigate('/profile');
-              }}
-              sx={{
-                py: 2,
-                px: 3,
-                borderRadius: '12px',
-                mx: 1,
-                mb: 0.5,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  backgroundColor: 'rgba(102, 126, 234, 0.08)',
-                  transform: 'translateX(8px)',
-                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.1)',
-                },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 48 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <PersonIcon sx={{ color: '#667eea', fontSize: '1.4rem' }} />
-                </Box>
-              </ListItemIcon>
-              <ListItemText
-                primary="Profile"
-                primaryTypographyProps={{
-                  fontWeight: 600,
-                  fontSize: '0.95rem',
-                  color: '#1a1a1a',
+        <List sx={{ px: 1.5, py: 2 }}>
+          {navLinks.map((item) => (
+            <ListItem key={item.label} disablePadding sx={{ mb: 0.5 }}>
+              <ListItemButton
+                onClick={() => {
+                  setDrawerOpen(false);
+                  handleNavClick(item);
                 }}
-              />
-            </ListItemButton>
-
-            <Divider sx={{ my: 1, mx: 2 }} />
-
-            {/* Address */}
-            <ListItemButton
-              onClick={() => {
-                setDrawerOpen(false);
-                navigate('/address');
-              }}
-              sx={{
-                py: 2,
-                px: 3,
-                borderRadius: '12px',
-                mx: 1,
-                mb: 0.5,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  backgroundColor: 'rgba(102, 126, 234, 0.08)',
-                  transform: 'translateX(8px)',
-                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.1)',
-                },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 48 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <LocationOnIcon sx={{ color: '#1976d2', fontSize: '1.4rem' }} />
-                </Box>
-              </ListItemIcon>
-              <ListItemText
-                primary="Address"
-                primaryTypographyProps={{
-                  fontWeight: 600,
-                  fontSize: '0.95rem',
-                  color: '#1a1a1a',
+                sx={{
+                  borderRadius: '8px',
+                  py: 1,
+                  backgroundColor: location.pathname === item.path ? '#EBFBEE' : 'transparent',
+                  color: location.pathname === item.path ? '#087F5B' : '#151515',
+                  '&:hover': {
+                    backgroundColor: '#F3F4F6',
+                  },
                 }}
-              />
-            </ListItemButton>
+              >
+                <ListItemIcon sx={{ color: location.pathname === item.path ? '#087F5B' : '#6B7280', minWidth: 38 }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{ fontSize: '14px', fontWeight: location.pathname === item.path ? 700 : 500 }}
+                />
+              </ListItemButton>
+            </ListItem>
+          ))}
 
-            <Divider sx={{ my: 1, mx: 2 }} />
+          <Divider sx={{ my: 1.5 }} />
 
-            {/* My Orders */}
+          <ListItem disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
               onClick={() => {
                 setDrawerOpen(false);
                 navigate('/my-orders');
               }}
-              sx={{
-                py: 2,
-                px: 3,
-                borderRadius: '12px',
-                mx: 1,
-                mb: 0.5,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  backgroundColor: 'rgba(102, 126, 234, 0.08)',
-                  transform: 'translateX(8px)',
-                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.1)',
-                },
-              }}
+              sx={{ borderRadius: '8px', py: 1 }}
             >
-              <ListItemIcon sx={{ minWidth: 48 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <ShoppingBagIcon sx={{ color: '#764ba2', fontSize: '1.4rem' }} />
-                </Box>
+              <ListItemIcon sx={{ color: '#6B7280', minWidth: 38 }}>
+                <ReceiptLongOutlinedIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText
-                primary="My Orders"
-                primaryTypographyProps={{
-                  fontWeight: 600,
-                  fontSize: '0.95rem',
-                  color: '#1a1a1a',
-                }}
-              />
+              <ListItemText primary="My Orders" primaryTypographyProps={{ fontSize: '14px', fontWeight: 500 }} />
             </ListItemButton>
+          </ListItem>
 
-            <Divider sx={{ my: 1, mx: 2 }} />
-
-            {/* Logout */}
+          <ListItem disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
-              onClick={handleLogout}
-              sx={{
-                py: 2,
-                px: 3,
-                borderRadius: '12px',
-                mx: 1,
-                mb: 0.5,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  backgroundColor: 'rgba(239, 83, 80, 0.08)',
-                  transform: 'translateX(8px)',
-                  boxShadow: '0 4px 12px rgba(239, 83, 80, 0.1)',
-                },
+              onClick={() => {
+                setDrawerOpen(false);
+                navigate('/address');
               }}
+              sx={{ borderRadius: '8px', py: 1 }}
             >
-              <ListItemIcon sx={{ minWidth: 48 }}>
-                <Box
+              <ListItemIcon sx={{ color: '#6B7280', minWidth: 38 }}>
+                <LocationOnOutlinedIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Saved Addresses" primaryTypographyProps={{ fontSize: '14px', fontWeight: 500 }} />
+            </ListItemButton>
+          </ListItem>
+
+          <ListItem disablePadding sx={{ mb: 0.5 }}>
+            <ListItemButton
+              onClick={() => {
+                setDrawerOpen(false);
+                navigate('/profile');
+              }}
+              sx={{ borderRadius: '8px', py: 1 }}
+            >
+              <ListItemIcon sx={{ color: '#6B7280', minWidth: 38 }}>
+                <PersonOutlineOutlinedIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Profile" primaryTypographyProps={{ fontSize: '14px', fontWeight: 500 }} />
+            </ListItemButton>
+          </ListItem>
+
+          <ListItem disablePadding sx={{ mb: 0.5 }}>
+            <ListItemButton
+              onClick={() => {
+                setDrawerOpen(false);
+                navigate('/profile');
+              }}
+              sx={{ borderRadius: '8px', py: 1 }}
+            >
+              <ListItemIcon sx={{ color: '#6B7280', minWidth: 38 }}>
+                <SettingsOutlinedIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Settings" primaryTypographyProps={{ fontSize: '14px', fontWeight: 500 }} />
+            </ListItemButton>
+          </ListItem>
+
+          {token && (
+            <>
+              <Divider sx={{ my: 1.5 }} />
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={handleLogout}
                   sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: '10px',
-                    background: 'rgba(239, 83, 80, 0.08)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    borderRadius: '8px',
+                    py: 1,
+                    color: '#E03131',
+                    '&:hover': { backgroundColor: '#FFF5F5' },
                   }}
                 >
-                  <LogoutIcon sx={{ color: '#ef5350', fontSize: '1.4rem' }} />
-                </Box>
-              </ListItemIcon>
-              <ListItemText
-                primary="Logout"
-                primaryTypographyProps={{
-                  fontWeight: 600,
-                  fontSize: '0.95rem',
-                  color: '#ef5350',
-                }}
-              />
-            </ListItemButton>
-          </List>
-        </Box>
+                  <ListItemIcon sx={{ color: '#E03131', minWidth: 38 }}>
+                    <LogoutOutlinedIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary="Logout" primaryTypographyProps={{ fontSize: '14px', fontWeight: 600 }} />
+                </ListItemButton>
+              </ListItem>
+            </>
+          )}
+        </List>
       </Drawer>
 
-      {/* Main Content */}
-      <Box sx={{ flex: 1 }}>
+      {/* Main Content View */}
+      <Box component="main" sx={{ flexGrow: 1, pb: { xs: 9, md: 0 } }}>
         {children}
       </Box>
 
-      {/* Scroll to Top Button */}
-      {/* <Zoom in={showScrollTop}>
-        <IconButton
-          onClick={scrollToTop}
-          sx={{
-            position: 'fixed',
-            bottom: { xs: 24, sm: 32 },
-            right: { xs: 16, sm: 24 },
-            zIndex: 1000,
-            width: { xs: 48, sm: 56 },
-            height: { xs: 48, sm: 56 },
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: '#fff',
-            boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
-              transform: 'translateY(-4px) scale(1.05)',
-              boxShadow: '0 12px 32px rgba(102, 126, 234, 0.5)',
-            },
-          }}
-        >
-          <KeyboardArrowUpIcon sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem' } }} />
-        </IconButton>
-      </Zoom> */}
-
-      {/* Footer */}
+      {/* AapnuBazaar Clean Marketplace Footer */}
       <Box
         component="footer"
         sx={{
-          background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fc 100%)',
-          borderTop: '2px solid transparent',
-          borderImage: 'linear-gradient(to right, transparent, rgba(102, 126, 234, 0.3), transparent) 1',
-          py: { xs: 4, sm: 5 },
+          backgroundColor: '#FFFFFF',
+          borderTop: '1px solid #E5E7EB',
+          py: { xs: 5, sm: 6 },
           mt: 'auto',
-          position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '1px',
-            background: 'linear-gradient(to right, transparent, rgba(102, 126, 234, 0.2), transparent)',
-          }
         }}
       >
         <Container maxWidth="lg">
-          <Stack
-            spacing={3}
-            sx={{
-              alignItems: 'center',
-            }}
-          >
-            {/* Logo Section */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5,
-              }}
-            >
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 40,
-                  height: 40,
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
-                }}
-              >
-                <LocalShippingIcon
-                  sx={{
-                    fontSize: '1.4rem',
-                    color: '#fff',
-                  }}
+          <Grid container spacing={{ xs: 3, md: 4 }} justifyContent="space-between">
+            {/* Brand column */}
+            <Grid item xs={12} md={3.5}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                <img
+                  src="/aapnubazaar-logo.png"
+                  alt="AapnuBazaar"
+                  style={{ width: '32px', height: '32px', objectFit: 'contain', marginRight: '10px' }}
                 />
+                <Typography sx={{ fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.02em' }}>
+                  <span style={{ color: '#087F5B' }}>Aapnu</span>
+                  <span style={{ color: '#FF6B00' }}>Bazaar</span>
+                </Typography>
               </Box>
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 800,
-                  fontSize: '1.15rem',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                DeliveryApp
+              <Typography sx={{ fontSize: '14px', color: '#6B7280', lineHeight: 1.6, maxWidth: 320, mb: 2 }}>
+                Our Local Marketplace connecting neighborhood shops with customers for fresh, fast, and authentic products.
               </Typography>
-            </Box>
+              <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#087F5B' }}>
+                📍 Serving Your Neighborhood Daily
+              </Typography>
+            </Grid>
 
-            {/* Tagline */}
-            <Typography
-              variant="body2"
-              sx={{
-                color: '#666',
-                textAlign: 'center',
-                maxWidth: 500,
-                lineHeight: 1.8,
-                fontSize: '0.9rem',
-              }}
-            >
-              Fast, reliable delivery from local vendors. Your favorite meals and products, delivered to your door.
+            {/* Marketplace */}
+            <Grid item xs={6} sm={3} md={2}>
+              <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#151515', mb: 2 }}>
+                Marketplace
+              </Typography>
+              <Stack spacing={1}>
+                <Typography component="a" href="/vendors" sx={{ fontSize: '13.5px', color: '#6B7280', textDecoration: 'none', '&:hover': { color: '#087F5B' } }}>
+                  Shops
+                </Typography>
+                <Typography component="a" href="/modules" sx={{ fontSize: '13.5px', color: '#6B7280', textDecoration: 'none', '&:hover': { color: '#087F5B' } }}>
+                  Categories
+                </Typography>
+                <Typography component="a" href="/#offers" sx={{ fontSize: '13.5px', color: '#6B7280', textDecoration: 'none', '&:hover': { color: '#087F5B' } }}>
+                  Offers & Deals
+                </Typography>
+              </Stack>
+            </Grid>
+
+            {/* For Customers */}
+            <Grid item xs={6} sm={3} md={2}>
+              <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#151515', mb: 2 }}>
+                For Customers
+              </Typography>
+              <Stack spacing={1}>
+                <Typography component="a" href="/my-orders" sx={{ fontSize: '13.5px', color: '#6B7280', textDecoration: 'none', '&:hover': { color: '#087F5B' } }}>
+                  Orders
+                </Typography>
+                <Typography component="a" href="/#favorites" sx={{ fontSize: '13.5px', color: '#6B7280', textDecoration: 'none', '&:hover': { color: '#087F5B' } }}>
+                  Favorites
+                </Typography>
+                <Typography component="a" href="/profile" sx={{ fontSize: '13.5px', color: '#6B7280', textDecoration: 'none', '&:hover': { color: '#087F5B' } }}>
+                  Help & Support
+                </Typography>
+              </Stack>
+            </Grid>
+
+            {/* For Sellers */}
+            <Grid item xs={6} sm={3} md={2}>
+              <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#151515', mb: 2 }}>
+                For Sellers
+              </Typography>
+              <Stack spacing={1}>
+                <Typography component="a" href="http://localhost:5175" target="_blank" rel="noopener noreferrer" sx={{ fontSize: '13.5px', color: '#6B7280', textDecoration: 'none', '&:hover': { color: '#087F5B' } }}>
+                  Register Your Shop
+                </Typography>
+                <Typography component="a" href="http://localhost:5175/login" target="_blank" rel="noopener noreferrer" sx={{ fontSize: '13.5px', color: '#6B7280', textDecoration: 'none', '&:hover': { color: '#087F5B' } }}>
+                  Seller Login
+                </Typography>
+              </Stack>
+            </Grid>
+
+            {/* Company */}
+            <Grid item xs={6} sm={3} md={2}>
+              <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#151515', mb: 2 }}>
+                Company
+              </Typography>
+              <Stack spacing={1}>
+                <Typography component="a" href="/#about" sx={{ fontSize: '13.5px', color: '#6B7280', textDecoration: 'none', '&:hover': { color: '#087F5B' } }}>
+                  About Us
+                </Typography>
+                <Typography component="a" href="/#contact" sx={{ fontSize: '13.5px', color: '#6B7280', textDecoration: 'none', '&:hover': { color: '#087F5B' } }}>
+                  Contact
+                </Typography>
+                <Typography component="a" href="/#terms" sx={{ fontSize: '13.5px', color: '#6B7280', textDecoration: 'none', '&:hover': { color: '#087F5B' } }}>
+                  Terms & Conditions
+                </Typography>
+                <Typography component="a" href="/#privacy" sx={{ fontSize: '13.5px', color: '#6B7280', textDecoration: 'none', '&:hover': { color: '#087F5B' } }}>
+                  Privacy Policy
+                </Typography>
+              </Stack>
+            </Grid>
+          </Grid>
+
+          <Divider sx={{ my: 4, borderColor: '#E5E7EB' }} />
+
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize: '13px', color: '#9CA3AF' }}>
+              © {new Date().getFullYear()} AapnuBazaar — Our Local Marketplace. All rights reserved.
             </Typography>
-
-            {/* Divider */}
-            <Box
-              sx={{
-                width: '100%',
-                maxWidth: 600,
-                height: '1px',
-                background: 'linear-gradient(to right, transparent, #e0e0e0, transparent)',
-              }}
-            />
-
-            {/* Copyright with heart */}
-            <Stack
-              direction="row"
-              spacing={0.5}
-              sx={{
-                alignItems: 'center',
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{
-                  color: '#888',
-                  fontSize: '0.85rem',
-                }}
-              >
-                © 2025 DeliveryApp. Made with
-              </Typography>
-              <FavoriteIcon
-                sx={{
-                  fontSize: '1rem',
-                  color: '#e74c3c',
-                  animation: 'heartbeat 1.5s ease-in-out infinite',
-                  '@keyframes heartbeat': {
-                    '0%, 100%': {
-                      transform: 'scale(1)',
-                    },
-                    '25%': {
-                      transform: 'scale(1.15)',
-                    },
-                    '50%': {
-                      transform: 'scale(1)',
-                    },
-                  },
-                }}
-              />
-              <Typography
-                variant="body2"
-                sx={{
-                  color: '#888',
-                  fontSize: '0.85rem',
-                }}
-              >
-                for food lovers
-              </Typography>
-            </Stack>
-          </Stack>
+            <Typography sx={{ fontSize: '12px', color: '#6B7280' }}>
+              Made with ❤️ for local businesses & communities
+            </Typography>
+          </Box>
         </Container>
       </Box>
+
+      {/* ── MOBILE BOTTOM NAVIGATION (Home | Shops | Orders | Favorites | Profile) ── */}
+      <Box
+        component="nav"
+        aria-label="Mobile Navigation"
+        sx={{
+          display: { xs: 'flex', md: 'none' },
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1100,
+          backgroundColor: '#FFFFFF',
+          borderTop: '1px solid #E5E7EB',
+          boxShadow: '0 -2px 14px rgba(0, 0, 0, 0.08)',
+          px: 0.5,
+          py: 0.5,
+          pb: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))',
+          justifyContent: 'space-around',
+          alignItems: 'center',
+        }}
+      >
+        {[
+          {
+            label: 'Home',
+            path: '/',
+            icon: <HomeOutlinedIcon sx={{ fontSize: 22 }} />,
+            activeIcon: <HomeIcon sx={{ fontSize: 22 }} />,
+            isActive: location.pathname === '/',
+            onClick: () => navigate('/'),
+          },
+          {
+            label: 'Shops',
+            path: '/vendors',
+            icon: <StorefrontOutlinedIcon sx={{ fontSize: 22 }} />,
+            activeIcon: <StorefrontIcon sx={{ fontSize: 22 }} />,
+            isActive: location.pathname === '/vendors' && !location.search.includes('favorites'),
+            onClick: () => navigate('/vendors'),
+          },
+          {
+            label: 'Orders',
+            path: '/my-orders',
+            icon: <ReceiptLongOutlinedIcon sx={{ fontSize: 22 }} />,
+            activeIcon: <ReceiptLongIcon sx={{ fontSize: 22 }} />,
+            isActive: location.pathname === '/my-orders',
+            onClick: () => {
+              if (token) navigate('/my-orders');
+              else navigate('/login');
+            },
+          },
+          {
+            label: 'Favorites',
+            path: '/vendors?filter=favorites',
+            icon: <FavoriteBorderOutlinedIcon sx={{ fontSize: 22 }} />,
+            activeIcon: <FavoriteIcon sx={{ fontSize: 22 }} />,
+            isActive: location.search.includes('favorites'),
+            onClick: () => navigate('/vendors?filter=favorites'),
+          },
+          {
+            label: 'Profile',
+            path: token ? '/profile' : '/login',
+            icon: <PersonOutlineOutlinedIcon sx={{ fontSize: 22 }} />,
+            activeIcon: <PersonIcon sx={{ fontSize: 22 }} />,
+            isActive: location.pathname === '/profile' || location.pathname === '/login',
+            onClick: () => {
+              if (token) navigate('/profile');
+              else navigate('/login');
+            },
+          },
+        ].map((item) => (
+          <Box
+            key={item.label}
+            onClick={item.onClick}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: 54,
+              minHeight: 46,
+              py: 0.3,
+              px: 0.5,
+              cursor: 'pointer',
+              color: item.isActive ? '#087F5B' : '#6B7280',
+              transition: 'all 0.15s ease',
+              borderRadius: '8px',
+              userSelect: 'none',
+              '&:active': { transform: 'scale(0.92)' },
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {item.isActive ? item.activeIcon : item.icon}
+            </Box>
+            <Typography
+              sx={{
+                fontSize: '11px',
+                fontWeight: item.isActive ? 700 : 500,
+                color: item.isActive ? '#087F5B' : '#6B7280',
+                mt: 0.3,
+                lineHeight: 1,
+              }}
+            >
+              {item.label}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+
+      {/* Mandatory Uncloseable Profile Completion Popup for any logged-in user with missing name/email */}
+      <CompleteProfileModal
+        open={showProfileModal}
+        initialMobile={profileModalData.mobile}
+        initialName={profileModalData.name}
+        initialEmail={profileModalData.email}
+        onSuccess={() => {
+          setShowProfileModal(false);
+          checkUserProfile();
+          window.dispatchEvent(new Event('profile_updated'));
+        }}
+      />
     </Box>
   );
 };

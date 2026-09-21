@@ -11,12 +11,11 @@ const sendOtpSchema = Joi.object({
     'any.required': 'Mobile number is required',
     'string.pattern.base': 'Please provide a valid 10-digit mobile number'
   }),
-  name: Joi.string().trim().required().min(2).max(50).messages({
-    'any.required': 'Name is required Please enter your name',
+  name: Joi.string().trim().optional().allow('', null).messages({
     'string.min': 'Name must be at least 2 characters',
     'string.max': 'Name cannot exceed 50 characters'
   }),
-  email: Joi.string().email().optional().lowercase().messages({
+  email: Joi.string().email().optional().allow('', null).lowercase().messages({
     'string.email': 'Please provide a valid email'
   })
 });
@@ -56,14 +55,14 @@ exports.sendOtp = async (req, res) => {
       // Create new user for registration
       user = new User({
         mobile_number,
-        name: name || '',
-        email: email || undefined,
+        name: (name && name.trim()) ? name.trim() : undefined,
+        email: (email && email.trim()) ? email.trim() : undefined,
         isVerified: false
       });
     } else {
       // For existing user (login flow), just update name/email if provided
-      if (name) user.name = name;
-      if (email) user.email = email;
+      if (name && name.trim()) user.name = name.trim();
+      if (email && email.trim()) user.email = email.trim();
     }
 
     // Check if user is blocked

@@ -3,13 +3,13 @@ import {
   Box,
   Container,
   Paper,
+  Typography,
   TextField,
   Button,
-  Typography,
-  Alert,
-  CircularProgress,
   InputAdornment,
   IconButton,
+  Alert,
+  CircularProgress,
   Stack,
 } from '@mui/material';
 import {
@@ -17,21 +17,21 @@ import {
   Lock,
   Visibility,
   VisibilityOff,
-  AdminPanelSettings,
+  Storefront as StoreIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import adminService from '../services/adminService';
+import { brandColors } from '../theme/tokens';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -39,48 +39,41 @@ const Login = () => {
       ...prev,
       [name]: value,
     }));
-    // Clear error when user starts typing
     if (error) setError(null);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Validation
-    if (!formData.email || !formData.password) {
-      setError('Please enter both email and password');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await adminService.loginAdmin({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (response.success) {
-        // Store token and admin data
-        localStorage.setItem('adminToken', response.data.token);
-        localStorage.setItem('adminData', JSON.stringify(response.data.admin));
-
-        // Redirect to dashboard
-        navigate('/');
-      } else {
-        setError(response.message || 'Login failed');
-      }
-    } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please check your credentials.');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleTogglePassword = () => {
     setShowPassword(!showPassword);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await adminService.loginAdmin(formData);
+
+      const token = response.token || response.data?.token;
+      const adminData = response.data?.admin || response.data?.user || response.data;
+
+      if (response.success && token) {
+        localStorage.setItem('adminToken', token);
+        localStorage.setItem('adminData', JSON.stringify(adminData));
+        navigate('/');
+      } else {
+        setError(response.message || 'Login failed. Please verify credentials.');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(
+        err.response?.data?.message ||
+        err.message ||
+        'Unable to connect to server. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -90,92 +83,101 @@ const Login = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        backgroundColor: brandColors.adminBg,
         position: 'relative',
         overflow: 'hidden',
         '&::before': {
           content: '""',
           position: 'absolute',
-          width: '200%',
-          height: '200%',
-          background: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
-          backgroundSize: '50px 50px',
-          animation: 'moveBackground 20s linear infinite',
-        },
-        '@keyframes moveBackground': {
-          '0%': {
-            transform: 'translate(0, 0)',
-          },
-          '100%': {
-            transform: 'translate(50px, 50px)',
-          },
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 650,
+          height: 650,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(8, 127, 91, 0.07) 0%, rgba(243, 247, 251, 0) 70%)',
+          pointerEvents: 'none',
         },
       }}
     >
-      <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
+      <Container maxWidth="xs" sx={{ position: 'relative', zIndex: 1 }}>
         <Paper
-          elevation={24}
+          elevation={0}
           sx={{
-            p: { xs: 3, sm: 5 },
-            borderRadius: 4,
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            p: { xs: 3.5, sm: 4.5 },
+            borderRadius: '24px',
+            backgroundColor: brandColors.white,
+            border: `1px solid ${brandColors.border}`,
+            boxShadow: '0 20px 50px rgba(20, 33, 61, 0.05)',
           }}
         >
-          {/* Logo/Icon */}
+          {/* AapnuBazaar Brand Header */}
           <Box
             sx={{
               display: 'flex',
-              justifyContent: 'center',
-              mb: 3,
+              flexDirection: 'column',
+              alignItems: 'center',
+              mb: 3.5,
             }}
           >
             <Box
               sx={{
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                width: 58,
+                height: 58,
+                borderRadius: '16px',
+                background: `linear-gradient(135deg, ${brandColors.primaryGreen} 0%, ${brandColors.darkGreen} 100%)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
+                boxShadow: '0 8px 24px rgba(8, 127, 91, 0.25)',
+                position: 'relative',
+                mb: 2,
               }}
             >
-              <AdminPanelSettings sx={{ fontSize: 40, color: '#fff' }} />
+              <StoreIcon sx={{ color: '#FFFFFF', fontSize: 30 }} />
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 4,
+                  right: 4,
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  backgroundColor: brandColors.orange,
+                  border: '2px solid #FFFFFF',
+                }}
+              />
             </Box>
-          </Box>
 
-          {/* Title */}
-          <Typography
-            variant="h4"
-            align="center"
-            sx={{
-              fontWeight: 800,
-              mb: 1,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            Admin Portal
-          </Typography>
-          <Typography
-            variant="body2"
-            align="center"
-            color="text.secondary"
-            sx={{ mb: 4 }}
-          >
-            Sign in to manage your delivery platform
-          </Typography>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 800,
+                color: brandColors.primaryText,
+                letterSpacing: '-0.025em',
+                lineHeight: 1.1,
+                mb: 0.5,
+              }}
+            >
+              AapnuBazaar
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: brandColors.secondaryText,
+                fontWeight: 600,
+                textAlign: 'center',
+              }}
+            >
+              Admin & Operations Portal
+            </Typography>
+          </Box>
 
           {/* Error Alert */}
           {error && (
             <Alert
               severity="error"
-              sx={{ mb: 3, borderRadius: 2 }}
+              sx={{ mb: 3, borderRadius: '14px' }}
               onClose={() => setError(null)}
             >
               {error}
@@ -184,7 +186,7 @@ const Login = () => {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit}>
-            <Stack spacing={3}>
+            <Stack spacing={2.5}>
               {/* Email Field */}
               <TextField
                 fullWidth
@@ -198,13 +200,17 @@ const Login = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Email color="action" />
+                      <Email sx={{ color: '#94A3B8', fontSize: 20 }} />
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: '14px',
+                    backgroundColor: '#F8FAFC',
+                    '& fieldset': { borderColor: brandColors.border },
+                    '&:hover fieldset': { borderColor: '#CBD5E1' },
+                    '&.Mui-focused fieldset': { borderColor: brandColors.primaryGreen },
                   },
                 }}
               />
@@ -222,7 +228,7 @@ const Login = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Lock color="action" />
+                      <Lock sx={{ color: '#94A3B8', fontSize: 20 }} />
                     </InputAdornment>
                   ),
                   endAdornment: (
@@ -231,15 +237,21 @@ const Login = () => {
                         onClick={handleTogglePassword}
                         edge="end"
                         disabled={loading}
+                        size="small"
+                        sx={{ color: '#94A3B8' }}
                       >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                        {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                       </IconButton>
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: '14px',
+                    backgroundColor: '#F8FAFC',
+                    '& fieldset': { borderColor: brandColors.border },
+                    '&:hover fieldset': { borderColor: '#CBD5E1' },
+                    '&.Mui-focused fieldset': { borderColor: brandColors.primaryGreen },
                   },
                 }}
               />
@@ -252,26 +264,28 @@ const Login = () => {
                 size="large"
                 disabled={loading}
                 sx={{
-                  py: 1.5,
-                  borderRadius: 2,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  boxShadow: '0 4px 16px rgba(102, 126, 234, 0.4)',
+                  py: 1.4,
+                  borderRadius: '14px',
+                  backgroundColor: brandColors.primaryGreen,
+                  boxShadow: '0 8px 24px rgba(8, 127, 91, 0.25)',
                   textTransform: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 600,
+                  fontSize: '0.98rem',
+                  fontWeight: 700,
+                  mt: 1,
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
-                    boxShadow: '0 6px 20px rgba(102, 126, 234, 0.5)',
+                    backgroundColor: brandColors.darkGreen,
+                    boxShadow: '0 10px 28px rgba(8, 127, 91, 0.35)',
                   },
                   '&:disabled': {
-                    background: '#ccc',
+                    background: '#CBD5E1',
+                    color: '#94A3B8',
                   },
                 }}
               >
                 {loading ? (
-                  <CircularProgress size={24} color="inherit" />
+                  <CircularProgress size={22} color="inherit" />
                 ) : (
-                  'Sign In'
+                  'Sign In to Dashboard'
                 )}
               </Button>
             </Stack>
@@ -279,8 +293,8 @@ const Login = () => {
 
           {/* Footer */}
           <Box sx={{ mt: 4, textAlign: 'center' }}>
-            <Typography variant="caption" color="text.secondary">
-              © 2025 DeliveryApp. All rights reserved.
+            <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 500 }}>
+              &copy; {new Date().getFullYear()} AapnuBazaar &bull; All Rights Reserved
             </Typography>
           </Box>
         </Paper>

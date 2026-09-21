@@ -1,6 +1,8 @@
 const Cart = require('../../models/cartModal');
 const Product = require('../../models/productModal');
 const Vendor = require('../../models/vendorModal');
+const Address = require('../../models/addressModal');
+const { calculateDistance, calculateDeliveryCharge } = require('../../utils/distanceCalculator');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Checkout: save cart(s) per vendor for the authenticated user
@@ -9,15 +11,33 @@ exports.checkout = async (req, res) => {
 		const userId = req.user && (req.user._id || req.user.id || req.user);
 		if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-		const { cart } = req.body;
+		const { cart, selectedAddressId } = req.body;
 		if (!Array.isArray(cart) || cart.length === 0) {
 			return res.status(400).json({ success: false, message: 'Cart must be a non-empty array' });
+		}
+
+		// Fetch customer address if selectedAddressId is provided
+		let customerAddress = null;
+		if (selectedAddressId) {
+			customerAddress = await Address.findById(selectedAddressId);
+			if (!customerAddress) {
+				return res.status(404).json({ success: false, message: 'Address not found' });
+			}
+
+			if (!customerAddress.latitude || !customerAddress.longitude) {
+				return res.status(400).json({
+					success: false,
+					message: 'Address coordinates are missing. Please update the address with valid coordinates.'
+				});
+			}
 		}
 
         // here we check cart exist then delete old cart
         await Cart.deleteMany({ user: userId, status: 'New' });
 
 		const createdCarts = [];
+		let hasAddressId = !!selectedAddressId; // Check if address was provided
+		let isDistanceTooFar = false; // Check if any vendor is more than 10 km away
 
 		// Process each vendor block sequentially to keep calculations clear
 		for (const vendorBlock of cart) {
@@ -77,18 +97,43 @@ exports.checkout = async (req, res) => {
 
 			// Add vendor-level packaging charge once per cart
 			const packaging_charge = packagingSum + Number(vendor.packaging_charge || 0);
-			const delivery_charge = Number(vendor.delivery_charge || 0);
 			const convenience_charge = Number(vendor.convenience_charge || 0);
+
+			// Calculate delivery charge if address is selected
+			let delivery_distance = 0;
+			let delivery_charge = 0;
+
+			if (customerAddress) {
+				// Calculate distance between customer address and vendor address
+				delivery_distance = calculateDistance(
+					Number(customerAddress.latitude),
+					Number(customerAddress.longitude),
+					Number(vendor.latitude),
+					Number(vendor.longitude)
+				);
+
+				// Calculate delivery charge based on distance
+				delivery_distance = parseInt(delivery_distance)
+
+				// Check if distance is more than 10 km
+				if (delivery_distance > 10) {
+					isDistanceTooFar = true;
+				}
+
+				delivery_charge = calculateDeliveryCharge(delivery_distance);
+			}
 
 			const total_payable_amount = subtotal - discount + packaging_charge + delivery_charge + convenience_charge;
 
 			const cartDoc = new Cart({
 				user: userId,
 				vendor: vendor._id,
+				address: selectedAddressId || null,
 				items,
 				subtotal,
 				discount,
 				packaging_charge,
+				delivery_distance,
 				delivery_charge,
 				convenience_charge,
 				total_quantity: totalQuantity,
@@ -99,7 +144,25 @@ exports.checkout = async (req, res) => {
 			createdCarts.push(saved);
 		}
 
-		return res.status(201).json({ success: true, message: 'Cart(s) saved', data: createdCarts });
+		// Determine if pay button should be disabled and the reason
+		let disablePayButton = false;
+		let disableMessage = '';
+
+		if (!hasAddressId) {
+			disablePayButton = true;
+			disableMessage = 'Please select a delivery address to proceed with payment.';
+		} else if (isDistanceTooFar) {
+			disablePayButton = true;
+			disableMessage = 'Our delivery service is currently not available in your area. We are working on expanding our service.';
+		}
+
+		return res.status(201).json({
+			success: true,
+			message: 'Cart(s) saved',
+			data: createdCarts,
+			is_disable_pay_button: disablePayButton,
+			disable_message: disableMessage
+		});
 	} catch (err) {
 		console.error('Checkout error:', err);
 		return res.status(500).json({ success: false, message: 'Checkout failed', error: err.message });
@@ -127,18 +190,23 @@ exports.placeOrder = async (req, res) => {
 			return res.status(400).json({ success: false, message: 'Delivery date is required' });
 		}
 
-		// Prepare update data
-		const updateData = {
-			address: selectedAddressId,
-			delivery_date: new Date(deliveryDate),
-			delivery_time: deliveryType || 'today',
-			status: 'Placed'
-		};
+		// Fetch customer address to get coordinates
+		const customerAddress = await Address.findById(selectedAddressId);
+		if (!customerAddress) {
+			return res.status(404).json({ success: false, message: 'Address not found' });
+		}
+
+		if (!customerAddress.latitude || !customerAddress.longitude) {
+			return res.status(400).json({
+				success: false,
+				message: 'Address coordinates are missing. Please update the address with valid coordinates.'
+			});
+		}
 
 		// Update all carts
 		const updatedCarts = [];
 		for (const cartId of cartIds) {
-			const cart = await Cart.findOne({ _id: cartId, user: userId });
+			const cart = await Cart.findOne({ _id: cartId, user: userId }).populate('vendor');
 
 			if (!cart) {
 				return res.status(404).json({
@@ -147,11 +215,35 @@ exports.placeOrder = async (req, res) => {
 				});
 			}
 
-			// Update cart
-			cart.address = updateData.address;
-			cart.delivery_date = updateData.delivery_date;
-			cart.delivery_time = updateData.delivery_time;
-			cart.status = updateData.status;
+			// Get vendor coordinates
+			const vendor = cart.vendor;
+			if (!vendor) {
+				return res.status(404).json({ success: false, message: 'Vendor not found' });
+			}
+
+			// Calculate distance between customer address and vendor address
+			const distance = calculateDistance(
+				Number(customerAddress.latitude),
+				Number(customerAddress.longitude),
+				Number(vendor.latitude),
+				Number(vendor.longitude)
+			);
+
+			// Calculate delivery charge based on distance
+			const deliveryCharge = calculateDeliveryCharge(distance);
+
+			// Update cart with delivery details
+			cart.address = selectedAddressId;
+			cart.delivery_date = new Date(deliveryDate);
+			cart.delivery_time = deliveryType || 'today';
+			cart.delivery_distance = distance;
+			cart.delivery_charge = deliveryCharge;
+
+			// Recalculate total_payable_amount
+			cart.total_payable_amount = cart.subtotal - cart.discount +
+				cart.packaging_charge + cart.delivery_charge + cart.convenience_charge;
+
+			cart.status = 'Placed';
 
 			const saved = await cart.save();
 			updatedCarts.push(saved);

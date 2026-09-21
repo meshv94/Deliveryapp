@@ -6,136 +6,197 @@ import {
   Typography,
   Box,
   Button,
-  Chip,
-  Stack,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Snackbar,
-  Alert,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
-import TimerIcon from '@mui/icons-material/Timer';
+import StarIcon from '@mui/icons-material/Star';
 import { useCartContext } from '../context/CartContext';
 
-// Fallback product image
+// Branded SVG Fallback for Product Images
 const FALLBACK_PRODUCT_IMAGE =
-  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300"%3E%3Crect fill="%23f5f5f5" width="300" height="300"/%3E%3Ctext x="50%25" y="50%25" font-size="16" fill="%23999" text-anchor="middle" dy=".3em"%3EProduct Image%3C/text%3E%3C/svg%3E';
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"%3E%3Crect fill="%23F7F9F8" width="300" height="300"/%3E%3Ccircle cx="150" cy="140" r="50" fill="%23EAF7F2"/%3E%3Cpath d="M135 125h30v35h-30z M140 125a10 10 0 0 1 20 0" stroke="%23087F5B" stroke-width="3" fill="none"/%3E%3Ctext x="150" y="220" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="%23087F5B" text-anchor="middle"%3EAapnuBazaar%3C/text%3E%3C/svg%3E';
+
+// Design Tokens
+const BRAND = {
+  primaryGreen: '#087F5B',
+  darkGreen: '#075B43',
+  lightGreen: '#EAF7F2',
+  orange: '#FF6B00',
+  orangeLight: '#FFF4E6',
+  white: '#FFFFFF',
+  textPrimary: '#17221D',
+  textSecondary: '#6B7280',
+  border: '#E5E7EB',
+  bgCard: '#FFFFFF',
+};
 
 /**
  * ProductCard Component
- * Displays individual product information with add to cart button
- * Allows quantity selection before adding to cart
- *
- * @param {object} product - Product data object
- * @param {string} vendorId - Vendor ID for the product
- * @param {function} onAddClick - Optional callback when add button is clicked
+ * High-performing vertical product card:
+ * - Fixed 1:1 image container with graceful fallback & discount tag
+ * - 2-line clamped title with fixed min-height for baseline grid alignment
+ * - Prominent price with strikethrough comparison
+ * - Full-width / large [ + Add ] and connected quantity stepper
  */
 const ProductCard = ({ product, vendorId, onAddClick }) => {
-  const { addToCart, getProductQuantity } = useCartContext();
-  const [quantity, setQuantity] = useState(1);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', type: 'success' });
+  const { addToCart, getProductQuantity, updateQuantity, removeFromCart } = useCartContext();
+  const [imageError, setImageError] = useState(false);
 
   const cartQuantity = getProductQuantity(vendorId, product._id);
 
-  const handleAddClick = (e) => {
+  // Pricing calculations
+  const hasSpecialPrice =
+    product.special_price != null &&
+    product.special_price < product.main_price &&
+    product.special_price > 0;
+  const mainPrice = product.main_price || product.price || 0;
+  const specialPrice = product.special_price || 0;
+  const displayPrice = hasSpecialPrice ? specialPrice : mainPrice;
+
+  // Discount percentage calculation
+  const discountPercent =
+    hasSpecialPrice && mainPrice > 0
+      ? Math.round(((mainPrice - specialPrice) / mainPrice) * 100)
+      : 0;
+
+  const handleAdd = (e) => {
     e.stopPropagation();
-    const cartQuantityToSet =  cartQuantity ? cartQuantity : 1;
-    setQuantity(cartQuantityToSet);
-    setOpenDialog(true);
-  };
-
-  const handleAddToCart = () => {
-    try {
-      const ItemQuantity = quantity - cartQuantity;
-      addToCart(vendorId, product, ItemQuantity);
-      setOpenDialog(false);
-      setSnackbar({
-        open: true,
-        message: `${quantity} item${quantity > 1 ? 's' : ''} added to cart!`,
-        type: 'success',
-      });
-
-      // Call optional callback
-      if (onAddClick) {
-        onAddClick(product);
-      }
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to add to cart',
-        type: 'error',
-      });
+    addToCart(vendorId, product, 1);
+    if (onAddClick) {
+      onAddClick(product);
     }
   };
 
-  const handleQuantityChange = (e) => {
-    const value = Math.max(1, parseInt(e.target.value) || 1);
-    setQuantity(value);
+  const handleIncrement = (e) => {
+    e.stopPropagation();
+    updateQuantity(vendorId, product._id, cartQuantity + 1);
   };
 
-  const incrementQuantity = () => setQuantity((q) => q + 1);
-  const decrementQuantity = () => setQuantity((q) => (q > 1 ? q - 1 : 1));
-
-  // Check if product has special price
-  const hasSpecialPrice =
-    product.special_price && product.special_price < product.main_price;
-
-  // Use correct price fields
-  const mainPrice = product.main_price || product.price || 0;
-  const specialPrice = product.special_price || 0;
-
-  const displayPrice = hasSpecialPrice ? specialPrice : mainPrice;
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
+  const handleDecrement = (e) => {
+    e.stopPropagation();
+    if (cartQuantity <= 1) {
+      removeFromCart(vendorId, product._id);
+    } else {
+      updateQuantity(vendorId, product._id, cartQuantity - 1);
+    }
   };
+
+  const imgSrc = !imageError && product.image ? product.image : FALLBACK_PRODUCT_IMAGE;
 
   return (
     <Card
+      elevation={0}
       sx={{
-        width: '20rem',
+        width: '100%',
         height: '100%',
-        minHeight: { xs: 160, sm: 170 },
         display: 'flex',
-        flexDirection: 'row',
-        borderRadius: 2,
-        boxShadow: '0 1px 4px rgba(0, 0, 0, 0.08)',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        backgroundColor: '#fff',
+        flexDirection: 'column',
+        borderRadius: '16px',
+        backgroundColor: BRAND.bgCard,
+        border: `1px solid ${BRAND.border}`,
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
         overflow: 'hidden',
-        border: '1px solid #f0f0f0',
+        transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
         '&:hover': {
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
-          transform: 'translateY(-2px)',
-          borderColor: '#667eea',
+          transform: 'translateY(-3px)',
+          boxShadow: '0 10px 24px rgba(8, 127, 91, 0.08)',
+          borderColor: BRAND.primaryGreen,
         },
       }}
     >
-      {/* Content - Left Side */}
-      <CardContent
+      {/* Product Image Container (1:1 / Fixed Height) */}
+      <Box
         sx={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '12px 14px',
-          gap: 0.5,
-          minWidth: 0,
+          position: 'relative',
+          width: '100%',
+          height: { xs: 135, sm: 160, md: 175 },
+          backgroundColor: '#F7F9F8',
+          overflow: 'hidden',
         }}
       >
-        {/* Product Name */}
-        <Typography
-          variant="subtitle1"
+        <CardMedia
+          component="img"
+          image={imgSrc}
+          alt={product.name || 'Product'}
+          loading="lazy"
+          onError={() => setImageError(true)}
           sx={{
-            fontWeight: 700,
-            fontSize: '0.9rem',
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            transition: 'transform 0.3s ease',
+            '&:hover': {
+              transform: 'scale(1.04)',
+            },
+          }}
+        />
+
+        {/* Discount Tag Overlay */}
+        {discountPercent > 0 && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              backgroundColor: BRAND.orangeLight,
+              color: BRAND.orange,
+              fontWeight: 800,
+              fontSize: { xs: '10px', sm: '11px' },
+              px: 0.8,
+              py: 0.2,
+              borderRadius: '6px',
+              border: `1px solid rgba(255, 107, 0, 0.25)`,
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
+            }}
+          >
+            {discountPercent}% OFF
+          </Box>
+        )}
+
+        {/* Rating overlay if available */}
+        {(product.rating || product.avgRating) && (
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 8,
+              left: 8,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.3,
+              backgroundColor: 'rgba(255, 255, 255, 0.92)',
+              px: 0.6,
+              py: 0.2,
+              borderRadius: '6px',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            <StarIcon sx={{ fontSize: 12, color: BRAND.primaryGreen }} />
+            <Typography sx={{ fontSize: '11px', fontWeight: 800, color: BRAND.textPrimary }}>
+              {product.rating || product.avgRating}
+            </Typography>
+          </Box>
+        )}
+      </Box>
+
+      {/* Product Content & Details */}
+      <CardContent
+        sx={{
+          p: { xs: 1.2, sm: 1.5 },
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          '&:last-child': { pb: { xs: 1.2, sm: 1.5 } },
+        }}
+      >
+        {/* Product Title (Guaranteed 2 lines max with uniform minHeight) */}
+        <Typography
+          sx={{
+            fontWeight: 600,
+            fontSize: { xs: '13.5px', sm: '15px' },
+            color: BRAND.textPrimary,
             lineHeight: 1.3,
-            color: '#1a1a1a',
+            minHeight: { xs: '35px', sm: '39px' },
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
@@ -146,247 +207,141 @@ const ProductCard = ({ product, vendorId, onAddClick }) => {
           {product.name}
         </Typography>
 
-        {/* Description (optional) */}
+        {/* Short Description */}
         {product.description && (
           <Typography
-            variant="caption"
             sx={{
-              color: '#888',
-              fontSize: '0.75rem',
+              color: BRAND.textSecondary,
+              fontSize: { xs: '11px', sm: '12px' },
+              lineHeight: 1.3,
               display: '-webkit-box',
               WebkitLineClamp: 1,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
-              mb: 0.5,
+              mb: 1,
             }}
           >
             {product.description}
           </Typography>
         )}
 
-        {/* Price Section */}
-        <Box sx={{ display: 'flex', flexFlow: 'column', alignItems: 'center', gap: 1, mb: 0.5 }}>
-          {hasSpecialPrice ? (
-            <>
-              <Typography
-                variant="body2"
-                sx={{
-                  textDecoration: 'line-through',
-                  color: '#999',
-                  fontWeight: 500,
-                  fontSize: '0.8rem',
-                }}
-              >
-                ₹ {mainPrice.toFixed(2)}
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 800,
-                  color: '#FF6B6B',
-                  fontSize: '1rem',
-                }}
-              >
-                ₹ {specialPrice.toFixed(2)}
-              </Typography>
-            </>
-          ) : (
+        {/* Pricing Row */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 0.8,
+            mb: 1.2,
+            flexWrap: 'wrap',
+          }}
+        >
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: '15px', sm: '16px' },
+              color: BRAND.primaryGreen,
+            }}
+          >
+            ₹{displayPrice.toFixed(0)}
+          </Typography>
+
+          {hasSpecialPrice && (
             <Typography
-              variant="h6"
               sx={{
-                fontWeight: 800,
-                color: '#667eea',
-                fontSize: '1rem',
+                textDecoration: 'line-through',
+                color: '#9CA3AF',
+                fontWeight: 500,
+                fontSize: { xs: '12px', sm: '13px' },
               }}
             >
-              ₹ {mainPrice.toFixed(2)}
+              ₹{mainPrice.toFixed(0)}
             </Typography>
           )}
         </Box>
 
-        {/* Preparation Time & Cart Badge */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {product.preparation_time_min && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <TimerIcon sx={{ fontSize: '0.9rem', color: '#ff9800' }} />
-              <Typography variant="caption" sx={{ color: '#666', fontWeight: 500, fontSize: '0.7rem' }}>
-                {product.preparation_time_min} min
-              </Typography>
-            </Box>
-          )}
-          {cartQuantity > 0 && (
-            <Chip
-              label={`${cartQuantity} in cart`}
-              size="small"
+        {/* Bottom CTA Section: [ + Add ] or [ −  qty  + ] */}
+        <Box sx={{ mt: 'auto', width: '100%' }}>
+          {cartQuantity > 0 ? (
+            <Box
               sx={{
-                backgroundColor: '#4CAF50',
-                color: '#fff',
-                height: 20,
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                '& .MuiChip-label': { px: 1 },
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                backgroundColor: BRAND.primaryGreen,
+                borderRadius: '10px',
+                color: BRAND.white,
+                px: 0.5,
+                py: 0.2,
+                height: { xs: 34, sm: 38 },
+                boxShadow: '0 2px 8px rgba(8, 127, 91, 0.25)',
               }}
-            />
+              onClick={(e) => e.stopPropagation()}
+            >
+              <IconButton
+                size="small"
+                aria-label={`Decrease quantity of ${product.name}`}
+                onClick={handleDecrement}
+                sx={{
+                  color: BRAND.white,
+                  p: { xs: 0.3, sm: 0.5 },
+                  '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' },
+                }}
+              >
+                <RemoveIcon sx={{ fontSize: { xs: 14, sm: 16 } }} />
+              </IconButton>
+
+              <Typography
+                sx={{
+                  fontWeight: 800,
+                  fontSize: { xs: '13px', sm: '14px' },
+                  userSelect: 'none',
+                }}
+              >
+                {cartQuantity}
+              </Typography>
+
+              <IconButton
+                size="small"
+                aria-label={`Increase quantity of ${product.name}`}
+                onClick={handleIncrement}
+                sx={{
+                  color: BRAND.white,
+                  p: { xs: 0.3, sm: 0.5 },
+                  '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' },
+                }}
+              >
+                <AddIcon sx={{ fontSize: { xs: 14, sm: 16 } }} />
+              </IconButton>
+            </Box>
+          ) : (
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={<AddIcon sx={{ fontSize: '15px !important' }} />}
+              onClick={handleAdd}
+              aria-label={`Add ${product.name} to cart`}
+              sx={{
+                backgroundColor: BRAND.primaryGreen,
+                color: BRAND.white,
+                fontWeight: 600,
+                textTransform: 'none',
+                borderRadius: '10px',
+                height: { xs: 34, sm: 38 },
+                fontSize: { xs: '12.5px', sm: '13.5px' },
+                boxShadow: 'none',
+                transition: 'all 0.18s ease',
+                '&:hover': {
+                  backgroundColor: BRAND.darkGreen,
+                  boxShadow: '0 4px 12px rgba(8, 127, 91, 0.25)',
+                },
+              }}
+            >
+              Add
+            </Button>
           )}
         </Box>
       </CardContent>
-
-      {/* Product Image with Button - Right Side */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0,
-        }}
-      >
-        {/* Image */}
-        <Box
-          sx={{
-            position: 'relative',
-            width: 120,
-            height: 120,
-            overflow: 'hidden',
-          }}
-        >
-          { product.image && <CardMedia
-            component="img"
-            image={product.image}
-            alt={""}
-            loading="lazy"
-            sx={{
-              marginTop: '1rem',
-              borderRadius: '12%',
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              backgroundColor: '#f5f5f5',
-              transition: 'transform 0.3s ease-in-out',
-              '&:hover': {
-                transform: 'scale(1.1)',
-              },
-            }}
-          />}
-
-          {/* Special Price Badge - Top of Image */}
-          {/* {hasSpecialPrice && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 6,
-                left: 6,
-                right: 6,
-                backgroundColor: '#FF6B6B',
-                color: '#fff',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                textAlign: 'center',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-              }}
-            >
-              Sale
-            </Box>
-          )} */}
-        </Box>
-
-        {/* Add Button - Below Image */}
-        <Button
-          variant="contained"
-          size="small"
-          fullWidth
-          startIcon={<AddIcon sx={{ fontSize: '0.85rem' }} />}
-          onClick={handleAddClick}
-          sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: '#fff',
-            fontWeight: 700,
-            textTransform: 'none',
-            borderRadius: '5%',
-            padding: '6px 8px',
-            fontSize: '0.7rem',
-            boxShadow: 'none',
-            minHeight: 'auto',
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #5568d3 0%, #6a3d8f 100%)',
-            },
-          }}
-        >
-          Add
-        </Button>
-      </Box>
-
-      {/* Add to Cart Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem' }}>
-          {product.name}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Box>
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-              Price: <strong>₹ {displayPrice.toFixed(2)}</strong>
-            </Typography>
-            {hasSpecialPrice && (
-              <Typography variant="caption" sx={{ color: '#FF6B6B' }}>
-                Save ₹ {(mainPrice - specialPrice).toFixed(2)}
-              </Typography>
-            )}
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2">Quantity:</Typography>
-            <IconButton size="small" onClick={decrementQuantity} disabled={quantity === 1}>
-              <RemoveIcon />
-            </IconButton>
-            <TextField
-              type="number"
-              size="small"
-              value={quantity}
-              onChange={handleQuantityChange}
-              inputProps={{ min: 1, max: 100, style: { textAlign: 'center', width: '50px' } }}
-            />
-            <IconButton size="small" onClick={incrementQuantity}>
-              <AddIcon />
-            </IconButton>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
-          <Button onClick={() => setOpenDialog(false)} variant="outlined">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleAddToCart}
-            variant="contained"
-            sx={{
-              backgroundColor: '#667eea',
-              '&:hover': {
-                backgroundColor: '#5568d3',
-              },
-            }}
-          >
-            Add to Cart
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Success Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.type}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Card>
   );
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -9,178 +9,906 @@ import {
   Divider,
   Avatar,
   Stack,
+  Alert,
+  Tabs,
+  Tab,
+  Switch,
+  CircularProgress,
+  Chip,
+  Card,
+  CardContent,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
 import {
   Save as SaveIcon,
   PhotoCamera as PhotoCameraIcon,
+  Person as PersonIcon,
+  Storefront as StoreIcon,
+  LocalShipping as DeliveryIcon,
+  NotificationsActive as NotificationIcon,
+  Security as SecurityIcon,
+  Tune as AppSettingsIcon,
+  CheckCircle as CheckCircleIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  Lock as LockIcon,
+  CurrencyRupee as CurrencyRupeeIcon,
+  AccessTime as TimeIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
+import adminService from '../services/adminService';
+import { brandColors } from '../theme/tokens';
+
+const DEFAULT_SETTINGS = {
+  appName: 'AapnuBazaar',
+  tagline: 'Our Local Marketplace',
+  supportEmail: 'support@aapnubazaar.com',
+  supportPhone: '+91 9876543210',
+  currencySymbol: '₹',
+  defaultDeliveryCharge: 30,
+  defaultPackagingCharge: 10,
+  defaultConvenienceCharge: 5,
+  defaultPrepTimeMinutes: 20,
+  operatingTimezone: 'Asia/Kolkata',
+  orderSoundAlert: true,
+  emailNotifications: true,
+  smsNotifications: true,
+  sessionTimeoutMinutes: 60,
+  maintenanceMode: false,
+};
 
 const Settings = () => {
+  const [activeTab, setActiveTab] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Password visibility toggles
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+  // Current logged in admin state
+  const [adminProfile, setAdminProfile] = useState({
+    id: '',
+    name: '',
+    email: '',
+    role: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  // General App & Marketplace Settings
+  const [appSettings, setAppSettings] = useState(DEFAULT_SETTINGS);
+
+  // Load Admin Data and Settings on Mount
+  useEffect(() => {
+    try {
+      const storedAdmin = JSON.parse(localStorage.getItem('adminData') || '{}');
+      if (storedAdmin) {
+        setAdminProfile((prev) => ({
+          ...prev,
+          id: storedAdmin._id || storedAdmin.id || '',
+          name: storedAdmin.name || 'Administrator',
+          email: storedAdmin.email || 'admin@aapnubazaar.com',
+          role: storedAdmin.role === 'super_admin' ? 'Super Administrator' : 'Store Admin',
+        }));
+      }
+
+      const storedSettings = localStorage.getItem('aapnubazaar_platform_settings');
+      if (storedSettings) {
+        setAppSettings((prev) => ({
+          ...prev,
+          ...JSON.parse(storedSettings),
+        }));
+      }
+    } catch (e) {
+      console.error('Error loading settings:', e);
+    }
+  }, []);
+
+  // Update Profile & Password
+  const handleSaveProfile = async (e) => {
+    if (e) e.preventDefault();
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Validate password if new password entered
+      if (adminProfile.newPassword) {
+        if (adminProfile.newPassword.length < 6) {
+          throw new Error('New password must be at least 6 characters long.');
+        }
+        if (adminProfile.newPassword !== adminProfile.confirmPassword) {
+          throw new Error('New password and confirmation password do not match.');
+        }
+      }
+
+      // If we have an active admin ID, update on backend
+      if (adminProfile.id) {
+        const payload = {
+          name: adminProfile.name.trim(),
+          email: adminProfile.email.trim(),
+        };
+        if (adminProfile.newPassword) {
+          payload.password = adminProfile.newPassword.trim();
+        }
+
+        await adminService.updateAdmin(adminProfile.id, payload);
+
+        // Update local storage
+        const currentStored = JSON.parse(localStorage.getItem('adminData') || '{}');
+        const updatedStored = { ...currentStored, name: adminProfile.name.trim(), email: adminProfile.email.trim() };
+        localStorage.setItem('adminData', JSON.stringify(updatedStored));
+      }
+
+      setSuccess('Profile and security credentials updated successfully!');
+      setAdminProfile((prev) => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      }));
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to update profile.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update Platform & Marketplace Settings
+  const handleSaveAppSettings = (e) => {
+    if (e) e.preventDefault();
+    try {
+      setLoading(true);
+      setError(null);
+
+      localStorage.setItem('aapnubazaar_platform_settings', JSON.stringify(appSettings));
+      setSuccess('Platform and marketplace configuration saved successfully!');
+    } catch (err) {
+      setError('Failed to save application settings.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Box>
-      <Typography variant="h4" sx={{ mb: 4, fontWeight: 800 }}>
-        Settings
-      </Typography>
+    <Box sx={{ width: '100%', maxWidth: '100%', pb: 6 }}>
+      {/* Alert Notifications */}
+      {success && (
+        <Alert
+          severity="success"
+          onClose={() => setSuccess(null)}
+          sx={{
+            mb: 3,
+            borderRadius: '14px',
+            backgroundColor: brandColors.successLight,
+            color: brandColors.success,
+            fontWeight: 600,
+            border: `1px solid ${brandColors.borderGreen}`,
+          }}
+        >
+          {success}
+        </Alert>
+      )}
 
-      <Grid container spacing={3}>
-        {/* Profile Settings */}
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 700 }}>
-              Profile Settings
-            </Typography>
+      {error && (
+        <Alert
+          severity="error"
+          onClose={() => setError(null)}
+          sx={{
+            mb: 3,
+            borderRadius: '14px',
+            backgroundColor: brandColors.errorLight,
+            color: brandColors.error,
+            fontWeight: 600,
+            border: `1px solid #FECACA`,
+          }}
+        >
+          {error}
+        </Alert>
+      )}
 
-            <Stack spacing={3}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <Avatar
-                  sx={{
-                    width: 80,
-                    height: 80,
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  }}
-                >
-                  AD
-                </Avatar>
-                <Button
-                  variant="outlined"
-                  startIcon={<PhotoCameraIcon />}
-                  sx={{ textTransform: 'none' }}
-                >
-                  Change Photo
-                </Button>
-              </Box>
+      {/* Page Header */}
+      <Box sx={{ mb: 3.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: '1.6rem', md: '2.1rem' },
+              color: brandColors.primaryText,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Platform Settings
+          </Typography>
+          <Chip
+            icon={<AppSettingsIcon sx={{ fontSize: '16px !important', color: `${brandColors.primaryGreen} !important` }} />}
+            label="System Configuration"
+            size="small"
+            sx={{
+              backgroundColor: brandColors.lightGreen,
+              color: brandColors.primaryGreen,
+              fontWeight: 700,
+              fontSize: '12px',
+              borderRadius: '8px',
+              border: `1px solid ${brandColors.borderGreen}`,
+            }}
+          />
+        </Box>
+        <Typography
+          variant="body2"
+          sx={{
+            color: brandColors.secondaryText,
+            fontWeight: 500,
+            mt: 0.5,
+            fontSize: '0.92rem',
+          }}
+        >
+          Configure administrator credentials, store defaults, order delivery policies, and system preferences.
+        </Typography>
+      </Box>
 
-              <Divider />
+      {/* Navigation Tabs */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: '16px',
+          border: `1px solid ${brandColors.border}`,
+          backgroundColor: brandColors.white,
+          mb: 3.5,
+          px: 1,
+        }}
+      >
+        <Tabs
+          value={activeTab}
+          onChange={(_, val) => setActiveTab(val)}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            '& .MuiTabs-indicator': {
+              backgroundColor: brandColors.primaryGreen,
+              height: 3,
+              borderRadius: '3px 3px 0 0',
+            },
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontWeight: 700,
+              fontSize: '0.92rem',
+              color: brandColors.secondaryText,
+              minHeight: 52,
+              '&.Mui-selected': {
+                color: brandColors.primaryGreen,
+              },
+            },
+          }}
+        >
+          <Tab icon={<PersonIcon sx={{ fontSize: 18, mr: 0.5 }} />} iconPosition="start" label="Admin Profile" />
+          <Tab icon={<StoreIcon sx={{ fontSize: 18, mr: 0.5 }} />} iconPosition="start" label="Marketplace & Store" />
+          <Tab icon={<DeliveryIcon sx={{ fontSize: 18, mr: 0.5 }} />} iconPosition="start" label="Delivery Defaults" />
+          <Tab icon={<NotificationIcon sx={{ fontSize: 18, mr: 0.5 }} />} iconPosition="start" label="Notifications & Audio" />
+          <Tab icon={<SecurityIcon sx={{ fontSize: 18, mr: 0.5 }} />} iconPosition="start" label="Security & Sessions" />
+        </Tabs>
+      </Paper>
 
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Full Name"
-                    defaultValue="Admin User"
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Email"
-                    defaultValue="admin@deliveryapp.com"
-                    variant="outlined"
-                    type="email"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Phone"
-                    defaultValue="+91 9876543210"
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Role"
-                    defaultValue="Super Admin"
-                    variant="outlined"
-                    disabled
-                  />
-                </Grid>
-              </Grid>
-
-              <Divider />
-
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                Change Password
+      {/* TAB 0: ADMIN PROFILE & SECURITY */}
+      {activeTab === 0 && (
+        <Grid container spacing={3}>
+          {/* Profile Details Card */}
+          <Grid item xs={12} md={7}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 2.5, sm: 3.5 },
+                borderRadius: '24px',
+                border: `1px solid ${brandColors.border}`,
+                backgroundColor: brandColors.white,
+                boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
+              }}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 800, color: brandColors.primaryText, mb: 3 }}>
+                Administrator Profile
               </Typography>
 
-              <Grid container spacing={2}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, mb: 3.5 }}>
+                <Avatar
+                  sx={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: '22px',
+                    background: `linear-gradient(135deg, ${brandColors.primaryGreen} 0%, ${brandColors.darkGreen} 100%)`,
+                    fontSize: '1.6rem',
+                    fontWeight: 800,
+                    color: '#FFFFFF',
+                    boxShadow: '0 4px 14px rgba(8, 127, 91, 0.25)',
+                  }}
+                >
+                  {adminProfile.name ? adminProfile.name[0].toUpperCase() : 'A'}
+                </Avatar>
+                <Box>
+                  <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: brandColors.primaryText }}>
+                    {adminProfile.name}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, mt: 0.3 }}>
+                    Role: <strong>{adminProfile.role}</strong>
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Divider sx={{ mb: 3.5 }} />
+
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Administrator Name"
+                    value={adminProfile.name}
+                    onChange={(e) => setAdminProfile({ ...adminProfile, name: e.target.value })}
+                    required
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Login Email"
+                    type="email"
+                    value={adminProfile.email}
+                    onChange={(e) => setAdminProfile({ ...adminProfile, email: e.target.value })}
+                    required
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                  />
+                </Grid>
+
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Current Password"
-                    type="password"
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="New Password"
-                    type="password"
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Confirm Password"
-                    type="password"
-                    variant="outlined"
+                    label="Access Role"
+                    value={adminProfile.role}
+                    disabled
+                    helperText="Super Admin role assignment is managed by platform owners"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px',
+                        backgroundColor: '#F8FAFC',
+                      },
+                    }}
                   />
                 </Grid>
               </Grid>
 
-              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                <Button variant="outlined" sx={{ textTransform: 'none' }}>
-                  Cancel
-                </Button>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3.5 }}>
                 <Button
                   variant="contained"
                   startIcon={<SaveIcon />}
+                  onClick={handleSaveProfile}
+                  disabled={loading || !adminProfile.name.trim() || !adminProfile.email.trim()}
                   sx={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    backgroundColor: brandColors.primaryGreen,
+                    color: '#FFFFFF',
+                    borderRadius: '12px',
+                    fontWeight: 700,
                     textTransform: 'none',
+                    px: 3.5,
+                    py: 1.1,
+                    boxShadow: '0 4px 14px rgba(8, 127, 91, 0.25)',
+                    '&:hover': {
+                      backgroundColor: brandColors.darkGreen,
+                    },
                   }}
                 >
-                  Save Changes
+                  {loading ? <CircularProgress size={20} color="inherit" /> : 'Save Profile Changes'}
                 </Button>
               </Box>
-            </Stack>
-          </Paper>
-        </Grid>
+            </Paper>
+          </Grid>
 
-        {/* Application Settings */}
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 700 }}>
-              Application Settings
-            </Typography>
-            <Stack spacing={2}>
+          {/* Change Password Card */}
+          <Grid item xs={12} md={5}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 2.5, sm: 3.5 },
+                borderRadius: '24px',
+                border: `1px solid ${brandColors.border}`,
+                backgroundColor: brandColors.white,
+                boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
+              }}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 800, color: brandColors.primaryText, mb: 1 }}>
+                Update Password
+              </Typography>
+              <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, mb: 3 }}>
+                Ensure your administrative password uses at least 6 characters.
+              </Typography>
+
+              <Stack spacing={2.5}>
+                <TextField
+                  fullWidth
+                  label="New Password"
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={adminProfile.newPassword}
+                  onChange={(e) => setAdminProfile({ ...adminProfile, newPassword: e.target.value })}
+                  placeholder="Enter at least 6 characters"
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowNewPassword(!showNewPassword)} edge="end" size="small">
+                          {showNewPassword ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Confirm New Password"
+                  type="password"
+                  value={adminProfile.confirmPassword}
+                  onChange={(e) => setAdminProfile({ ...adminProfile, confirmPassword: e.target.value })}
+                  placeholder="Repeat new password"
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                />
+
+                <Button
+                  variant="contained"
+                  startIcon={<LockIcon />}
+                  onClick={handleSaveProfile}
+                  disabled={loading || !adminProfile.newPassword}
+                  sx={{
+                    backgroundColor: brandColors.blueAccent,
+                    color: '#FFFFFF',
+                    borderRadius: '12px',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    py: 1.2,
+                    mt: 1,
+                    '&:hover': {
+                      backgroundColor: '#1D4ED8',
+                    },
+                  }}
+                >
+                  {loading ? <CircularProgress size={20} color="inherit" /> : 'Update Password'}
+                </Button>
+              </Stack>
+            </Paper>
+          </Grid>
+        </Grid>
+      )}
+
+      {/* TAB 1: MARKETPLACE & STORE SETTINGS */}
+      {activeTab === 1 && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 2.5, sm: 3.5 },
+            borderRadius: '24px',
+            border: `1px solid ${brandColors.border}`,
+            backgroundColor: brandColors.white,
+            boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 800, color: brandColors.primaryText, mb: 1 }}>
+            Marketplace Identity & Support
+          </Typography>
+          <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, mb: 3.5 }}>
+            Public marketplace details displayed in customer app headers, receipts, and order notifications.
+          </Typography>
+
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="App Name"
-                defaultValue="DeliveryApp"
-                variant="outlined"
+                label="Marketplace App Name"
+                value={appSettings.appName}
+                onChange={(e) => setAppSettings({ ...appSettings, appName: e.target.value })}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
               />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Support Email"
-                defaultValue="support@deliveryapp.com"
-                variant="outlined"
+                label="Brand Tagline"
+                value={appSettings.tagline}
+                onChange={(e) => setAppSettings({ ...appSettings, tagline: e.target.value })}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
               />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Support Phone"
-                defaultValue="+91 9876543210"
-                variant="outlined"
+                label="Support Contact Email"
+                type="email"
+                value={appSettings.supportEmail}
+                onChange={(e) => setAppSettings({ ...appSettings, supportEmail: e.target.value })}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
               />
-              <Button
-                variant="contained"
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
                 fullWidth
+                label="Support Phone Helpline"
+                value={appSettings.supportPhone}
+                onChange={(e) => setAppSettings({ ...appSettings, supportPhone: e.target.value })}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Default Currency Symbol"
+                value={appSettings.currencySymbol}
+                onChange={(e) => setAppSettings({ ...appSettings, currencySymbol: e.target.value })}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Operating Timezone"
+                value={appSettings.operatingTimezone}
+                onChange={(e) => setAppSettings({ ...appSettings, operatingTimezone: e.target.value })}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+              />
+            </Grid>
+          </Grid>
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+            <Button
+              variant="contained"
+              startIcon={<SaveIcon />}
+              onClick={handleSaveAppSettings}
+              disabled={loading}
+              sx={{
+                backgroundColor: brandColors.primaryGreen,
+                color: '#FFFFFF',
+                borderRadius: '12px',
+                fontWeight: 700,
+                textTransform: 'none',
+                px: 3.5,
+                py: 1.1,
+                boxShadow: '0 4px 14px rgba(8, 127, 91, 0.25)',
+                '&:hover': {
+                  backgroundColor: brandColors.darkGreen,
+                },
+              }}
+            >
+              {loading ? <CircularProgress size={20} color="inherit" /> : 'Save Marketplace Settings'}
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
+      {/* TAB 2: DELIVERY & ORDER DEFAULTS */}
+      {activeTab === 2 && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 2.5, sm: 3.5 },
+            borderRadius: '24px',
+            border: `1px solid ${brandColors.border}`,
+            backgroundColor: brandColors.white,
+            boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 800, color: brandColors.primaryText, mb: 1 }}>
+            Delivery & Fee Policies
+          </Typography>
+          <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, mb: 3.5 }}>
+            Default marketplace rates used when initializing new merchant store contracts.
+          </Typography>
+
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                fullWidth
+                label="Default Delivery Charge (₹)"
+                type="number"
+                value={appSettings.defaultDeliveryCharge}
+                onChange={(e) => setAppSettings({ ...appSettings, defaultDeliveryCharge: Number(e.target.value) })}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                fullWidth
+                label="Default Packaging Fee (₹)"
+                type="number"
+                value={appSettings.defaultPackagingCharge}
+                onChange={(e) => setAppSettings({ ...appSettings, defaultPackagingCharge: Number(e.target.value) })}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                fullWidth
+                label="Default Platform Fee (₹)"
+                type="number"
+                value={appSettings.defaultConvenienceCharge}
+                onChange={(e) => setAppSettings({ ...appSettings, defaultConvenienceCharge: Number(e.target.value) })}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                fullWidth
+                label="Default Prep Time (Mins)"
+                type="number"
+                value={appSettings.defaultPrepTimeMinutes}
+                onChange={(e) => setAppSettings({ ...appSettings, defaultPrepTimeMinutes: Number(e.target.value) })}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+              />
+            </Grid>
+          </Grid>
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+            <Button
+              variant="contained"
+              startIcon={<SaveIcon />}
+              onClick={handleSaveAppSettings}
+              disabled={loading}
+              sx={{
+                backgroundColor: brandColors.primaryGreen,
+                color: '#FFFFFF',
+                borderRadius: '12px',
+                fontWeight: 700,
+                textTransform: 'none',
+                px: 3.5,
+                py: 1.1,
+                boxShadow: '0 4px 14px rgba(8, 127, 91, 0.25)',
+                '&:hover': {
+                  backgroundColor: brandColors.darkGreen,
+                },
+              }}
+            >
+              {loading ? <CircularProgress size={20} color="inherit" /> : 'Save Delivery Defaults'}
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
+      {/* TAB 3: NOTIFICATIONS & AUDIO */}
+      {activeTab === 3 && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 2.5, sm: 3.5 },
+            borderRadius: '24px',
+            border: `1px solid ${brandColors.border}`,
+            backgroundColor: brandColors.white,
+            boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 800, color: brandColors.primaryText, mb: 1 }}>
+            Notification & Audio Preferences
+          </Typography>
+          <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, mb: 3.5 }}>
+            Manage portal ringers, dispatch chime alerts, and email notifications.
+          </Typography>
+
+          <Stack spacing={2.5}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2.5,
+                borderRadius: '16px',
+                backgroundColor: '#F8FAFC',
+                border: `1px solid ${brandColors.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Box>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.92rem', color: brandColors.primaryText }}>
+                  Incoming Order Audio Chime
+                </Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: brandColors.secondaryText }}>
+                  Play an audible sound chime on the Order Management screen when a new order is received.
+                </Typography>
+              </Box>
+              <Switch
+                checked={appSettings.orderSoundAlert}
+                onChange={(e) => setAppSettings({ ...appSettings, orderSoundAlert: e.target.checked })}
                 sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  textTransform: 'none',
-                  mt: 2,
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: brandColors.primaryGreen },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: brandColors.primaryGreen },
+                }}
+              />
+            </Paper>
+
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2.5,
+                borderRadius: '16px',
+                backgroundColor: '#F8FAFC',
+                border: `1px solid ${brandColors.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Box>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.92rem', color: brandColors.primaryText }}>
+                  Email Digest & Critical Alerts
+                </Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: brandColors.secondaryText }}>
+                  Send email notifications for high-priority platform events, cancellations, and daily summaries.
+                </Typography>
+              </Box>
+              <Switch
+                checked={appSettings.emailNotifications}
+                onChange={(e) => setAppSettings({ ...appSettings, emailNotifications: e.target.checked })}
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: brandColors.primaryGreen },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: brandColors.primaryGreen },
+                }}
+              />
+            </Paper>
+
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2.5,
+                borderRadius: '16px',
+                backgroundColor: '#F8FAFC',
+                border: `1px solid ${brandColors.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Box>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.92rem', color: brandColors.primaryText }}>
+                  Customer SMS Updates
+                </Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: brandColors.secondaryText }}>
+                  Trigger automated order confirmation and delivery status SMS to shopper mobile numbers.
+                </Typography>
+              </Box>
+              <Switch
+                checked={appSettings.smsNotifications}
+                onChange={(e) => setAppSettings({ ...appSettings, smsNotifications: e.target.checked })}
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: brandColors.primaryGreen },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: brandColors.primaryGreen },
+                }}
+              />
+            </Paper>
+          </Stack>
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+            <Button
+              variant="contained"
+              startIcon={<SaveIcon />}
+              onClick={handleSaveAppSettings}
+              disabled={loading}
+              sx={{
+                backgroundColor: brandColors.primaryGreen,
+                color: '#FFFFFF',
+                borderRadius: '12px',
+                fontWeight: 700,
+                textTransform: 'none',
+                px: 3.5,
+                py: 1.1,
+                boxShadow: '0 4px 14px rgba(8, 127, 91, 0.25)',
+                '&:hover': {
+                  backgroundColor: brandColors.darkGreen,
+                },
+              }}
+            >
+              {loading ? <CircularProgress size={20} color="inherit" /> : 'Save Notification Preferences'}
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
+      {/* TAB 4: SECURITY & SESSIONS */}
+      {activeTab === 4 && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 2.5, sm: 3.5 },
+            borderRadius: '24px',
+            border: `1px solid ${brandColors.border}`,
+            backgroundColor: brandColors.white,
+            boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 800, color: brandColors.primaryText, mb: 1 }}>
+            Security & Authentication Policies
+          </Typography>
+          <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, mb: 3.5 }}>
+            Configure session timeouts and portal access security safeguards.
+          </Typography>
+
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Admin Portal Session Expiry (Minutes)"
+                type="number"
+                value={appSettings.sessionTimeoutMinutes}
+                onChange={(e) => setAppSettings({ ...appSettings, sessionTimeoutMinutes: Number(e.target.value) })}
+                helperText="Inactive administrator tokens expire automatically after this duration"
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2.5,
+                  borderRadius: '16px',
+                  backgroundColor: '#F8FAFC',
+                  border: `1px solid ${brandColors.border}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                 }}
               >
-                Update Settings
-              </Button>
-            </Stack>
-          </Paper>
-        </Grid>
-      </Grid>
+                <Box>
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.92rem', color: brandColors.primaryText }}>
+                    Marketplace Maintenance Mode
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.8rem', color: brandColors.secondaryText }}>
+                    Temporarily pause storefront checkouts for scheduled maintenance upgrades.
+                  </Typography>
+                </Box>
+                <Switch
+                  checked={appSettings.maintenanceMode}
+                  onChange={(e) => setAppSettings({ ...appSettings, maintenanceMode: e.target.checked })}
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': { color: brandColors.orange },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: brandColors.orange },
+                  }}
+                />
+              </Paper>
+            </Grid>
+          </Grid>
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+            <Button
+              variant="contained"
+              startIcon={<SaveIcon />}
+              onClick={handleSaveAppSettings}
+              disabled={loading}
+              sx={{
+                backgroundColor: brandColors.primaryGreen,
+                color: '#FFFFFF',
+                borderRadius: '12px',
+                fontWeight: 700,
+                textTransform: 'none',
+                px: 3.5,
+                py: 1.1,
+                boxShadow: '0 4px 14px rgba(8, 127, 91, 0.25)',
+                '&:hover': {
+                  backgroundColor: brandColors.darkGreen,
+                },
+              }}
+            >
+              {loading ? <CircularProgress size={20} color="inherit" /> : 'Save Security Policies'}
+            </Button>
+          </Box>
+        </Paper>
+      )}
     </Box>
   );
 };

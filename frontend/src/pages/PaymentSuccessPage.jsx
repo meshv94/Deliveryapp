@@ -111,7 +111,7 @@ const PaymentSuccessPage = () => {
     return (
       <Container sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Box sx={{ textAlign: 'center' }}>
-          <CircularProgress size={60} thickness={4} sx={{ color: '#667eea' }} />
+          <CircularProgress size={60} thickness={4} sx={{ color: '#087F5B' }} />
           <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
             Processing your payment...
           </Typography>
@@ -151,38 +151,23 @@ const PaymentSuccessPage = () => {
                 mb: 4,
               }}
             >
-              <Zoom in timeout={800} style={{ transitionDelay: '200ms' }}>
+              <Zoom in timeout={600}>
                 <Box
                   sx={{
                     width: '100%',
                     height: '100%',
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)',
+                    backgroundColor: '#087F5B',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 15px 50px rgba(76, 175, 80, 0.4)',
-                    animation: 'pulse 2s ease-in-out infinite',
-                    '@keyframes pulse': {
-                      '0%': {
-                        transform: 'scale(1)',
-                        boxShadow: '0 15px 50px rgba(76, 175, 80, 0.4)',
-                      },
-                      '50%': {
-                        transform: 'scale(1.05)',
-                        boxShadow: '0 20px 60px rgba(76, 175, 80, 0.6)',
-                      },
-                      '100%': {
-                        transform: 'scale(1)',
-                        boxShadow: '0 15px 50px rgba(76, 175, 80, 0.4)',
-                      },
-                    },
+                    boxShadow: '0 12px 28px rgba(8, 127, 91, 0.25)',
                   }}
                 >
                   <CheckCircleIcon
                     sx={{
-                      fontSize: { xs: 80, md: 100 },
-                      color: '#fff',
+                      fontSize: { xs: 72, md: 88 },
+                      color: '#FFFFFF',
                     }}
                   />
                 </Box>
@@ -190,68 +175,55 @@ const PaymentSuccessPage = () => {
             </Box>
 
             {/* Success Message */}
-            <Fade in timeout={1000} style={{ transitionDelay: '400ms' }}>
+            <Fade in timeout={800}>
               <Box>
                 <Typography
                   variant="h3"
                   sx={{
-                    mb: 2,
+                    mb: 1.5,
                     fontWeight: 800,
-                    fontSize: { xs: '2rem', md: '2.5rem' },
-                    background: 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)',
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    animation: 'slideUp 0.8s ease-out',
-                    '@keyframes slideUp': {
-                      '0%': {
-                        opacity: 0,
-                        transform: 'translateY(20px)',
-                      },
-                      '100%': {
-                        opacity: 1,
-                        transform: 'translateY(0)',
-                      },
-                    },
+                    fontSize: { xs: '1.75rem', md: '2.25rem' },
+                    color: '#151515',
                   }}
                 >
                   Payment Successful!
                 </Typography>
                 <Typography
-                  variant="h6"
-                  color="textSecondary"
+                  variant="body1"
                   sx={{
-                    mb: 4,
-                    fontSize: { xs: '1rem', md: '1.25rem' },
+                    mb: 3,
+                    fontSize: { xs: '0.95rem', md: '1.1rem' },
+                    color: '#6B7280',
                     fontWeight: 500,
                   }}
                 >
-                  Your order has been successfully placed
+                  Your order has been successfully confirmed and sent to the store.
                 </Typography>
               </Box>
             </Fade>
 
-            {/* Animated Decorative Elements */}
-            <Grow in timeout={1200} style={{ transitionDelay: '600ms' }}>
+            {/* Confirmation Banner */}
+            <Grow in timeout={900}>
               <Box
                 sx={{
-                  mb: 4,
-                  py: 3,
-                  px: 2,
+                  mb: 3.5,
+                  py: 2.5,
+                  px: 3,
                   borderRadius: '16px',
-                  background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                  border: '2px solid #bae6fd',
+                  backgroundColor: '#EBFBEE',
+                  border: '1px solid #B2F2BB',
                 }}
               >
                 <Typography
                   variant="body1"
-                  color="textSecondary"
                   sx={{
-                    fontSize: { xs: '0.95rem', md: '1.1rem' },
-                    lineHeight: 1.8,
+                    fontSize: { xs: '0.9rem', md: '1rem' },
+                    lineHeight: 1.6,
+                    color: '#075B43',
+                    fontWeight: 600,
                   }}
                 >
-                  Thank you for your payment! We're preparing your items and will have them delivered soon.
+                  Thank you for your payment! The shop is packing your items and will have them delivered soon.
                 </Typography>
               </Box>
             </Grow>
@@ -264,7 +236,7 @@ const PaymentSuccessPage = () => {
                   size="large"
                   onClick={() => navigate('/my-orders')}
                   sx={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    backgroundColor: '#087F5B',
                     color: '#fff',
                     fontWeight: 700,
                     px: { xs: 4, md: 5 },
@@ -272,12 +244,11 @@ const PaymentSuccessPage = () => {
                     borderRadius: '12px',
                     fontSize: { xs: '1rem', md: '1.1rem' },
                     textTransform: 'none',
-                    boxShadow: '0 10px 30px rgba(102, 126, 234, 0.4)',
-                    transition: 'all 0.3s ease',
+                    boxShadow: '0 6px 20px rgba(8, 127, 91, 0.3)',
+                    transition: 'all 0.25s ease',
                     '&:hover': {
-                      background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
-                      transform: 'translateY(-3px)',
-                      boxShadow: '0 15px 40px rgba(102, 126, 234, 0.5)',
+                      backgroundColor: '#075B43',
+                      transform: 'translateY(-2px)',
                     },
                   }}
                 >
@@ -288,18 +259,18 @@ const PaymentSuccessPage = () => {
                   size="large"
                   onClick={() => navigate('/vendors')}
                   sx={{
-                    borderColor: '#667eea',
-                    color: '#667eea',
+                    borderColor: '#087F5B',
+                    color: '#087F5B',
                     fontWeight: 600,
                     px: { xs: 4, md: 5 },
                     py: { xs: 1.5, md: 2 },
                     borderRadius: '12px',
                     fontSize: { xs: '0.95rem', md: '1rem' },
                     textTransform: 'none',
-                    transition: 'all 0.3s ease',
+                    transition: 'all 0.25s ease',
                     '&:hover': {
-                      borderColor: '#667eea',
-                      backgroundColor: '#667eea10',
+                      borderColor: '#075B43',
+                      backgroundColor: 'rgba(8, 127, 91, 0.05)',
                       transform: 'translateY(-2px)',
                     },
                   }}
@@ -345,23 +316,23 @@ const PaymentSuccessPage = () => {
               mb: 4,
             }}
           >
-            <Zoom in timeout={800} style={{ transitionDelay: '200ms' }}>
+            <Zoom in timeout={600}>
               <Box
                 sx={{
                   width: '100%',
                   height: '100%',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #ef5350 0%, #e53935 100%)',
+                  backgroundColor: '#E03131',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 15px 50px rgba(239, 83, 80, 0.4)',
+                  boxShadow: '0 12px 28px rgba(224, 49, 49, 0.25)',
                 }}
               >
                 <ErrorOutlineIcon
                   sx={{
-                    fontSize: { xs: 80, md: 100 },
-                    color: '#fff',
+                    fontSize: { xs: 72, md: 88 },
+                    color: '#FFFFFF',
                   }}
                 />
               </Box>
@@ -369,35 +340,32 @@ const PaymentSuccessPage = () => {
           </Box>
 
           {/* Error Message */}
-          <Fade in timeout={1000} style={{ transitionDelay: '400ms' }}>
+          <Fade in timeout={800}>
             <Box>
               <Typography
                 variant="h3"
                 sx={{
-                  mb: 2,
+                  mb: 1.5,
                   fontWeight: 800,
-                  fontSize: { xs: '2rem', md: '2.5rem' },
-                  background: 'linear-gradient(135deg, #ef5350 0%, #e53935 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  fontSize: { xs: '1.75rem', md: '2.25rem' },
+                  color: '#151515',
                 }}
               >
                 Payment Failed
               </Typography>
               <Typography
-                variant="h6"
-                color="textSecondary"
+                variant="body1"
                 sx={{
-                  mb: 4,
-                  fontSize: { xs: '1rem', md: '1.25rem' },
+                  mb: 3,
+                  fontSize: { xs: '0.95rem', md: '1.1rem' },
+                  color: '#6B7280',
                   fontWeight: 500,
                 }}
               >
-                Your payment was not successful
+                Your payment could not be processed at this time.
               </Typography>
               {error && (
-                <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>
+                <Alert severity="error" sx={{ mb: 3, borderRadius: '12px', fontWeight: 600 }}>
                   {error}
                 </Alert>
               )}
@@ -412,7 +380,7 @@ const PaymentSuccessPage = () => {
                 size="large"
                 onClick={() => navigate('/cart')}
                 sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  backgroundColor: '#087F5B',
                   color: '#fff',
                   fontWeight: 700,
                   px: { xs: 4, md: 5 },
@@ -420,12 +388,11 @@ const PaymentSuccessPage = () => {
                   borderRadius: '12px',
                   fontSize: { xs: '1rem', md: '1.1rem' },
                   textTransform: 'none',
-                  boxShadow: '0 10px 30px rgba(102, 126, 234, 0.4)',
-                  transition: 'all 0.3s ease',
+                  boxShadow: '0 6px 20px rgba(8, 127, 91, 0.3)',
+                  transition: 'all 0.25s ease',
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
-                    transform: 'translateY(-3px)',
-                    boxShadow: '0 15px 40px rgba(102, 126, 234, 0.5)',
+                    backgroundColor: '#075B43',
+                    transform: 'translateY(-2px)',
                   },
                 }}
               >
@@ -436,18 +403,18 @@ const PaymentSuccessPage = () => {
                 size="large"
                 onClick={() => navigate('/vendors')}
                 sx={{
-                  borderColor: '#667eea',
-                  color: '#667eea',
+                  borderColor: '#087F5B',
+                  color: '#087F5B',
                   fontWeight: 600,
                   px: { xs: 4, md: 5 },
                   py: { xs: 1.5, md: 2 },
                   borderRadius: '12px',
                   fontSize: { xs: '0.95rem', md: '1rem' },
                   textTransform: 'none',
-                  transition: 'all 0.3s ease',
+                  transition: 'all 0.25s ease',
                   '&:hover': {
-                    borderColor: '#667eea',
-                    backgroundColor: '#667eea10',
+                    borderColor: '#075B43',
+                    backgroundColor: 'rgba(8, 127, 91, 0.05)',
                     transform: 'translateY(-2px)',
                   },
                 }}

@@ -23,6 +23,7 @@ const cartSchema = new mongoose.Schema({
 	subtotal: { type: Number, required: true, min: 0, default: 0 },
 	discount: { type: Number, default: 0, min: 0 },
 	packaging_charge: { type: Number, default: 0, min: 0 },
+	delivery_distance: { type: Number, default: 0, min: 0 }, // distance in kilometers
 	delivery_charge: { type: Number, default: 0, min: 0 },
 	convenience_charge: { type: Number, default: 0, min: 0 },
 

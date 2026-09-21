@@ -304,27 +304,49 @@ const getRevenueStats = async (req, res) => {
 
     let startDate;
     const endDate = new Date();
+    let numDays = 7;
 
     // Determine date range based on period
     switch (period) {
       case '7days':
+        numDays = 7;
         startDate = new Date();
-        startDate.setDate(startDate.getDate() - 7);
+        startDate.setDate(startDate.getDate() - 6);
+        startDate.setHours(0, 0, 0, 0);
         break;
       case '30days':
+        numDays = 30;
         startDate = new Date();
-        startDate.setDate(startDate.getDate() - 30);
+        startDate.setDate(startDate.getDate() - 29);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case '90days':
+        numDays = 90;
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - 89);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case '1year':
+      case 'year':
+        numDays = 365;
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - 364);
+        startDate.setHours(0, 0, 0, 0);
         break;
       case 'thisMonth':
         startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+        numDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
         break;
       case 'lastMonth':
         startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 1, 1);
-        endDate.setDate(0); // Last day of last month
+        endDate.setDate(0);
+        numDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
         break;
       default:
+        numDays = 7;
         startDate = new Date();
-        startDate.setDate(startDate.getDate() - 7);
+        startDate.setDate(startDate.getDate() - 6);
+        startDate.setHours(0, 0, 0, 0);
     }
 
     // Get revenue data
@@ -332,7 +354,7 @@ const getRevenueStats = async (req, res) => {
       {
         $match: {
           createdAt: { $gte: startDate, $lte: endDate },
-          status: { $in: ['Placed', 'Delivered'] },
+          status: { $ne: 'New' },
         },
       },
       {
@@ -341,16 +363,53 @@ const getRevenueStats = async (req, res) => {
             $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
           },
           revenue: { $sum: '$total_payable_amount' },
+          count: { $sum: 1 },
           orders: { $sum: 1 },
         },
       },
       { $sort: { _id: 1 } },
     ]);
 
+    // Fill in dates for daily stats
+    const filledStats = [];
+    if (numDays <= 30) {
+      for (let i = numDays - 1; i >= 0; i--) {
+        const d = new Date(endDate);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const existing = revenueData.find((r) => r._id === dateStr);
+        filledStats.push({
+          date: dateStr,
+          count: existing?.count || existing?.orders || 0,
+          orders: existing?.orders || existing?.count || 0,
+          revenue: existing?.revenue || 0,
+        });
+      }
+    } else {
+      if (revenueData.length > 0) {
+        revenueData.forEach((r) => {
+          filledStats.push({
+            date: r._id,
+            count: r.count || r.orders || 0,
+            orders: r.orders || r.count || 0,
+            revenue: r.revenue || 0,
+          });
+        });
+      }
+    }
+
+    const totalPeriodRevenue = revenueData.reduce((acc, curr) => acc + (curr.revenue || 0), 0);
+    const totalPeriodOrders = revenueData.reduce((acc, curr) => acc + (curr.count || curr.orders || 0), 0);
+
     return res.status(200).json({
       success: true,
       message: 'Revenue statistics fetched successfully',
-      data: revenueData,
+      data: {
+        period,
+        totalRevenue: totalPeriodRevenue,
+        totalOrders: totalPeriodOrders,
+        dailyStats: filledStats,
+      },
     });
   } catch (error) {
     console.error('Error fetching revenue statistics:', error);
