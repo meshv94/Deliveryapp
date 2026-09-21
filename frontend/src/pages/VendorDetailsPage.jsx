@@ -2,64 +2,75 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
-  Grid,
   Box,
   Typography,
-  Stack,
   Skeleton,
   Button,
-  Paper,
   TextField,
   InputAdornment,
-  Chip,
   Fade,
   IconButton,
-  Divider,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import AddIcon from '@mui/icons-material/Add';
-import RemoveIcon from '@mui/icons-material/Remove';
 import LocalMallOutlinedIcon from '@mui/icons-material/LocalMallOutlined';
-import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 import useVendorDetails from '../hooks/useVendorDetails';
 import { useCartContext } from '../context/CartContext';
 import apiClient from '../services/api';
 import VendorHeader from '../components/VendorHeader';
 import ProductCard from '../components/ProductCard';
+import FloatingCartBar from '../components/FloatingCartBar';
+import CartDrawer from '../components/CartDrawer';
+
+// Brand Design Tokens
+const BRAND = {
+  primaryGreen: '#087F5B',
+  darkGreen: '#075B43',
+  lightGreen: '#EAF7F2',
+  orange: '#FF6B00',
+  orangeLight: '#FFF4E6',
+  bgPage: '#F7F9F8',
+  white: '#FFFFFF',
+  textPrimary: '#17221D',
+  textSecondary: '#6B7280',
+  border: '#E5E7EB',
+  borderInput: '#DDE5E1',
+  red: '#E03131',
+  redLight: '#FFF5F5',
+};
 
 /**
- * Redesigned VendorDetailsPage
- * Authentic local store experience with:
- * - Cover & identity header
- * - In-shop product search
- * - Category tabs (All, Popular, and dynamic categories from API)
- * - Premium product cards with inline stepper
- * - Sticky desktop Mini-Cart & Mobile bottom cart bar
+ * VendorDetailsPage Component
+ * Professional marketplace vendor details & product catalog:
+ * - Controlled compact vendor hero
+ * - In-shop search & responsive horizontal category navigation
+ * - 2-column mobile / 4-column desktop product grid with uniform vertical cards
+ * - Real-time CartContext integration & floating cart summary
+ * - Slide-in cart drawer / mobile bottom sheet
  */
 const VendorDetailsPage = () => {
   const { vendorId } = useParams();
   const navigate = useNavigate();
   const { vendor, products, loading, error } = useVendorDetails(vendorId);
-  const { getVendorCart, updateQuantity, removeFromCart } = useCartContext();
+  const { getVendorCart } = useCartContext();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [modules, setModules] = useState([]);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
 
   // Fetch active modules/categories from API for mapping
   useEffect(() => {
     const fetchModules = async () => {
       try {
         const res = await apiClient.get('/app/modules/active/list');
-        if (res.data && Array.isArray(res.data)) {
+        if (res?.data && Array.isArray(res.data)) {
           setModules(res.data);
         }
       } catch (err) {
@@ -99,7 +110,6 @@ const VendorDetailsPage = () => {
     let hasPopular = false;
 
     products.forEach((p) => {
-      // Check if popular / has special price
       if (p.special_price && p.special_price < p.main_price) {
         hasPopular = true;
       }
@@ -189,25 +199,49 @@ const VendorDetailsPage = () => {
   // Loading State
   if (loading) {
     return (
-      <Box sx={{ backgroundColor: '#FAFAF7', minHeight: '100vh', pb: 8 }}>
-        <Skeleton variant="rectangular" width="100%" height={300} />
-        <Container maxWidth="lg" sx={{ mt: 3 }}>
-          <Skeleton variant="text" width="30%" height={40} sx={{ mb: 2 }} />
-          <Skeleton variant="rectangular" height={50} sx={{ borderRadius: 3, mb: 4 }} />
-          <Grid container spacing={3}>
-            <Grid item xs={12} lg={8}>
-              <Grid container spacing={2}>
-                {[1, 2, 3, 4].map((i) => (
-                  <Grid item xs={12} sm={6} key={i}>
-                    <Skeleton variant="rounded" height={160} sx={{ borderRadius: 3 }} />
-                  </Grid>
-                ))}
-              </Grid>
-            </Grid>
-            <Grid item xs={12} lg={4}>
-              <Skeleton variant="rounded" height={360} sx={{ borderRadius: 3 }} />
-            </Grid>
-          </Grid>
+      <Box sx={{ backgroundColor: BRAND.bgPage, minHeight: '100vh', pb: 10 }}>
+        {/* Skeleton Banner */}
+        <Box sx={{ backgroundColor: BRAND.white, pb: 3, borderBottom: `1px solid ${BRAND.border}` }}>
+          <Container maxWidth="lg" sx={{ maxWidth: '1280px !important', px: { xs: 2, sm: 3, md: 4 }, pt: 2 }}>
+            <Skeleton variant="text" width={140} height={24} sx={{ mb: 1.5 }} />
+            <Skeleton variant="rectangular" width="100%" height={200} sx={{ borderRadius: '16px' }} />
+          </Container>
+        </Box>
+
+        {/* Skeleton Grid */}
+        <Container maxWidth="lg" sx={{ maxWidth: '1280px !important', px: { xs: 1.5, sm: 2.5, md: 3 }, mt: 3 }}>
+          <Skeleton variant="rectangular" height={48} sx={{ borderRadius: '12px', mb: 2.5 }} />
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'repeat(2, minmax(0, 1fr))',
+                sm: 'repeat(2, minmax(0, 1fr))',
+                md: 'repeat(3, minmax(0, 1fr))',
+                lg: 'repeat(4, minmax(0, 1fr))',
+              },
+              gap: { xs: 1.5, sm: 2, md: 2.5 },
+            }}
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <Box
+                key={i}
+                sx={{
+                  borderRadius: '16px',
+                  border: `1px solid ${BRAND.border}`,
+                  backgroundColor: BRAND.white,
+                  overflow: 'hidden',
+                }}
+              >
+                <Skeleton variant="rectangular" height={150} />
+                <Box sx={{ p: 1.5 }}>
+                  <Skeleton variant="text" width="80%" height={22} sx={{ mb: 0.5 }} />
+                  <Skeleton variant="text" width="45%" height={18} sx={{ mb: 1.5 }} />
+                  <Skeleton variant="rectangular" height={36} sx={{ borderRadius: '10px' }} />
+                </Box>
+              </Box>
+            ))}
+          </Box>
         </Container>
       </Box>
     );
@@ -218,7 +252,7 @@ const VendorDetailsPage = () => {
     return (
       <Box
         sx={{
-          backgroundColor: '#FAFAF7',
+          backgroundColor: BRAND.bgPage,
           minHeight: '80vh',
           display: 'flex',
           alignItems: 'center',
@@ -227,41 +261,54 @@ const VendorDetailsPage = () => {
         }}
       >
         <Container maxWidth="sm">
-          <Paper
-            elevation={0}
+          <Box
             sx={{
               p: 5,
-              borderRadius: '20px',
+              borderRadius: '16px',
               textAlign: 'center',
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #E5E7EB',
-              boxShadow: '0 8px 30px rgba(0,0,0,0.06)',
+              backgroundColor: BRAND.white,
+              border: `1px solid ${BRAND.border}`,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
             }}
           >
-            <Box sx={{ fontSize: '3.5rem', mb: 2 }}>⚠️</Box>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: '#151515', mb: 1.5 }}>
+            <Box
+              sx={{
+                width: 60,
+                height: 60,
+                borderRadius: '50%',
+                backgroundColor: BRAND.redLight,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 2,
+              }}
+            >
+              <ErrorOutlineIcon sx={{ fontSize: 32, color: BRAND.red }} />
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: BRAND.textPrimary, mb: 1 }}>
               Unable to Load Shop
             </Typography>
-            <Typography variant="body2" sx={{ color: '#6B7280', mb: 3 }}>
-              {error}
+            <Typography variant="body2" sx={{ color: BRAND.textSecondary, mb: 3 }}>
+              {error || 'Something went wrong while fetching the vendor details.'}
             </Typography>
             <Button
               variant="contained"
               onClick={() => navigate('/vendors')}
               sx={{
-                backgroundColor: '#087F5B',
-                color: '#fff',
+                backgroundColor: BRAND.primaryGreen,
+                color: BRAND.white,
                 fontWeight: 700,
                 borderRadius: '10px',
                 px: 3,
-                py: 1.2,
+                py: 1,
                 textTransform: 'none',
-                '&:hover': { backgroundColor: '#075B43' },
+                '&:hover': { backgroundColor: BRAND.darkGreen },
               }}
             >
               Browse Other Shops
             </Button>
-          </Paper>
+          </Box>
         </Container>
       </Box>
     );
@@ -272,7 +319,7 @@ const VendorDetailsPage = () => {
     return (
       <Box
         sx={{
-          backgroundColor: '#FAFAF7',
+          backgroundColor: BRAND.bgPage,
           minHeight: '80vh',
           display: 'flex',
           alignItems: 'center',
@@ -281,41 +328,55 @@ const VendorDetailsPage = () => {
         }}
       >
         <Container maxWidth="sm">
-          <Paper
-            elevation={0}
+          <Box
             sx={{
               p: 5,
-              borderRadius: '20px',
+              borderRadius: '16px',
               textAlign: 'center',
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #E5E7EB',
-              boxShadow: '0 8px 30px rgba(0,0,0,0.06)',
+              backgroundColor: BRAND.white,
+              border: `1px solid ${BRAND.border}`,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
             }}
           >
-            <StorefrontIcon sx={{ fontSize: 60, color: '#9CA3AF', mb: 2 }} />
-            <Typography variant="h5" sx={{ fontWeight: 800, color: '#151515', mb: 1.5 }}>
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: '50%',
+                backgroundColor: BRAND.bgPage,
+                border: `1px solid ${BRAND.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 2,
+              }}
+            >
+              <StorefrontIcon sx={{ fontSize: 32, color: BRAND.textSecondary }} />
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: BRAND.textPrimary, mb: 1 }}>
               Shop Not Found
             </Typography>
-            <Typography variant="body2" sx={{ color: '#6B7280', mb: 3 }}>
+            <Typography variant="body2" sx={{ color: BRAND.textSecondary, mb: 3 }}>
               This shop is currently unavailable or has been removed.
             </Typography>
             <Button
               variant="contained"
               onClick={() => navigate('/vendors')}
               sx={{
-                backgroundColor: '#087F5B',
-                color: '#fff',
+                backgroundColor: BRAND.primaryGreen,
+                color: BRAND.white,
                 fontWeight: 700,
                 borderRadius: '10px',
                 px: 3,
-                py: 1.2,
+                py: 1,
                 textTransform: 'none',
-                '&:hover': { backgroundColor: '#075B43' },
+                '&:hover': { backgroundColor: BRAND.darkGreen },
               }}
             >
               Discover Local Shops
             </Button>
-          </Paper>
+          </Box>
         </Container>
       </Box>
     );
@@ -324,594 +385,335 @@ const VendorDetailsPage = () => {
   return (
     <Box
       sx={{
-        backgroundColor: '#FAFAF7',
+        backgroundColor: BRAND.bgPage,
         minHeight: '100vh',
-        pb: { xs: 12, lg: 8 },
+        pb: { xs: 18, md: 10 },
         position: 'relative',
       }}
     >
-      {/* 1. SHOP HEADER with Breadcrumbs, Cover, Logo, Details, Actions */}
+      {/* 1. SHOP HEADER (Cover, Avatar, Name, Rating, Badges, Actions) */}
       <VendorHeader vendor={vendor} />
 
-      {/* 2. MAIN STORE VIEW */}
-      <Container maxWidth="lg" sx={{ mt: 3.5, position: 'relative', zIndex: 1 }}>
-        <Grid container spacing={{ xs: 2.5, md: 3.5 }}>
-          {/* LEFT / CENTER: Store Catalog (Search + Category Tabs + Products) */}
-          <Grid item xs={12} lg={cartDetails.totalItems > 0 ? 8.2 : 12}>
-            {/* SHOP SEARCH */}
-            <Box sx={{ mb: 2.5 }}>
-              <Paper
-                elevation={0}
+      {/* 2. MAIN CATALOG CONTAINER (CENTERED 1280PX) */}
+      <Container
+        maxWidth="lg"
+        sx={{
+          maxWidth: '1280px !important',
+          mt: { xs: 2.5, sm: 3 },
+          px: { xs: 1.5, sm: 2.5, md: 3 },
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        {/* IN-SHOP SEARCH BAR */}
+        <Box sx={{ mb: 2 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: BRAND.white,
+              border: `1px solid ${BRAND.borderInput}`,
+              borderRadius: '12px',
+              height: { xs: 46, sm: 48 },
+              px: 1.5,
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+              transition: 'all 0.2s ease',
+              '&:focus-within': {
+                borderColor: BRAND.primaryGreen,
+                boxShadow: `0 0 0 3px ${BRAND.lightGreen}`,
+              },
+            }}
+          >
+            <SearchIcon sx={{ color: BRAND.textSecondary, mr: 1, fontSize: 22 }} />
+            <TextField
+              fullWidth
+              variant="standard"
+              placeholder={`Search products in ${vendor.name || 'this shop'}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                disableUnderline: true,
+                sx: {
+                  fontSize: { xs: '13.5px', sm: '14.5px' },
+                  color: BRAND.textPrimary,
+                  fontWeight: 500,
+                },
+              }}
+            />
+            {searchQuery && (
+              <IconButton
+                size="small"
+                aria-label="Clear search"
+                onClick={() => setSearchQuery('')}
+                sx={{ color: BRAND.textSecondary, p: 0.5 }}
+              >
+                <ClearIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
+        </Box>
+
+        {/* DYNAMIC CATEGORY TABS (HORIZONTAL SCROLLING) */}
+        {categoryTabs.length > 1 && (
+          <Box
+            sx={{
+              mb: 2.5,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              overflowX: 'auto',
+              pb: 1,
+              scrollbarWidth: 'none',
+              '&::-webkit-scrollbar': { display: 'none' },
+            }}
+          >
+            {categoryTabs.map((cat) => {
+              const isSelected = selectedCategory === cat;
+              const isPopular = cat === 'Popular';
+
+              return (
+                <Button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  startIcon={
+                    isPopular ? (
+                      <WhatshotIcon
+                        sx={{
+                          fontSize: '16px !important',
+                          color: isSelected ? `${BRAND.white} !important` : `${BRAND.orange} !important`,
+                        }}
+                      />
+                    ) : null
+                  }
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: '12.5px', sm: '13px' },
+                    px: { xs: 1.8, sm: 2.2 },
+                    py: 0.6,
+                    height: 36,
+                    borderRadius: '10px',
+                    backgroundColor: isSelected ? BRAND.primaryGreen : BRAND.white,
+                    color: isSelected ? BRAND.white : BRAND.textPrimary,
+                    border: isSelected ? `1px solid ${BRAND.primaryGreen}` : `1px solid ${BRAND.border}`,
+                    textTransform: 'none',
+                    flexShrink: 0,
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                    transition: 'all 0.18s ease',
+                    '&:hover': {
+                      backgroundColor: isSelected ? BRAND.darkGreen : BRAND.bgPage,
+                      borderColor: isSelected ? BRAND.darkGreen : BRAND.border,
+                    },
+                  }}
+                >
+                  {cat}
+                </Button>
+              );
+            })}
+          </Box>
+        )}
+
+        {/* SECTION HEADING & ITEM COUNT */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            mb: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography
+              sx={{
+                fontWeight: 800,
+                color: BRAND.textPrimary,
+                fontSize: { xs: '15px', sm: '17px' },
+              }}
+            >
+              {selectedCategory === 'All'
+                ? 'All Products'
+                : selectedCategory === 'Popular'
+                ? 'Popular Items'
+                : selectedCategory}
+            </Typography>
+            <Box
+              sx={{
+                backgroundColor: BRAND.lightGreen,
+                color: BRAND.primaryGreen,
+                fontWeight: 700,
+                fontSize: '11.5px',
+                px: 0.8,
+                py: 0.2,
+                borderRadius: '6px',
+              }}
+            >
+              {filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'}
+            </Box>
+          </Box>
+
+          {searchQuery && (
+            <Button
+              size="small"
+              onClick={() => setSearchQuery('')}
+              sx={{
+                color: BRAND.orange,
+                fontWeight: 600,
+                fontSize: '12.5px',
+                textTransform: 'none',
+                p: '2px 6px',
+              }}
+            >
+              Clear search
+            </Button>
+          )}
+        </Box>
+
+        {/* PRODUCT GRID / EMPTY STATES */}
+        {products.length === 0 ? (
+          /* No products in vendor shop */
+          <Fade in timeout={400}>
+            <Box
+              sx={{
+                textAlign: 'center',
+                py: 8,
+                px: 3,
+                borderRadius: '16px',
+                backgroundColor: BRAND.white,
+                border: `1px dashed ${BRAND.border}`,
+                maxWidth: 540,
+                mx: 'auto',
+                my: 4,
+              }}
+            >
+              <LocalMallOutlinedIcon sx={{ fontSize: 48, color: BRAND.textSecondary, mb: 1.5 }} />
+              <Typography variant="h6" sx={{ fontWeight: 700, color: BRAND.textPrimary, mb: 0.5 }}>
+                No products available
+              </Typography>
+              <Typography variant="body2" sx={{ color: BRAND.textSecondary }}>
+                This shop hasn't added products yet.
+              </Typography>
+            </Box>
+          </Fade>
+        ) : filteredProducts.length === 0 ? (
+          /* No filter / search results */
+          <Fade in timeout={400}>
+            <Box
+              sx={{
+                textAlign: 'center',
+                py: 7,
+                px: 3,
+                borderRadius: '16px',
+                backgroundColor: BRAND.white,
+                border: `1px dashed ${BRAND.border}`,
+                maxWidth: 540,
+                mx: 'auto',
+                my: 4,
+              }}
+            >
+              <SearchIcon sx={{ fontSize: 44, color: BRAND.textSecondary, mb: 1.5 }} />
+              <Typography variant="h6" sx={{ fontWeight: 700, color: BRAND.textPrimary, mb: 0.5 }}>
+                No products found
+              </Typography>
+              <Typography variant="body2" sx={{ color: BRAND.textSecondary, mb: 2.5 }}>
+                Try another search or change your filter.
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('All');
+                }}
                 sx={{
-                  borderRadius: '14px',
-                  border: '1.5px solid #E5E7EB',
-                  backgroundColor: '#FFFFFF',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-                  transition: 'all 0.2s ease',
-                  '&:focus-within': {
-                    borderColor: '#087F5B',
-                    boxShadow: '0 4px 16px rgba(8, 127, 91, 0.12)',
+                  backgroundColor: BRAND.primaryGreen,
+                  color: BRAND.white,
+                  fontWeight: 700,
+                  borderRadius: '10px',
+                  px: 3,
+                  py: 1,
+                  fontSize: '13.5px',
+                  textTransform: 'none',
+                  '&:hover': {
+                    backgroundColor: BRAND.darkGreen,
                   },
                 }}
               >
-                <TextField
-                  fullWidth
-                  size="medium"
-                  placeholder={`Search products in ${vendor.name || 'this shop'}...`}
-                  variant="standard"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  InputProps={{
-                    disableUnderline: true,
-                    startAdornment: (
-                      <InputAdornment position="start" sx={{ pl: 2 }}>
-                        <SearchIcon sx={{ color: '#087F5B', fontSize: 24 }} />
-                      </InputAdornment>
-                    ),
-                    endAdornment: searchQuery ? (
-                      <InputAdornment position="end" sx={{ pr: 1.5 }}>
-                        <IconButton size="small" onClick={() => setSearchQuery('')}>
-                          <ClearIcon fontSize="small" sx={{ color: '#9CA3AF' }} />
-                        </IconButton>
-                      </InputAdornment>
-                    ) : null,
-                    sx: {
-                      py: 1.2,
-                      fontSize: '0.95rem',
-                      fontWeight: 500,
-                      color: '#151515',
-                    },
-                  }}
-                />
-              </Paper>
+                Clear Search
+              </Button>
             </Box>
-
-            {/* CATEGORY TABS */}
-            {categoryTabs.length > 1 && (
-              <Box
-                sx={{
-                  mb: 3,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  overflowX: 'auto',
-                  pb: 1,
-                  scrollbarWidth: 'none',
-                  '&::-webkit-scrollbar': { display: 'none' },
-                }}
-              >
-                {categoryTabs.map((cat) => {
-                  const isSelected = selectedCategory === cat;
-                  const isPopular = cat === 'Popular';
-
-                  return (
-                    <Chip
-                      key={cat}
-                      label={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          {isPopular && <WhatshotIcon sx={{ fontSize: 16, color: isSelected ? '#fff' : '#FF6B00' }} />}
-                          <span>{cat}</span>
-                        </Box>
-                      }
-                      onClick={() => setSelectedCategory(cat)}
-                      clickable
-                      sx={{
-                        px: 1,
-                        py: 2.2,
-                        borderRadius: '12px',
-                        fontWeight: 700,
-                        fontSize: '0.88rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        backgroundColor: isSelected ? '#087F5B' : '#FFFFFF',
-                        color: isSelected ? '#FFFFFF' : '#4B5563',
-                        border: isSelected ? '1px solid #087F5B' : '1px solid #E5E7EB',
-                        boxShadow: isSelected
-                          ? '0 4px 12px rgba(8, 127, 91, 0.25)'
-                          : '0 2px 6px rgba(0,0,0,0.02)',
-                        '&:hover': {
-                          backgroundColor: isSelected ? '#075B43' : '#F3F4F6',
-                          borderColor: isSelected ? '#075B43' : '#D1D5DB',
-                        },
-                      }}
-                    />
-                  );
-                })}
-              </Box>
-            )}
-
-            {/* SECTION HEADING & RESULT COUNT */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                mb: 2.5,
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: 800,
-                    color: '#151515',
-                    fontSize: '1.15rem',
-                  }}
-                >
-                  {selectedCategory === 'All'
-                    ? 'All Products'
-                    : selectedCategory === 'Popular'
-                    ? 'Popular Items'
-                    : selectedCategory}
-                </Typography>
-                <Chip
-                  label={`${filteredProducts.length} items`}
-                  size="small"
-                  sx={{
-                    backgroundColor: '#EBFBEE',
-                    color: '#087F5B',
-                    fontWeight: 700,
-                    fontSize: '0.75rem',
-                    height: 22,
-                  }}
-                />
-              </Box>
-
-              {searchQuery && (
-                <Button
-                  size="small"
-                  onClick={() => setSearchQuery('')}
-                  sx={{
-                    color: '#FF6B00',
-                    fontWeight: 600,
-                    fontSize: '0.8rem',
-                    textTransform: 'none',
-                  }}
-                >
-                  Clear search
-                </Button>
-              )}
-            </Box>
-
-            {/* PRODUCT GRID */}
-            {products.length === 0 ? (
-              /* No Products in store */
-              <Fade in timeout={500}>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    textAlign: 'center',
-                    py: 8,
-                    px: 3,
-                    borderRadius: '16px',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px dashed #D1D5DB',
-                  }}
-                >
-                  <LocalMallOutlinedIcon sx={{ fontSize: 50, color: '#9CA3AF', mb: 1.5 }} />
-                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#151515', mb: 0.5 }}>
-                    No products added yet
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: '#6B7280', maxWidth: 360, mx: 'auto' }}>
-                    This vendor hasn't published any items yet. Please check back later!
-                  </Typography>
-                </Paper>
-              </Fade>
-            ) : filteredProducts.length === 0 ? (
-              /* No Search/Filter Results */
-              <Fade in timeout={500}>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    textAlign: 'center',
-                    py: 7,
-                    px: 3,
-                    borderRadius: '16px',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px dashed #D1D5DB',
-                  }}
-                >
-                  <SearchIcon sx={{ fontSize: 48, color: '#9CA3AF', mb: 1.5 }} />
-                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#151515', mb: 0.5 }}>
-                    No items found
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: '#6B7280', maxWidth: 360, mx: 'auto', mb: 2 }}>
-                    We couldn't find any products matching your filters in this shop.
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    onClick={() => {
-                      setSearchQuery('');
-                      setSelectedCategory('All');
-                    }}
-                    sx={{
-                      borderColor: '#087F5B',
-                      color: '#087F5B',
-                      fontWeight: 700,
-                      borderRadius: '10px',
-                      textTransform: 'none',
-                      '&:hover': {
-                        borderColor: '#075B43',
-                        backgroundColor: '#EBFBEE',
-                      },
-                    }}
-                  >
-                    Reset Filters
-                  </Button>
-                </Paper>
-              </Fade>
-            ) : (
-              <Grid container spacing={{ xs: 2, sm: 2.5 }}>
-                {filteredProducts.map((product) => (
-                  <Grid
-                    item
-                    xs={12}
-                    sm={cartDetails.totalItems > 0 ? 12 : 6}
-                    md={6}
-                    key={product._id || product.id}
-                  >
-                    <ProductCard product={product} vendorId={vendorId} />
-                  </Grid>
-                ))}
-              </Grid>
-            )}
-          </Grid>
-
-          {/* RIGHT: Desktop Sticky Mini-Cart */}
-          {cartDetails.totalItems > 0 && (
-            <Grid
-              item
-              xs={12}
-              lg={3.8}
-              sx={{
-                display: { xs: 'none', lg: 'block' },
-              }}
-            >
-              <Box
-                sx={{
-                  position: 'sticky',
-                  top: '96px',
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '20px',
-                  border: '1px solid #E5E7EB',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.05)',
-                  overflow: 'hidden',
-                }}
-              >
-                {/* Mini-Cart Header */}
-                <Box
-                  sx={{
-                    p: 2.5,
-                    borderBottom: '1px solid #E5E7EB',
-                    backgroundColor: '#FAFAF7',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <ShoppingCartIcon sx={{ color: '#087F5B', fontSize: 20 }} />
-                    <Typography sx={{ fontWeight: 800, color: '#151515', fontSize: '1rem' }}>
-                      Your Cart
-                    </Typography>
-                  </Box>
-                  <Chip
-                    label={`${cartDetails.totalItems} ${cartDetails.totalItems === 1 ? 'item' : 'items'}`}
-                    size="small"
-                    sx={{
-                      backgroundColor: '#087F5B',
-                      color: '#FFFFFF',
-                      fontWeight: 700,
-                      fontSize: '0.75rem',
-                      height: 22,
-                    }}
-                  />
-                </Box>
-
-                {/* Cart Items List */}
-                <Box
-                  sx={{
-                    p: 2.5,
-                    maxHeight: '360px',
-                    overflowY: 'auto',
-                  }}
-                >
-                  <Stack spacing={2}>
-                    {cartDetails.items.map(({ product, quantity, price, lineTotal }) => (
-                      <Box
-                        key={product._id}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: 1.5,
-                        }}
-                      >
-                        {/* Item Details */}
-                        <Box sx={{ minWidth: 0, flex: 1 }}>
-                          <Typography
-                            sx={{
-                              fontWeight: 700,
-                              fontSize: '0.88rem',
-                              color: '#151515',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {product.name}
-                          </Typography>
-                          <Typography sx={{ fontSize: '0.78rem', color: '#6B7280', mt: 0.2 }}>
-                            ₹{price.toFixed(2)} × {quantity}
-                          </Typography>
-                        </Box>
-
-                        {/* Inline Stepper */}
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            backgroundColor: '#EBFBEE',
-                            borderRadius: '8px',
-                            border: '1px solid #B2F2BB',
-                            px: 0.5,
-                            py: 0.2,
-                          }}
-                        >
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              if (quantity === 1) {
-                                removeFromCart(vendorId, product._id);
-                              } else {
-                                updateQuantity(vendorId, product._id, quantity - 1);
-                              }
-                            }}
-                            sx={{ color: '#087F5B', p: 0.3 }}
-                          >
-                            <RemoveIcon sx={{ fontSize: '0.8rem' }} />
-                          </IconButton>
-                          <Typography
-                            sx={{
-                              fontWeight: 800,
-                              fontSize: '0.82rem',
-                              color: '#087F5B',
-                              px: 0.8,
-                            }}
-                          >
-                            {quantity}
-                          </Typography>
-                          <IconButton
-                            size="small"
-                            onClick={() => updateQuantity(vendorId, product._id, quantity + 1)}
-                            sx={{ color: '#087F5B', p: 0.3 }}
-                          >
-                            <AddIcon sx={{ fontSize: '0.8rem' }} />
-                          </IconButton>
-                        </Box>
-
-                        {/* Line Total */}
-                        <Typography
-                          sx={{
-                            fontWeight: 800,
-                            fontSize: '0.9rem',
-                            color: '#151515',
-                            minWidth: 52,
-                            textAlign: 'right',
-                          }}
-                        >
-                          ₹{lineTotal.toFixed(0)}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Stack>
-                </Box>
-
-                <Divider sx={{ borderColor: '#E5E7EB' }} />
-
-                {/* Subtotal & Bill Section */}
-                <Box sx={{ p: 2.5, backgroundColor: '#FFFFFF' }}>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      mb: 1,
-                    }}
-                  >
-                    <Typography sx={{ fontSize: '0.85rem', color: '#6B7280' }}>
-                      Subtotal
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.92rem', fontWeight: 700, color: '#151515' }}>
-                      ₹{cartDetails.subtotal.toFixed(2)}
-                    </Typography>
-                  </Box>
-
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      mb: 2,
-                    }}
-                  >
-                    <Typography sx={{ fontSize: '0.85rem', color: '#6B7280' }}>
-                      Delivery Fee
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#087F5B' }}>
-                      Standard
-                    </Typography>
-                  </Box>
-
-                  <Divider sx={{ mb: 2, borderColor: '#F3F4F6' }} />
-
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      mb: 2.5,
-                    }}
-                  >
-                    <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: '#151515' }}>
-                      Total
-                    </Typography>
-                    <Typography sx={{ fontWeight: 800, fontSize: '1.2rem', color: '#087F5B' }}>
-                      ₹{cartDetails.subtotal.toFixed(2)}
-                    </Typography>
-                  </Box>
-
-                  {/* Checkout CTA */}
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    size="large"
-                    onClick={() => navigate('/cart')}
-                    endIcon={<ArrowForwardIcon />}
-                    sx={{
-                      backgroundColor: '#087F5B',
-                      color: '#FFFFFF',
-                      fontWeight: 800,
-                      fontSize: '0.95rem',
-                      py: 1.4,
-                      borderRadius: '12px',
-                      textTransform: 'none',
-                      boxShadow: '0 4px 14px rgba(8, 127, 91, 0.3)',
-                      '&:hover': {
-                        backgroundColor: '#075B43',
-                        boxShadow: '0 6px 18px rgba(8, 127, 91, 0.4)',
-                      },
-                    }}
-                  >
-                    Proceed to Cart
-                  </Button>
-
-                  {/* Guarantee info */}
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 0.6,
-                      mt: 1.8,
-                    }}
-                  >
-                    <VerifiedUserOutlinedIcon sx={{ fontSize: 15, color: '#087F5B' }} />
-                    <Typography sx={{ fontSize: '11.5px', color: '#6B7280', fontWeight: 600 }}>
-                      Freshly prepared & securely packed
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-            </Grid>
-          )}
-        </Grid>
-      </Container>
-
-      {/* 3. MOBILE STICKY BOTTOM CART BAR */}
-      {cartDetails.totalItems > 0 && (
-        <Fade in timeout={300}>
+          </Fade>
+        ) : (
+          /* 2-Column Mobile & 4-Column Desktop CSS Grid */
           <Box
             sx={{
-              display: { xs: 'flex', lg: 'none' },
-              position: 'fixed',
-              bottom: { xs: 'calc(52px + env(safe-area-inset-bottom, 0px))', md: 0 },
-              left: 0,
-              right: 0,
-              zIndex: 1200,
-              backgroundColor: '#075B43',
-              color: '#FFFFFF',
-              px: { xs: 2, sm: 3 },
-              py: 1.5,
-              boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.2)',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backdropFilter: 'blur(10px)',
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'repeat(2, minmax(0, 1fr))',
+                sm: 'repeat(2, minmax(0, 1fr))',
+                md: 'repeat(3, minmax(0, 1fr))',
+                lg: 'repeat(4, minmax(0, 1fr))',
+              },
+              gap: { xs: 1.5, sm: 2, md: 2.5 },
+              width: '100%',
             }}
           >
-            <Box>
-              <Typography sx={{ fontWeight: 800, fontSize: '0.98rem', lineHeight: 1.2 }}>
-                {cartDetails.totalItems} {cartDetails.totalItems === 1 ? 'item' : 'items'} • ₹
-                {cartDetails.subtotal.toFixed(0)}
-              </Typography>
-              <Typography sx={{ fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.8)', mt: 0.2 }}>
-                From {vendor.name}
-              </Typography>
-            </Box>
-
-            <Button
-              variant="contained"
-              onClick={() => navigate('/cart')}
-              endIcon={<ArrowForwardIcon sx={{ fontSize: '1rem' }} />}
-              sx={{
-                backgroundColor: '#FFFFFF',
-                color: '#075B43',
-                fontWeight: 800,
-                fontSize: '0.88rem',
-                px: 2.5,
-                py: 0.9,
-                borderRadius: '10px',
-                textTransform: 'none',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                '&:hover': {
-                  backgroundColor: '#FAFAF7',
-                },
-              }}
-            >
-              View Cart
-            </Button>
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product._id || product.id}
+                product={product}
+                vendorId={vendorId}
+              />
+            ))}
           </Box>
-        </Fade>
-      )}
+        )}
+      </Container>
 
-      {/* 4. SCROLL TO TOP BUTTON */}
+      {/* 3. STICKY FLOATING CART BAR (Floats above mobile bottom navigation) */}
+      <FloatingCartBar
+        totalItems={cartDetails.totalItems}
+        subtotal={cartDetails.subtotal}
+        vendorName={vendor.name}
+        onViewCart={() => setIsCartDrawerOpen(true)}
+      />
+
+      {/* 4. SLIDE-IN CART DRAWER (Desktop right-drawer / Mobile bottom-sheet) */}
+      <CartDrawer
+        open={isCartDrawerOpen}
+        onClose={() => setIsCartDrawerOpen(false)}
+        vendorId={vendorId}
+        vendorName={vendor.name}
+        items={cartDetails.items}
+        subtotal={cartDetails.subtotal}
+        totalItems={cartDetails.totalItems}
+      />
+
+      {/* 5. SCROLL TO TOP BUTTON */}
       <Fade in={showScrollTop}>
         <IconButton
           onClick={scrollToTop}
+          aria-label="Scroll to top"
           sx={{
             position: 'fixed',
-            bottom: { xs: cartDetails.totalItems > 0 ? 80 : 24, lg: 28 },
-            right: { xs: 18, sm: 28 },
+            bottom: { xs: cartDetails.totalItems > 0 ? 140 : 80, md: 32 },
+            right: { xs: 16, sm: 24 },
             zIndex: 1000,
-            width: 48,
-            height: 48,
-            backgroundColor: '#FFFFFF',
-            border: '2px solid #087F5B',
+            width: 44,
+            height: 44,
+            backgroundColor: BRAND.white,
+            border: `2px solid ${BRAND.primaryGreen}`,
             boxShadow: '0 4px 16px rgba(8, 127, 91, 0.2)',
-            transition: 'all 0.25s ease',
+            transition: 'all 0.2s ease',
             '&:hover': {
-              backgroundColor: '#087F5B',
+              backgroundColor: BRAND.primaryGreen,
               transform: 'translateY(-2px)',
               '& .MuiSvgIcon-root': {
-                color: '#FFFFFF',
+                color: BRAND.white,
               },
             },
           }}
         >
           <KeyboardArrowUpIcon
             sx={{
-              fontSize: '1.6rem',
-              color: '#087F5B',
+              fontSize: '1.5rem',
+              color: BRAND.primaryGreen,
               transition: 'color 0.2s ease',
             }}
           />

@@ -48,11 +48,14 @@ import {
 } from '@mui/icons-material';
 import vendorService from '../services/vendorService';
 import moduleService from '../services/moduleService';
+import orderService from '../services/orderService';
 import DashboardBanner from '../components/DashboardBanner';
 
 const Vendors = () => {
   const [vendors, setVendors] = useState([]);
   const [modules, setModules] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
+  const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -144,7 +147,7 @@ const Vendors = () => {
   const mapRef = useRef(null);
   const markerRef = useRef(null);
 
-  const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyCpAhl9zWxIfigpQ17hkcgjHoKPNDP07pI';
 
   // Fetch vendors and modules on mount
   useEffect(() => {
@@ -156,9 +159,18 @@ const Vendors = () => {
   useEffect(() => {
     if (!openDialog) return;
 
-    if (window.google && window.google.maps) {
+    if (window.google && window.google.maps && window.google.maps.places) {
       setMapLoaded(true);
       return;
+    }
+
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existingScript) {
+      if (window.google && window.google.maps) {
+        setMapLoaded(true);
+        return;
+      }
+      existingScript.remove();
     }
 
     const script = document.createElement('script');
@@ -169,7 +181,7 @@ const Vendors = () => {
       setMapLoaded(true);
     };
     document.head.appendChild(script);
-  }, [openDialog]);
+  }, [openDialog, GOOGLE_MAPS_API_KEY]);
 
   // Initialize Map
   useEffect(() => {
@@ -273,8 +285,31 @@ const Vendors = () => {
   const fetchVendors = async () => {
     try {
       setLoading(true);
-      const response = await vendorService.getAllVendors();
-      setVendors(response.data || []);
+      const [vendorsRes, modulesRes, productsRes, ordersRes] = await Promise.allSettled([
+        vendorService.getAllVendors(),
+        moduleService.getActiveModules(),
+        vendorService.getAllProducts(),
+        orderService.getAllOrders(),
+      ]);
+
+      if (vendorsRes.status === 'fulfilled') {
+        setVendors(vendorsRes.value?.data || []);
+      } else {
+        throw new Error(vendorsRes.reason?.message || 'Failed to fetch vendors');
+      }
+
+      if (modulesRes.status === 'fulfilled') {
+        setModules(modulesRes.value?.data || []);
+      }
+
+      if (productsRes.status === 'fulfilled') {
+        setAllProducts(productsRes.value?.data || []);
+      }
+
+      if (ordersRes.status === 'fulfilled') {
+        setAllOrders(ordersRes.value?.data || []);
+      }
+
       setError(null);
     } catch (err) {
       setError(err.message || 'Failed to fetch vendors');
@@ -478,6 +513,11 @@ const Vendors = () => {
         (error) => {
           console.error('Error getting location:', error);
           alert('Unable to get your location. Please allow location access.');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
         }
       );
     } else {
@@ -905,17 +945,18 @@ const Vendors = () => {
 
           {/* ── Table ── */}
           <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
-            <Table sx={{ minWidth: 820 }}>
+            <Table sx={{ minWidth: 920 }}>
               <TableHead>
                 <TableRow sx={{ '& th': { borderBottom: '1.5px solid #F1F5F9', color: '#94A3B8', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', py: 1.6, backgroundColor: '#FAFBFC', whiteSpace: 'nowrap' } }}>
                   <TableCell padding="checkbox">
                     <Checkbox checked={paginatedVendors.length > 0 && paginatedVendors.every((v) => selectedIds.includes(v._id))} indeterminate={paginatedVendors.some((v) => selectedIds.includes(v._id)) && !paginatedVendors.every((v) => selectedIds.includes(v._id))} onChange={handleSelectAll} sx={{ color: '#CBD5E1', '&.Mui-checked': { color: '#087F5B' } }} />
                   </TableCell>
-                  <TableCell>Vendor / Store</TableCell>
+                  <TableCell>Store Name</TableCell>
+                  <TableCell>Vendor / Owner</TableCell>
                   <TableCell>Category</TableCell>
-                  <TableCell>Contact</TableCell>
                   <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Location</TableCell>
-                  <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>Delivery</TableCell>
+                  <TableCell align="center">Products</TableCell>
+                  <TableCell align="center">Orders</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
@@ -923,11 +964,11 @@ const Vendors = () => {
               <TableBody>
                 {paginatedVendors.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                    <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
                       <StorefrontIcon sx={{ fontSize: 48, color: '#E2E8F0', mb: 1.5, display: 'block', mx: 'auto' }} />
-                      <Typography sx={{ color: '#64748B', fontWeight: 700, fontSize: '0.95rem' }}>No vendors found</Typography>
+                      <Typography sx={{ color: '#64748B', fontWeight: 700, fontSize: '0.95rem' }}>No stores found</Typography>
                       <Typography sx={{ color: '#94A3B8', fontSize: '0.82rem', mt: 0.5 }}>
-                        {tableSearch ? `No results for "${tableSearch}"` : 'Add your first vendor to get started'}
+                        {tableSearch ? `No results for "${tableSearch}"` : 'Add your first store to get started'}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -935,6 +976,9 @@ const Vendors = () => {
                   paginatedVendors.map((vendor) => {
                     const isSelected = selectedIds.includes(vendor._id);
                     const isActive = !vendor.isBlocked;
+                    const vendorProductsCount = allProducts.filter((p) => (p.vendor_id?._id || p.vendor_id || p.vendor?._id || p.vendor) === vendor._id).length;
+                    const vendorOrdersCount = allOrders.filter((o) => (o.vendor?._id || o.vendor) === vendor._id).length;
+
                     return (
                       <TableRow
                         key={vendor._id}
@@ -947,7 +991,7 @@ const Vendors = () => {
                           <Checkbox checked={isSelected} onChange={() => handleSelectRow(vendor._id)} sx={{ color: '#CBD5E1', '&.Mui-checked': { color: '#087F5B' } }} />
                         </TableCell>
 
-                        {/* Vendor / Store */}
+                        {/* Store Name */}
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.8 }}>
                             <Avatar
@@ -960,13 +1004,23 @@ const Vendors = () => {
                             </Avatar>
                             <Box>
                               <Typography sx={{ fontWeight: 700, fontSize: '13.5px', color: '#14213D', lineHeight: 1.3 }}>{vendor.name}</Typography>
-                              {vendor.open_time && vendor.close_time && (
+                              {vendor.open_time && vendor.close_time ? (
                                 <Typography sx={{ fontSize: '11px', color: '#94A3B8', mt: 0.2 }}>
                                   {vendor.open_time} – {vendor.close_time}
+                                </Typography>
+                              ) : (
+                                <Typography sx={{ fontSize: '11px', color: '#94A3B8', mt: 0.2 }}>
+                                  Delivery: ₹{vendor.delivery_charge || 0}
                                 </Typography>
                               )}
                             </Box>
                           </Box>
+                        </TableCell>
+
+                        {/* Vendor / Owner Contact */}
+                        <TableCell>
+                          <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>{vendor.email || '—'}</Typography>
+                          <Typography sx={{ fontSize: '12px', color: '#64748B', mt: 0.2 }}>{vendor.mobile_number || '—'}</Typography>
                         </TableCell>
 
                         {/* Category */}
@@ -974,12 +1028,6 @@ const Vendors = () => {
                           <Box sx={{ display: 'inline-flex', alignItems: 'center', px: 1.4, py: 0.4, borderRadius: '8px', backgroundColor: '#EBFBEE', color: '#087F5B', fontSize: '12px', fontWeight: 700 }}>
                             {vendor.module?.name || '—'}
                           </Box>
-                        </TableCell>
-
-                        {/* Contact */}
-                        <TableCell>
-                          <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>{vendor.email || '—'}</Typography>
-                          <Typography sx={{ fontSize: '12px', color: '#64748B', mt: 0.2 }}>{vendor.mobile_number || '—'}</Typography>
                         </TableCell>
 
                         {/* Location */}
@@ -990,10 +1038,29 @@ const Vendors = () => {
                           </Typography>
                         </TableCell>
 
-                        {/* Delivery Charge */}
-                        <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
-                          <Typography sx={{ fontSize: '13px', fontWeight: 700, color: '#14213D' }}>₹{vendor.delivery_charge || 0}</Typography>
-                          <Typography sx={{ fontSize: '11.5px', color: '#64748B' }}>delivery charge</Typography>
+                        {/* Products Count */}
+                        <TableCell align="center">
+                          <Chip
+                            icon={<InventoryIcon sx={{ fontSize: '14px !important', color: vendorProductsCount > 0 ? '#087F5B !important' : '#94A3B8 !important' }} />}
+                            label={`${vendorProductsCount} ${vendorProductsCount === 1 ? 'item' : 'items'}`}
+                            size="small"
+                            onClick={() => handleOpenProductsDialog(vendor)}
+                            clickable
+                            sx={{
+                              fontWeight: 700,
+                              fontSize: '11.5px',
+                              backgroundColor: vendorProductsCount > 0 ? '#EBFBEE' : '#F1F5F9',
+                              color: vendorProductsCount > 0 ? '#087F5B' : '#64748B',
+                              borderRadius: '8px',
+                            }}
+                          />
+                        </TableCell>
+
+                        {/* Orders Count */}
+                        <TableCell align="center">
+                          <Box sx={{ display: 'inline-flex', alignItems: 'center', px: 1.4, py: 0.4, borderRadius: '8px', backgroundColor: vendorOrdersCount > 0 ? '#EFF6FF' : '#F1F5F9', color: vendorOrdersCount > 0 ? '#2563EB' : '#64748B', fontSize: '12px', fontWeight: 700 }}>
+                            {vendorOrdersCount} {vendorOrdersCount === 1 ? 'order' : 'orders'}
+                          </Box>
                         </TableCell>
 
                         {/* Status */}
@@ -1012,14 +1079,14 @@ const Vendors = () => {
                             </IconButton>
                           </Tooltip>
                           {canUpdateVendor && (
-                            <Tooltip title="Edit Vendor">
+                            <Tooltip title="Edit Store">
                               <IconButton size="small" onClick={() => handleOpenDialog(vendor)} sx={{ color: '#64748B', backgroundColor: '#F1F5F9', borderRadius: '10px', mr: 0.8, '&:hover': { backgroundColor: '#E2E8F0', color: '#14213D' } }}>
                                 <EditIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
                           )}
                           {isSuperAdmin && (
-                            <Tooltip title="Delete Vendor">
+                            <Tooltip title="Delete Store">
                               <IconButton size="small" onClick={() => handleDeleteClick(vendor)} sx={{ color: '#EF4444', backgroundColor: '#FEE2E2', borderRadius: '10px', mr: 0.8, '&:hover': { backgroundColor: '#FECACA' } }}>
                                 <DeleteIcon fontSize="small" />
                               </IconButton>

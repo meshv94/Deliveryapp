@@ -4,34 +4,47 @@ import {
   Container,
   Typography,
   Stack,
-  Chip,
-  Button,
   IconButton,
   Avatar,
   Breadcrumbs,
   Link,
   Snackbar,
   Alert,
-  Paper,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import HomeIcon from '@mui/icons-material/Home';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import StarIcon from '@mui/icons-material/Star';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ShareIcon from '@mui/icons-material/Share';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
-import CallIcon from '@mui/icons-material/Call';
-import DeliveryDiningIcon from '@mui/icons-material/DeliveryDining';
-import VerifiedIcon from '@mui/icons-material/Verified';
-import StorefrontIcon from '@mui/icons-material/Storefront';
 
-// Fallback banner
+// Fallback banner image
 const FALLBACK_COVER =
-  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1200" height="400"%3E%3Crect fill="%23075B43" width="1200" height="400"/%3E%3Ctext x="50%25" y="50%25" font-size="28" fill="%23ffffff" font-family="sans-serif" text-anchor="middle" dy=".3em"%3EAapnuBazaar Local Marketplace%3C/text%3E%3C/svg%3E';
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1200" height="400"%3E%3Crect fill="%23075B43" width="1200" height="400"/%3E%3Ctext x="50%25" y="50%25" font-size="28" font-weight="bold" fill="%23ffffff" font-family="sans-serif" text-anchor="middle" dy=".3em"%3EAapnuBazaar Local Marketplace%3C/text%3E%3C/svg%3E';
 
+// Design Tokens
+const BRAND = {
+  primaryGreen: '#087F5B',
+  darkGreen: '#075B43',
+  lightGreen: '#EAF7F2',
+  orange: '#FF6B00',
+  white: '#FFFFFF',
+  textPrimary: '#17221D',
+  textSecondary: '#6B7280',
+  border: '#E5E7EB',
+  red: '#E03131',
+};
+
+/**
+ * VendorHeader Component
+ * Clean, compact marketplace vendor hero:
+ * - Breadcrumb navigation
+ * - Controlled aspect-ratio cover banner with fallback
+ * - Overlapping store logo / avatar
+ * - Store name, star rating badge, category, distance, prep time, open status
+ * - Interactive Share & Favorite buttons
+ */
 const VendorHeader = ({ vendor }) => {
   const navigate = useNavigate();
   const [showShareSnackbar, setShowShareSnackbar] = useState(false);
@@ -82,15 +95,23 @@ const VendorHeader = ({ vendor }) => {
   const coverImg = vendor.vendor_image || vendor.banner || '/cover_img.png';
   const prepTime = vendor.preparation_time_minute ? `${vendor.preparation_time_minute} min` : '20–30 min';
   const distance = vendor.distance_km != null ? `${vendor.distance_km} km` : '1.2 km';
-  const addressText = vendor.address?.address_line_1 || vendor.address?.city || (typeof vendor.address === 'string' ? vendor.address : 'Surat, Gujarat');
+  const categoryName = vendor.module?.name || 'Local Store';
 
   return (
-    <Box sx={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E5E7EB' }}>
+    <Box sx={{ backgroundColor: BRAND.white, borderBottom: `1px solid ${BRAND.border}` }}>
       {/* 1. Breadcrumbs */}
-      <Container maxWidth="lg" sx={{ pt: 2.5, pb: 1.5 }}>
+      <Container
+        maxWidth="lg"
+        sx={{
+          maxWidth: '1280px !important',
+          pt: { xs: 1.5, sm: 2 },
+          pb: 1,
+          px: { xs: 2, sm: 3, md: 4 },
+        }}
+      >
         <Breadcrumbs
           separator={<NavigateNextIcon fontSize="small" sx={{ color: '#9CA3AF' }} />}
-          sx={{ fontSize: '13.5px' }}
+          sx={{ fontSize: '13px' }}
         >
           <Link
             component="button"
@@ -99,53 +120,60 @@ const VendorHeader = ({ vendor }) => {
               display: 'flex',
               alignItems: 'center',
               gap: 0.5,
-              color: '#6B7280',
+              color: BRAND.textSecondary,
               textDecoration: 'none',
               fontWeight: 600,
-              fontSize: '13px',
+              fontSize: '12.5px',
               border: 'none',
               background: 'none',
               cursor: 'pointer',
-              '&:hover': { color: '#087F5B' },
+              '&:hover': { color: BRAND.primaryGreen },
             }}
           >
-            <HomeIcon sx={{ fontSize: 16 }} />
+            <HomeIcon sx={{ fontSize: 15 }} />
             Home
           </Link>
           <Link
             component="button"
             onClick={() => navigate('/vendors')}
             sx={{
-              color: '#6B7280',
+              color: BRAND.textSecondary,
               textDecoration: 'none',
               fontWeight: 600,
-              fontSize: '13px',
+              fontSize: '12.5px',
               border: 'none',
               background: 'none',
               cursor: 'pointer',
-              '&:hover': { color: '#087F5B' },
+              '&:hover': { color: BRAND.primaryGreen },
             }}
           >
             Shops
           </Link>
-          <Typography sx={{ color: '#151515', fontWeight: 700, fontSize: '13px' }}>
+          <Typography sx={{ color: BRAND.textPrimary, fontWeight: 700, fontSize: '12.5px' }}>
             {vendor.name}
           </Typography>
         </Breadcrumbs>
       </Container>
 
-      {/* 2. Large Shop Cover Image */}
-      <Container maxWidth="lg" sx={{ pb: 3 }}>
+      {/* 2. Shop Cover Banner with Actions */}
+      <Container
+        maxWidth="lg"
+        sx={{
+          maxWidth: '1280px !important',
+          px: { xs: 2, sm: 3, md: 4 },
+          pb: 2,
+        }}
+      >
         <Box
           sx={{
             position: 'relative',
             width: '100%',
-            height: { xs: 180, sm: 260, md: 320 },
-            borderRadius: { xs: '16px', sm: '20px' },
+            height: { xs: 150, sm: 200, md: 240 },
+            borderRadius: { xs: '14px', sm: '18px' },
             overflow: 'hidden',
-            backgroundColor: '#075B43',
-            border: '1px solid #E5E7EB',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.06)',
+            backgroundColor: BRAND.darkGreen,
+            border: `1px solid ${BRAND.border}`,
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
           }}
         >
           <Box
@@ -163,12 +191,12 @@ const VendorHeader = ({ vendor }) => {
             }}
           />
 
-          {/* Gradient overlay */}
+          {/* Dark gradient overlay */}
           <Box
             sx={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 60%)',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 65%)',
             }}
           />
 
@@ -176,227 +204,170 @@ const VendorHeader = ({ vendor }) => {
           <Stack
             direction="row"
             spacing={1}
-            sx={{ position: 'absolute', top: 14, right: 14, zIndex: 3 }}
+            sx={{ position: 'absolute', top: 12, right: 12, zIndex: 3 }}
           >
             <IconButton
+              aria-label="Share shop"
               onClick={handleShare}
               sx={{
                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                width: 36,
+                height: 36,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                color: '#151515',
-                '&:hover': { backgroundColor: '#FFFFFF', color: '#087F5B' },
+                color: BRAND.textPrimary,
+                '&:hover': { backgroundColor: BRAND.white, color: BRAND.primaryGreen },
               }}
             >
-              <ShareIcon fontSize="small" />
+              <ShareIcon sx={{ fontSize: 18 }} />
             </IconButton>
 
             <IconButton
+              aria-label="Add to favorites"
               onClick={handleToggleFavorite}
               sx={{
                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                width: 36,
+                height: 36,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                color: isFav ? '#E03131' : '#151515',
-                '&:hover': { backgroundColor: '#FFFFFF', color: '#E03131' },
+                color: isFav ? BRAND.red : BRAND.textPrimary,
+                '&:hover': { backgroundColor: BRAND.white, color: BRAND.red },
               }}
             >
-              {isFav ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+              {isFav ? <FavoriteIcon sx={{ fontSize: 18 }} /> : <FavoriteBorderIcon sx={{ fontSize: 18 }} />}
             </IconButton>
           </Stack>
         </Box>
 
-        {/* 3. Shop Details & Identity Bar */}
+        {/* 3. Shop Details & Identity Info */}
         <Box
           sx={{
             display: 'flex',
             flexDirection: { xs: 'column', sm: 'row' },
             alignItems: { xs: 'flex-start', sm: 'center' },
             justifyContent: 'space-between',
-            mt: -4,
-            px: { xs: 1, sm: 2 },
+            px: { xs: 0.5, sm: 1 },
+            mt: 0,
             position: 'relative',
             zIndex: 4,
             gap: 2,
           }}
         >
-          {/* Shop Logo & Name */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2.2 } }}>
+            {/* Shop Avatar overlapping banner */}
             <Avatar
               src={vendor.vendor_image || coverImg}
               alt={vendor.name}
               sx={{
-                width: { xs: 72, sm: 90 },
-                height: { xs: 72, sm: 90 },
+                width: { xs: 68, sm: 84 },
+                height: { xs: 68, sm: 84 },
+                mt: { xs: -4.5, sm: -5.5 },
                 border: '4px solid #FFFFFF',
-                boxShadow: '0 6px 16px rgba(0, 0, 0, 0.12)',
-                backgroundColor: '#EBFBEE',
-                color: '#087F5B',
-                fontSize: '2rem',
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.12)',
+                backgroundColor: BRAND.lightGreen,
+                color: BRAND.primaryGreen,
+                fontSize: '1.8rem',
                 fontWeight: 800,
+                flexShrink: 0,
               }}
             >
               {vendor.name ? vendor.name.charAt(0).toUpperCase() : 'S'}
             </Avatar>
 
-            <Box sx={{ pt: { xs: 3.5, sm: 3 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography
-                  variant="h1"
+            {/* Shop Title & Badges with clean spacing */}
+            <Box sx={{ pt: { xs: 0.8, sm: 1.2 }, pb: 0.5 }}>
+              <Typography
+                variant="h1"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: '20px', sm: '24px' },
+                  color: BRAND.textPrimary,
+                  letterSpacing: '-0.02em',
+                  lineHeight: 1.25,
+                  mb: 0.5,
+                }}
+              >
+                {vendor.name}
+              </Typography>
+
+              {/* Metadata Row: Rating • Category • Distance • Delivery Time • Status */}
+              <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap">
+                {/* Rating Badge */}
+                <Box
                   sx={{
-                    fontWeight: 800,
-                    fontSize: { xs: '1.5rem', sm: '1.9rem', md: '2.2rem' },
-                    color: '#151515',
-                    letterSpacing: '-0.02em',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.3,
+                    backgroundColor: BRAND.lightGreen,
+                    px: 0.8,
+                    py: 0.2,
+                    borderRadius: '6px',
                   }}
                 >
-                  {vendor.name}
-                </Typography>
-                <VerifiedIcon sx={{ color: '#087F5B', fontSize: 22 }} />
-              </Box>
+                  <StarIcon sx={{ fontSize: 13, color: BRAND.primaryGreen }} />
+                  <Typography sx={{ fontSize: '12px', fontWeight: 800, color: BRAND.primaryGreen }}>
+                    {vendor.rating || '4.8'}
+                  </Typography>
+                </Box>
 
-              {/* Category & Status */}
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
-                {vendor.module?.name && (
-                  <Chip
-                    label={vendor.module.name}
-                    size="small"
+                <Typography sx={{ fontSize: '12px', color: '#CBD5E1' }}>•</Typography>
+
+                <Typography sx={{ fontSize: '12.5px', color: BRAND.textSecondary, fontWeight: 600 }}>
+                  {categoryName}
+                </Typography>
+
+                <Typography sx={{ fontSize: '12px', color: '#CBD5E1' }}>•</Typography>
+
+                <Typography sx={{ fontSize: '12.5px', color: BRAND.textSecondary, fontWeight: 500 }}>
+                  {distance}
+                </Typography>
+
+                <Typography sx={{ fontSize: '12px', color: '#CBD5E1' }}>•</Typography>
+
+                {/* Status Indicator */}
+                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                  <Box
                     sx={{
-                      backgroundColor: '#EBFBEE',
-                      color: '#087F5B',
-                      fontWeight: 700,
-                      fontSize: '11px',
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      backgroundColor: isOpen ? BRAND.primaryGreen : BRAND.textSecondary,
                     }}
                   />
-                )}
-                <Chip
-                  label={isOpen ? 'Open Now' : 'Closed'}
-                  size="small"
-                  sx={{
-                    backgroundColor: isOpen ? '#EBFBEE' : '#FFF5F5',
-                    color: isOpen ? '#087F5B' : '#E03131',
-                    fontWeight: 700,
-                    fontSize: '11px',
-                    border: isOpen ? '1px solid #B2F2BB' : '1px solid #FFC9C9',
-                  }}
-                />
+                  <Typography
+                    sx={{
+                      fontSize: '12.5px',
+                      color: isOpen ? BRAND.primaryGreen : BRAND.textSecondary,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {isOpen ? 'Open now' : 'Closed'}
+                  </Typography>
+                </Box>
+
+                <Typography sx={{ fontSize: '12px', color: '#CBD5E1' }}>•</Typography>
+
+                <Typography sx={{ fontSize: '12.5px', color: BRAND.textSecondary, fontWeight: 500 }}>
+                  {prepTime}
+                </Typography>
               </Stack>
             </Box>
           </Box>
-
-          {/* Quick Contact CTA */}
-          {vendor.mobile_number && (
-            <Box sx={{ pt: { xs: 0, sm: 3 }, alignSelf: { xs: 'stretch', sm: 'auto' } }}>
-              <Button
-                variant="outlined"
-                href={`tel:${vendor.mobile_number}`}
-                startIcon={<CallIcon />}
-                sx={{
-                  borderColor: '#E5E7EB',
-                  color: '#151515',
-                  fontWeight: 700,
-                  fontSize: '13.5px',
-                  borderRadius: '10px',
-                  px: 2.2,
-                  py: 0.8,
-                  textTransform: 'none',
-                  '&:hover': {
-                    borderColor: '#087F5B',
-                    backgroundColor: '#EBFBEE',
-                    color: '#087F5B',
-                  },
-                }}
-              >
-                Call Store
-              </Button>
-            </Box>
-          )}
         </Box>
-
-        {/* 4. Meta Badges Strip: Rating, Distance, Delivery Time, Address */}
-        <Paper
-          elevation={0}
-          sx={{
-            mt: 2.5,
-            p: 2,
-            borderRadius: '14px',
-            border: '1px solid #E5E7EB',
-            backgroundColor: '#FAFAF7',
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: { xs: 2, sm: 3 },
-          }}
-        >
-          {/* ⭐ Rating */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-            <Box sx={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#FFF4E6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <StarIcon sx={{ fontSize: 17, color: '#FF922B' }} />
-            </Box>
-            <Box>
-              <Typography sx={{ fontSize: '13px', fontWeight: 800, color: '#151515', lineHeight: 1 }}>
-                {vendor.rating || '4.8'}
-              </Typography>
-              <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>
-                Verified Rating
-              </Typography>
-            </Box>
-          </Box>
-
-          {/* Delivery Time */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-            <Box sx={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#EBFBEE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <AccessTimeIcon sx={{ fontSize: 17, color: '#087F5B' }} />
-            </Box>
-            <Box>
-              <Typography sx={{ fontSize: '13px', fontWeight: 800, color: '#151515', lineHeight: 1 }}>
-                {prepTime}
-              </Typography>
-              <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>
-                Delivery Time
-              </Typography>
-            </Box>
-          </Box>
-
-          {/* Distance */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-            <Box sx={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#E7F5FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <LocationOnIcon sx={{ fontSize: 17, color: '#1971C2' }} />
-            </Box>
-            <Box>
-              <Typography sx={{ fontSize: '13px', fontWeight: 800, color: '#151515', lineHeight: 1 }}>
-                {distance}
-              </Typography>
-              <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>
-                From Your Location
-              </Typography>
-            </Box>
-          </Box>
-
-          {/* Store Address / Hours */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, ml: { sm: 'auto' } }}>
-            <DeliveryDiningIcon sx={{ fontSize: 20, color: '#087F5B' }} />
-            <Typography sx={{ fontSize: '12.5px', color: '#6B7280', fontWeight: 600 }}>
-              {addressText}
-            </Typography>
-          </Box>
-        </Paper>
-
-        {/* Optional Description */}
-        {vendor.description && (
-          <Typography sx={{ fontSize: '14px', color: '#6B7280', mt: 2, px: 0.5, lineHeight: 1.6 }}>
-            {vendor.description}
-          </Typography>
-        )}
       </Container>
 
-      {/* Share Toast */}
+      {/* Share Snackbar */}
       <Snackbar
         open={showShareSnackbar}
         autoHideDuration={2500}
         onClose={() => setShowShareSnackbar(false)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity="success" sx={{ borderRadius: '10px', fontWeight: 600 }}>
-          Store link copied to clipboard!
+        <Alert
+          onClose={() => setShowShareSnackbar(false)}
+          severity="success"
+          sx={{ width: '100%', borderRadius: '10px', fontWeight: 600 }}
+        >
+          Shop link copied to clipboard!
         </Alert>
       </Snackbar>
     </Box>

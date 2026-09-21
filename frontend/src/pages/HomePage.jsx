@@ -70,16 +70,43 @@ const HomePage = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   // Read saved address/location label
-  const locationLabel = (() => {
+  const [activeLocationName, setActiveLocationName] = useState(() => {
     try {
       const activeAddress = localStorage.getItem('activeDeliveryAddress');
       if (activeAddress) {
         const parsed = JSON.parse(activeAddress);
-        return parsed.city || parsed.address_line_1 || 'Surat, Gujarat';
+        return parsed.city || parsed.displayLabel || parsed.address_line_1 || parsed.address || 'Current Location';
       }
+      const savedCity = localStorage.getItem('userCity') || localStorage.getItem('userAddress');
+      if (savedCity) return savedCity;
     } catch {}
-    return 'Surat, Gujarat';
-  })();
+    return 'Current Location';
+  });
+
+  const locationLabel = activeLocationName;
+
+  // Listen for address changes
+  useEffect(() => {
+    const handleAddressUpdated = () => {
+      try {
+        const activeAddress = localStorage.getItem('activeDeliveryAddress');
+        if (activeAddress) {
+          const parsed = JSON.parse(activeAddress);
+          setActiveLocationName(parsed.city || parsed.displayLabel || parsed.address_line_1 || parsed.address || 'Current Location');
+        } else {
+          const savedCity = localStorage.getItem('userCity') || localStorage.getItem('userAddress');
+          if (savedCity) setActiveLocationName(savedCity);
+        }
+      } catch {}
+    };
+
+    window.addEventListener('address_updated', handleAddressUpdated);
+    window.addEventListener('storage', handleAddressUpdated);
+    return () => {
+      window.removeEventListener('address_updated', handleAddressUpdated);
+      window.removeEventListener('storage', handleAddressUpdated);
+    };
+  }, []);
 
   const token = localStorage.getItem('authToken');
 
@@ -645,21 +672,48 @@ const HomePage = () => {
       {/* ─────────────────────────────────────────────────────────────
           3. SHOP BY CATEGORY
       ───────────────────────────────────────────────────────────── */}
-      <Box sx={{ py: { xs: 5, md: 7 } }} id="categories">
+      <Box sx={{ py: { xs: 4, md: 6 } }} id="categories">
         <Container maxWidth="lg">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 3.5 }}>
-            <Box>
-              <Typography variant="h2" sx={{ fontSize: { xs: '1.75rem', md: '2.25rem' }, fontWeight: 800, color: '#151515', mb: 0.5 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: { xs: 2, md: 3.5 }, gap: 1 }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                variant="h2"
+                noWrap
+                sx={{
+                  fontSize: { xs: '1.18rem', sm: '1.45rem', md: '2rem' },
+                  fontWeight: 800,
+                  color: '#151515',
+                  mb: 0.3,
+                  lineHeight: 1.2,
+                }}
+              >
                 Shop by Category
               </Typography>
-              <Typography sx={{ fontSize: '15px', color: '#6B7280' }}>
+              <Typography
+                sx={{
+                  fontSize: { xs: '12px', sm: '14.5px' },
+                  color: '#6B7280',
+                  whiteSpace: { xs: 'nowrap', sm: 'normal' },
+                  overflow: { xs: 'hidden', sm: 'visible' },
+                  textOverflow: { xs: 'ellipsis', sm: 'clip' },
+                }}
+              >
                 Find what you need from local stores around you.
               </Typography>
             </Box>
             <Button
               onClick={() => navigate('/modules')}
-              endIcon={<ArrowForwardIcon />}
-              sx={{ color: '#087F5B', fontWeight: 700, fontSize: '14px', textTransform: 'none', display: { xs: 'none', sm: 'inline-flex' } }}
+              endIcon={<ArrowForwardIcon sx={{ fontSize: { xs: '15px !important', sm: '18px !important' } }} />}
+              sx={{
+                color: '#087F5B',
+                fontWeight: 700,
+                fontSize: { xs: '12px', sm: '13.5px' },
+                textTransform: 'none',
+                flexShrink: 0,
+                p: { xs: '4px 6px', sm: '6px 12px' },
+                minWidth: 'auto',
+                whiteSpace: 'nowrap',
+              }}
             >
               All Categories
             </Button>
@@ -752,23 +806,50 @@ const HomePage = () => {
       {/* ─────────────────────────────────────────────────────────────
           4. POPULAR SHOPS NEAR YOU
       ───────────────────────────────────────────────────────────── */}
-      <Box sx={{ py: { xs: 4, md: 7 }, backgroundColor: '#FFFFFF', borderTop: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
+      <Box sx={{ py: { xs: 4, md: 6 }, backgroundColor: '#FFFFFF', borderTop: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
         <Container maxWidth="lg">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: { xs: 2, md: 3.5 } }}>
-            <Box>
-              <Typography variant="h2" sx={{ fontSize: { xs: '1.45rem', md: '2.25rem' }, fontWeight: 800, color: '#151515', mb: 0.5 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: { xs: 2, md: 3.5 }, gap: 1 }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                variant="h2"
+                noWrap
+                sx={{
+                  fontSize: { xs: '1.18rem', sm: '1.45rem', md: '2rem' },
+                  fontWeight: 800,
+                  color: '#151515',
+                  mb: 0.3,
+                  lineHeight: 1.2,
+                }}
+              >
                 Popular Shops Near You
               </Typography>
-              <Typography sx={{ fontSize: { xs: '13px', sm: '15px' }, color: '#6B7280' }}>
+              <Typography
+                sx={{
+                  fontSize: { xs: '12px', sm: '14.5px' },
+                  color: '#6B7280',
+                  whiteSpace: { xs: 'nowrap', sm: 'normal' },
+                  overflow: { xs: 'hidden', sm: 'visible' },
+                  textOverflow: { xs: 'ellipsis', sm: 'clip' },
+                }}
+              >
                 Trusted local businesses delivering to your doorstep.
               </Typography>
             </Box>
             <Button
               onClick={() => navigate('/vendors')}
-              endIcon={<ArrowForwardIcon />}
-              sx={{ color: '#087F5B', fontWeight: 700, fontSize: '13.5px', textTransform: 'none', flexShrink: 0 }}
+              endIcon={<ArrowForwardIcon sx={{ fontSize: { xs: '15px !important', sm: '18px !important' } }} />}
+              sx={{
+                color: '#087F5B',
+                fontWeight: 700,
+                fontSize: { xs: '12px', sm: '13.5px' },
+                textTransform: 'none',
+                flexShrink: 0,
+                p: { xs: '4px 6px', sm: '6px 12px' },
+                minWidth: 'auto',
+                whiteSpace: 'nowrap',
+              }}
             >
-              See All →
+              See All
             </Button>
           </Box>
 
@@ -1057,31 +1138,204 @@ const HomePage = () => {
       </Box>
 
       {/* ─────────────────────────────────────────────────────────────
-          5. POPULAR PRODUCTS (POPULAR NEAR YOU) - 2-COLUMN MOBILE GRID
+          5. POPULAR PRODUCTS (POPULAR NEAR YOU) - MOBILE SCROLL & DESKTOP GRID
       ───────────────────────────────────────────────────────────── */}
       {popularProducts.length > 0 && (
-        <Box sx={{ py: { xs: 4, md: 7 } }}>
+        <Box sx={{ py: { xs: 4, md: 6 } }}>
           <Container maxWidth="lg">
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: { xs: 2, md: 3.5 } }}>
-              <Box>
-                <Typography variant="h2" sx={{ fontSize: { xs: '1.45rem', md: '2.25rem' }, fontWeight: 800, color: '#151515', mb: 0.5 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: { xs: 2, md: 3.5 }, gap: 1 }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="h2"
+                  noWrap
+                  sx={{
+                    fontSize: { xs: '1.18rem', sm: '1.45rem', md: '2rem' },
+                    fontWeight: 800,
+                    color: '#151515',
+                    mb: 0.3,
+                    lineHeight: 1.2,
+                  }}
+                >
                   Popular Near You
                 </Typography>
-                <Typography sx={{ fontSize: { xs: '13px', sm: '15px' }, color: '#6B7280' }}>
+                <Typography
+                  sx={{
+                    fontSize: { xs: '12px', sm: '14.5px' },
+                    color: '#6B7280',
+                    whiteSpace: { xs: 'nowrap', sm: 'normal' },
+                    overflow: { xs: 'hidden', sm: 'visible' },
+                    textOverflow: { xs: 'ellipsis', sm: 'clip' },
+                  }}
+                >
                   Frequently ordered essentials and specialties from local stores.
                 </Typography>
               </Box>
               <Button
                 onClick={() => navigate('/vendors')}
-                endIcon={<ArrowForwardIcon />}
-                sx={{ color: '#087F5B', fontWeight: 700, fontSize: '13.5px', textTransform: 'none', flexShrink: 0 }}
+                endIcon={<ArrowForwardIcon sx={{ fontSize: { xs: '15px !important', sm: '18px !important' } }} />}
+                sx={{
+                  color: '#087F5B',
+                  fontWeight: 700,
+                  fontSize: { xs: '12px', sm: '13.5px' },
+                  textTransform: 'none',
+                  flexShrink: 0,
+                  p: { xs: '4px 6px', sm: '6px 12px' },
+                  minWidth: 'auto',
+                  whiteSpace: 'nowrap',
+                }}
               >
                 Explore More
               </Button>
             </Box>
 
-            {/* 2-Column Grid on Mobile (xs={6}), 4-Column on Desktop (md={3}) */}
-            <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+            {/* MOBILE VIEW: Smooth Horizontal Scrolling Products */}
+            <Box
+              sx={{
+                display: { xs: 'flex', md: 'none' },
+                gap: 1.8,
+                overflowX: 'auto',
+                pb: 1.5,
+                scrollSnapType: 'x mandatory',
+                scrollbarWidth: 'none',
+                '&::-webkit-scrollbar': { display: 'none' },
+              }}
+            >
+              {popularProducts.map((prod) => {
+                const hasDiscount = prod.special_price && prod.special_price < prod.main_price;
+                const price = hasDiscount ? prod.special_price : prod.main_price || prod.price || 0;
+                const originalPrice = prod.main_price || prod.price || 0;
+                const discountPct = hasDiscount ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+
+                return (
+                  <Card
+                    key={prod._id}
+                    elevation={0}
+                    sx={{
+                      flex: '0 0 165px',
+                      scrollSnapAlign: 'start',
+                      borderRadius: '16px',
+                      border: '1px solid #E5E7EB',
+                      backgroundColor: '#FFFFFF',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      overflow: 'hidden',
+                      transition: 'all 0.25s ease',
+                      '&:hover': {
+                        borderColor: '#087F5B',
+                      },
+                    }}
+                  >
+                    {/* Product Image & Badges */}
+                    <Box sx={{ position: 'relative', height: 115, backgroundColor: '#F9FAFB', overflow: 'hidden' }}>
+                      <CardMedia
+                        component="img"
+                        image={prod.image || FALLBACK_PRODUCT_IMAGE}
+                        alt={prod.name}
+                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => {
+                          e.target.src = FALLBACK_PRODUCT_IMAGE;
+                        }}
+                      />
+                      {hasDiscount && (
+                        <Chip
+                          label={`${discountPct}% OFF`}
+                          size="small"
+                          sx={{
+                            position: 'absolute',
+                            top: 6,
+                            left: 6,
+                            backgroundColor: '#FF6B00',
+                            color: '#FFFFFF',
+                            fontWeight: 800,
+                            fontSize: '9px',
+                            height: 18,
+                          }}
+                        />
+                      )}
+                    </Box>
+
+                    {/* Info & Add Action */}
+                    <CardContent sx={{ p: 1.2, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                      <Typography
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          color: '#151515',
+                          mb: 0.5,
+                          lineHeight: 1.25,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          minHeight: 32,
+                        }}
+                      >
+                        {prod.name}
+                      </Typography>
+
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.8 }}>
+                        <Typography
+                          sx={{
+                            fontSize: '11px',
+                            color: '#6B7280',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: '70%',
+                          }}
+                        >
+                          {prod.shopName}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.2 }}>
+                          <StarIcon sx={{ fontSize: 11, color: '#FF922B' }} />
+                          <Typography sx={{ fontSize: '11px', fontWeight: 700, color: '#151515' }}>
+                            {prod.shopRating || '4.8'}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Box sx={{ mt: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', pt: 0.8, borderTop: '1px solid #F3F4F6' }}>
+                        <Box>
+                          <Typography sx={{ fontSize: '14.5px', fontWeight: 800, color: '#087F5B', lineHeight: 1 }}>
+                            ₹{price.toFixed(0)}
+                          </Typography>
+                          {hasDiscount && (
+                            <Typography sx={{ fontSize: '10.5px', textDecoration: 'line-through', color: '#9CA3AF' }}>
+                              ₹{originalPrice.toFixed(0)}
+                            </Typography>
+                          )}
+                        </Box>
+
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={(e) => handleAddProductToCart(prod, e)}
+                          sx={{
+                            backgroundColor: '#087F5B',
+                            color: '#FFFFFF',
+                            borderRadius: '8px',
+                            px: 1.2,
+                            py: 0.4,
+                            minHeight: 30,
+                            minWidth: 50,
+                            fontWeight: 700,
+                            fontSize: '11px',
+                            textTransform: 'none',
+                            '&:hover': { backgroundColor: '#075B43' },
+                          }}
+                        >
+                          Add
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </Box>
+
+            {/* DESKTOP VIEW: 4-Column Grid */}
+            <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }} sx={{ display: { xs: 'none', md: 'flex' } }}>
               {popularProducts.map((prod) => {
                 const hasDiscount = prod.special_price && prod.special_price < prod.main_price;
                 const price = hasDiscount ? prod.special_price : prod.main_price || prod.price || 0;
@@ -1228,38 +1482,90 @@ const HomePage = () => {
       {/* ─────────────────────────────────────────────────────────────
           6. FAVORITE SHOPS
       ───────────────────────────────────────────────────────────── */}
-      <Box sx={{ py: { xs: 5, md: 7 }, backgroundColor: '#FFFFFF', borderTop: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }} id="favorites">
+      <Box sx={{ py: { xs: 4, md: 6 }, backgroundColor: '#FFFFFF', borderTop: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }} id="favorites">
         <Container maxWidth="lg">
-          <Box sx={{ mb: 3.5 }}>
-            <Typography variant="h2" sx={{ fontSize: { xs: '1.75rem', md: '2.25rem' }, fontWeight: 800, color: '#151515', mb: 0.5 }}>
-              Your Favorite Shops
-            </Typography>
-            <Typography sx={{ fontSize: '15px', color: '#6B7280' }}>
-              Quick access to your preferred neighborhood stores.
-            </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: { xs: 2, md: 3.5 }, gap: 1 }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                variant="h2"
+                noWrap
+                sx={{
+                  fontSize: { xs: '1.18rem', sm: '1.45rem', md: '2rem' },
+                  fontWeight: 800,
+                  color: '#151515',
+                  mb: 0.3,
+                  lineHeight: 1.2,
+                }}
+              >
+                Your Favorite Shops
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: { xs: '12px', sm: '14.5px' },
+                  color: '#6B7280',
+                  whiteSpace: { xs: 'nowrap', sm: 'normal' },
+                  overflow: { xs: 'hidden', sm: 'visible' },
+                  textOverflow: { xs: 'ellipsis', sm: 'clip' },
+                }}
+              >
+                Quick access to your preferred neighborhood stores.
+              </Typography>
+            </Box>
+            {favoriteVendors.length > 0 && (
+              <Button
+                onClick={() => navigate('/vendors')}
+                endIcon={<ArrowForwardIcon sx={{ fontSize: { xs: '15px !important', sm: '18px !important' } }} />}
+                sx={{
+                  color: '#087F5B',
+                  fontWeight: 700,
+                  fontSize: { xs: '12px', sm: '13.5px' },
+                  textTransform: 'none',
+                  flexShrink: 0,
+                  p: { xs: '4px 6px', sm: '6px 12px' },
+                  minWidth: 'auto',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                All Shops
+              </Button>
+            )}
           </Box>
 
           {favoriteVendors.length > 0 ? (
-            <Grid container spacing={{ xs: 2.5, md: 3 }}>
-              {favoriteVendors.map((vendor) => (
-                <Grid item xs={12} sm={6} md={3} key={vendor._id}>
+            <>
+              {/* MOBILE VIEW: Horizontal Scrolling Favorite Shops */}
+              <Box
+                sx={{
+                  display: { xs: 'flex', md: 'none' },
+                  gap: 1.8,
+                  overflowX: 'auto',
+                  pb: 1.5,
+                  scrollSnapType: 'x mandatory',
+                  scrollbarWidth: 'none',
+                  '&::-webkit-scrollbar': { display: 'none' },
+                }}
+              >
+                {favoriteVendors.map((vendor) => (
                   <Card
+                    key={vendor._id}
                     onClick={() => navigate(`/vendors/${vendor._id}`)}
                     elevation={0}
                     sx={{
+                      flex: '0 0 235px',
+                      scrollSnapAlign: 'start',
                       borderRadius: '16px',
                       border: '1px solid #E5E7EB',
                       backgroundColor: '#FFFFFF',
                       cursor: 'pointer',
                       overflow: 'hidden',
-                      p: 2,
+                      p: 1.5,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 2,
+                      gap: 1.5,
                       transition: 'all 0.2s ease',
                       '&:hover': {
                         borderColor: '#087F5B',
-                        boxShadow: '0 8px 16px rgba(0,0,0,0.06)',
+                        boxShadow: '0 6px 14px rgba(0,0,0,0.06)',
                       },
                     }}
                   >
@@ -1267,26 +1573,75 @@ const HomePage = () => {
                       component="img"
                       src={vendor.vendor_image || FALLBACK_SHOP_IMAGE}
                       alt={vendor.name}
-                      sx={{ width: 64, height: 64, borderRadius: '12px', objectFit: 'cover' }}
+                      sx={{ width: 54, height: 54, borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }}
                       onError={(e) => {
                         e.target.src = FALLBACK_SHOP_IMAGE;
                       }}
                     />
                     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                      <Typography sx={{ fontWeight: 700, fontSize: '15px', color: '#151515', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <Typography sx={{ fontWeight: 700, fontSize: '13.5px', color: '#151515', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {vendor.name}
                       </Typography>
-                      <Typography sx={{ fontSize: '12px', color: '#6B7280', mb: 0.5 }}>
+                      <Typography sx={{ fontSize: '11px', color: '#6B7280', mb: 0.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {vendor.module?.name || 'Local Store'}
                       </Typography>
-                      <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#087F5B' }}>
+                      <Typography sx={{ fontSize: '11.5px', fontWeight: 700, color: '#087F5B' }}>
                         ⭐ {vendor.rating || '4.8'}
                       </Typography>
                     </Box>
                   </Card>
-                </Grid>
-              ))}
-            </Grid>
+                ))}
+              </Box>
+
+              {/* DESKTOP VIEW: 4-Column Grid */}
+              <Grid container spacing={{ xs: 2.5, md: 3 }} sx={{ display: { xs: 'none', md: 'flex' } }}>
+                {favoriteVendors.map((vendor) => (
+                  <Grid item xs={12} sm={6} md={3} key={vendor._id}>
+                    <Card
+                      onClick={() => navigate(`/vendors/${vendor._id}`)}
+                      elevation={0}
+                      sx={{
+                        borderRadius: '16px',
+                        border: '1px solid #E5E7EB',
+                        backgroundColor: '#FFFFFF',
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                        p: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          borderColor: '#087F5B',
+                          boxShadow: '0 8px 16px rgba(0,0,0,0.06)',
+                        },
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={vendor.vendor_image || FALLBACK_SHOP_IMAGE}
+                        alt={vendor.name}
+                        sx={{ width: 64, height: 64, borderRadius: '12px', objectFit: 'cover' }}
+                        onError={(e) => {
+                          e.target.src = FALLBACK_SHOP_IMAGE;
+                        }}
+                      />
+                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: '15px', color: '#151515', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {vendor.name}
+                        </Typography>
+                        <Typography sx={{ fontSize: '12px', color: '#6B7280', mb: 0.5 }}>
+                          {vendor.module?.name || 'Local Store'}
+                        </Typography>
+                        <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#087F5B' }}>
+                          ⭐ {vendor.rating || '4.8'}
+                        </Typography>
+                      </Box>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </>
           ) : (
             /* Graceful Empty State as specified in Prompt */
             <Paper
@@ -1347,13 +1702,31 @@ const HomePage = () => {
       {/* ─────────────────────────────────────────────────────────────
           7. OFFERS & DEALS SECTION
       ───────────────────────────────────────────────────────────── */}
-      <Box sx={{ py: { xs: 5, md: 7 } }} id="offers">
+      <Box sx={{ py: { xs: 4, md: 6 } }} id="offers">
         <Container maxWidth="lg">
-          <Box sx={{ mb: 3.5 }}>
-            <Typography variant="h2" sx={{ fontSize: { xs: '1.75rem', md: '2.25rem' }, fontWeight: 800, color: '#151515', mb: 0.5 }}>
+          <Box sx={{ mb: { xs: 2, md: 3.5 } }}>
+            <Typography
+              variant="h2"
+              noWrap
+              sx={{
+                fontSize: { xs: '1.18rem', sm: '1.45rem', md: '2rem' },
+                fontWeight: 800,
+                color: '#151515',
+                mb: 0.3,
+                lineHeight: 1.2,
+              }}
+            >
               Offers & Local Deals
             </Typography>
-            <Typography sx={{ fontSize: '15px', color: '#6B7280' }}>
+            <Typography
+              sx={{
+                fontSize: { xs: '12px', sm: '14.5px' },
+                color: '#6B7280',
+                whiteSpace: { xs: 'nowrap', sm: 'normal' },
+                overflow: { xs: 'hidden', sm: 'visible' },
+                textOverflow: { xs: 'ellipsis', sm: 'clip' },
+              }}
+            >
               Save more on everyday essentials with verified neighbourhood discounts.
             </Typography>
           </Box>
@@ -1368,7 +1741,7 @@ const HomePage = () => {
                   borderRadius: '20px',
                   backgroundColor: '#075B43',
                   color: '#FFFFFF',
-                  p: { xs: 3, sm: 4 },
+                  p: { xs: 2.5, sm: 3.5, md: 4 },
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
@@ -1399,32 +1772,32 @@ const HomePage = () => {
                       backgroundColor: '#FF6B00',
                       color: '#FFFFFF',
                       fontWeight: 800,
-                      fontSize: '11px',
-                      mb: 2,
+                      fontSize: '10.5px',
+                      mb: 1.5,
                     }}
                   />
-                  <Typography variant="h3" sx={{ fontSize: { xs: '1.75rem', sm: '2.2rem' }, fontWeight: 800, lineHeight: 1.2, mb: 1.5 }}>
+                  <Typography variant="h3" sx={{ fontSize: { xs: '1.45rem', sm: '2rem', md: '2.2rem' }, fontWeight: 800, lineHeight: 1.2, mb: 1.2 }}>
                     Flat ₹50 OFF on Your First 3 Local Orders
                   </Typography>
-                  <Typography sx={{ fontSize: '15px', color: 'rgba(255, 255, 255, 0.85)', lineHeight: 1.6, maxWidth: 440, mb: 3 }}>
+                  <Typography sx={{ fontSize: { xs: '13px', sm: '15px' }, color: 'rgba(255, 255, 255, 0.85)', lineHeight: 1.5, maxWidth: 440, mb: 2.5 }}>
                     Enjoy fresh fruits, vegetables, food, and grocery items from top verified neighborhood stores.
                   </Typography>
                 </Box>
 
-                <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5 }}>
                   <Button
                     onClick={() => handleCopyCode('AAPNU50')}
                     variant="outlined"
-                    startIcon={<ContentCopyIcon sx={{ fontSize: 16 }} />}
+                    startIcon={<ContentCopyIcon sx={{ fontSize: 15 }} />}
                     sx={{
                       borderColor: 'rgba(255, 255, 255, 0.4)',
                       color: '#FFFFFF',
                       backgroundColor: 'rgba(255, 255, 255, 0.12)',
                       borderRadius: '8px',
-                      px: 2,
-                      py: 0.8,
+                      px: 1.8,
+                      py: 0.6,
                       fontWeight: 700,
-                      fontSize: '13px',
+                      fontSize: { xs: '11.5px', sm: '13px' },
                       textTransform: 'none',
                       '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)', borderColor: '#FFFFFF' },
                     }}
@@ -1439,10 +1812,10 @@ const HomePage = () => {
                       backgroundColor: '#FFFFFF',
                       color: '#075B43',
                       borderRadius: '8px',
-                      px: 2.5,
-                      py: 0.8,
+                      px: 2.2,
+                      py: 0.6,
                       fontWeight: 800,
-                      fontSize: '13.5px',
+                      fontSize: { xs: '12px', sm: '13.5px' },
                       textTransform: 'none',
                       '&:hover': { backgroundColor: '#F3F4F6' },
                     }}
@@ -1455,7 +1828,7 @@ const HomePage = () => {
 
             {/* 2 Smaller Promotional Cards */}
             <Grid item xs={12} md={5}>
-              <Stack spacing={{ xs: 2.5, md: 3 }} sx={{ height: '100%' }}>
+              <Stack spacing={{ xs: 2, md: 3 }} sx={{ height: '100%' }}>
                 {/* Small Offer Card 1 */}
                 <Card
                   elevation={0}
@@ -1465,7 +1838,7 @@ const HomePage = () => {
                     borderRadius: '16px',
                     border: '1px solid #E5E7EB',
                     backgroundColor: '#FFFFFF',
-                    p: 2.5,
+                    p: { xs: 2, sm: 2.5 },
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
@@ -1473,25 +1846,25 @@ const HomePage = () => {
                     transition: 'all 0.2s ease',
                     '&:hover': {
                       borderColor: '#087F5B',
-                      boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
+                      boxShadow: '0 8px 20px rgba(8, 127, 91, 0.08)',
                     },
                   }}
                 >
                   <Box>
                     <Chip
-                      label="FREE DELIVERY"
+                      label="MIDDAY BITES"
                       size="small"
-                      sx={{ backgroundColor: '#EBFBEE', color: '#087F5B', fontWeight: 800, fontSize: '11px', mb: 1 }}
+                      sx={{ backgroundColor: '#EBFBEE', color: '#087F5B', fontWeight: 800, fontSize: '10px', mb: 1 }}
                     />
-                    <Typography sx={{ fontWeight: 800, fontSize: '17px', color: '#151515', mb: 0.5 }}>
-                      Zero Delivery Fee on Orders Above ₹249
+                    <Typography sx={{ fontWeight: 800, fontSize: { xs: '14.5px', sm: '16.5px' }, color: '#151515', mb: 0.3 }}>
+                      Free Delivery from Neighborhood Restaurants
                     </Typography>
-                    <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>
-                      Delivered within 3 km from your nearest neighborhood shop.
+                    <Typography sx={{ fontSize: { xs: '12px', sm: '13px' }, color: '#6B7280' }}>
+                      Hot lunch, bakery snacks and sweet treats straight to your desk or home.
                     </Typography>
                   </Box>
-                  <Typography sx={{ fontSize: '13px', fontWeight: 700, color: '#087F5B', mt: 1.5 }}>
-                    Claim Free Delivery →
+                  <Typography sx={{ fontSize: { xs: '12px', sm: '13px' }, fontWeight: 700, color: '#087F5B', mt: 1.2 }}>
+                    View Participating Stores →
                   </Typography>
                 </Card>
 
@@ -1504,7 +1877,7 @@ const HomePage = () => {
                     borderRadius: '16px',
                     border: '1px solid #FFE8CC',
                     backgroundColor: '#FFF4E6',
-                    p: 2.5,
+                    p: { xs: 2, sm: 2.5 },
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
@@ -1520,16 +1893,16 @@ const HomePage = () => {
                     <Chip
                       label="FARM FRESH"
                       size="small"
-                      sx={{ backgroundColor: '#FF6B00', color: '#FFFFFF', fontWeight: 800, fontSize: '11px', mb: 1 }}
+                      sx={{ backgroundColor: '#FF6B00', color: '#FFFFFF', fontWeight: 800, fontSize: '10px', mb: 1 }}
                     />
-                    <Typography sx={{ fontWeight: 800, fontSize: '17px', color: '#151515', mb: 0.5 }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: { xs: '14.5px', sm: '16.5px' }, color: '#151515', mb: 0.3 }}>
                       Up to 25% OFF on Morning Mandi Harvests
                     </Typography>
-                    <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>
+                    <Typography sx={{ fontSize: { xs: '12px', sm: '13px' }, color: '#6B7280' }}>
                       Seasonal fruits and green vegetables delivered fresh daily.
                     </Typography>
                   </Box>
-                  <Typography sx={{ fontSize: '13px', fontWeight: 700, color: '#FF6B00', mt: 1.5 }}>
+                  <Typography sx={{ fontSize: { xs: '12px', sm: '13px' }, fontWeight: 700, color: '#FF6B00', mt: 1.2 }}>
                     Explore Mandi Deals →
                   </Typography>
                 </Card>
@@ -1540,73 +1913,94 @@ const HomePage = () => {
       </Box>
 
       {/* ─────────────────────────────────────────────────────────────
-          8. WHY AAPNUBAZAAR
+          8. WHY AAPNUBAZAAR (COMPACT & MODERN UI)
       ───────────────────────────────────────────────────────────── */}
-      <Box sx={{ py: { xs: 6, md: 8 }, backgroundColor: '#FFFFFF', borderTop: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
+      <Box sx={{ py: { xs: 3.5, sm: 4.5, md: 6 }, backgroundColor: '#FFFFFF', borderTop: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
         <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', maxWidth: 600, mx: 'auto', mb: 5 }}>
-            <Typography variant="h2" sx={{ fontSize: { xs: '1.85rem', md: '2.4rem' }, fontWeight: 800, color: '#151515', mb: 1 }}>
+          <Box sx={{ textAlign: 'center', maxWidth: 620, mx: 'auto', mb: { xs: 2.5, md: 4 } }}>
+            <Typography
+              variant="h2"
+              noWrap
+              sx={{
+                fontSize: { xs: '1.18rem', sm: '1.5rem', md: '2rem' },
+                fontWeight: 800,
+                color: '#151515',
+                mb: 0.4,
+              }}
+            >
               Why Shop With AapnuBazaar?
             </Typography>
-            <Typography sx={{ fontSize: '15px', color: '#6B7280' }}>
+            <Typography sx={{ fontSize: { xs: '12px', sm: '14px' }, color: '#6B7280' }}>
               We empower your local neighborhood merchants while providing speedy, dependable service right to your doorstep.
             </Typography>
           </Box>
 
-          <Grid container spacing={2.5}>
+          <Grid container spacing={{ xs: 1.5, sm: 2, md: 2.5 }}>
             {[
               {
-                icon: <StoreOutlinedIcon sx={{ fontSize: 28, color: '#087F5B' }} />,
+                icon: <StoreOutlinedIcon sx={{ fontSize: { xs: 22, sm: 26 }, color: '#087F5B' }} />,
                 title: 'Local Shops',
-                desc: 'Shop from businesses you already know and trust.',
+                desc: 'Shop from businesses you know and trust.',
               },
               {
-                icon: <LocalShippingOutlinedIcon sx={{ fontSize: 28, color: '#087F5B' }} />,
+                icon: <LocalShippingOutlinedIcon sx={{ fontSize: { xs: 22, sm: 26 }, color: '#087F5B' }} />,
                 title: 'Fast Delivery',
-                desc: 'Get your orders delivered conveniently.',
+                desc: 'Speedy doorstep delivery across town.',
               },
               {
-                icon: <ThumbUpOutlinedIcon sx={{ fontSize: 28, color: '#087F5B' }} />,
+                icon: <ThumbUpOutlinedIcon sx={{ fontSize: { xs: 22, sm: 26 }, color: '#087F5B' }} />,
                 title: 'Your Choice',
-                desc: 'Choose the shops you love.',
+                desc: 'Curated shops for everyday needs.',
               },
               {
-                icon: <SecurityOutlinedIcon sx={{ fontSize: 28, color: '#087F5B' }} />,
+                icon: <SecurityOutlinedIcon sx={{ fontSize: { xs: 22, sm: 26 }, color: '#087F5B' }} />,
                 title: 'Secure Payments',
-                desc: 'Simple and secure checkout.',
+                desc: 'Safe, verified and seamless checkout.',
               },
               {
-                icon: <TrackChangesOutlinedIcon sx={{ fontSize: 28, color: '#087F5B' }} />,
-                title: 'Live Order Tracking',
-                desc: 'Track your order from shop to doorstep.',
+                icon: <TrackChangesOutlinedIcon sx={{ fontSize: { xs: 22, sm: 26 }, color: '#087F5B' }} />,
+                title: 'Live Tracking',
+                desc: 'Real-time order tracking to doorstep.',
               },
             ].map((item, idx) => (
-              <Grid item xs={12} sm={6} md={2.4} key={idx}>
+              <Grid item xs={6} sm={4} md={2.4} key={idx}>
                 <Paper
                   elevation={0}
                   sx={{
-                    p: 2.5,
+                    p: { xs: 1.6, sm: 2.2 },
                     height: '100%',
-                    borderRadius: '14px',
+                    borderRadius: '16px',
                     border: '1px solid #E5E7EB',
                     backgroundColor: '#FAFAF7',
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     flexDirection: 'column',
+                    alignItems: 'flex-start',
                     '&:hover': {
                       borderColor: '#087F5B',
-                      transform: 'translateY(-3px)',
-                      boxShadow: '0 8px 16px rgba(0,0,0,0.05)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 14px rgba(0,0,0,0.04)',
                     },
                   }}
                 >
-                  <Box sx={{ width: 48, height: 48, borderRadius: '12px', backgroundColor: '#EBFBEE', display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+                  <Box
+                    sx={{
+                      width: { xs: 36, sm: 44 },
+                      height: { xs: 36, sm: 44 },
+                      borderRadius: '10px',
+                      backgroundColor: '#EBFBEE',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mb: { xs: 1, sm: 1.5 },
+                    }}
+                  >
                     {item.icon}
                   </Box>
-                  <Typography sx={{ fontWeight: 800, fontSize: '16px', color: '#151515', mb: 0.8 }}>
+                  <Typography sx={{ fontWeight: 800, fontSize: { xs: '13px', sm: '15px' }, color: '#151515', mb: 0.3 }}>
                     {item.title}
                   </Typography>
-                  <Typography sx={{ fontSize: '13px', color: '#6B7280', lineHeight: 1.5 }}>
+                  <Typography sx={{ fontSize: { xs: '11px', sm: '12.5px' }, color: '#6B7280', lineHeight: 1.4 }}>
                     {item.desc}
                   </Typography>
                 </Paper>

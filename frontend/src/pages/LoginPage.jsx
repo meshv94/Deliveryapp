@@ -8,6 +8,8 @@ import {
 } from '@mui/material';
 import { ArrowLeft, Phone, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { userAPI } from '../api/endpoints';
+import CompleteProfileModal from '../components/CompleteProfileModal';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -19,6 +21,9 @@ const LoginPage = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [timer, setTimer] = useState(0);
   const [activeSlide, setActiveSlide] = useState(0);
+
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileModalData, setProfileModalData] = useState({ mobile: '', name: '', email: '' });
 
   const inputRefs = useRef([]);
 
@@ -39,11 +44,33 @@ const LoginPage = () => {
     },
   ];
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated ONLY if profile is complete
   useEffect(() => {
-    if (isAuthenticated()) {
-      navigate('/');
-    }
+    const checkAuthStatus = async () => {
+      if (isAuthenticated()) {
+        try {
+          const res = await userAPI.getProfile();
+          if (res?.success && res?.data) {
+            const p = res.data;
+            const isNameEmpty = !p.name || p.name.trim() === '' || p.name.trim().toLowerCase() === 'customer';
+            const isEmailEmpty = !p.email || p.email.trim() === '';
+            if (isNameEmpty || isEmailEmpty) {
+              setProfileModalData({
+                mobile: p.mobile_number || '',
+                name: p.name && p.name.toLowerCase() !== 'customer' ? p.name : '',
+                email: p.email || '',
+              });
+              setShowProfileModal(true);
+              return;
+            }
+          }
+        } catch {
+          // ignore
+        }
+        navigate('/');
+      }
+    };
+    checkAuthStatus();
   }, [isAuthenticated, navigate]);
 
   // Countdown timer for OTP
@@ -81,7 +108,7 @@ const LoginPage = () => {
       return;
     }
 
-    const result = await sendOtp(cleanNumber, 'Customer');
+    const result = await sendOtp(cleanNumber);
     if (result.success) {
       setSuccessMessage(`OTP sent successfully to +91 ${cleanNumber}`);
       setTimer(60);
@@ -154,13 +181,46 @@ const LoginPage = () => {
     const result = await verifyOtp(mobileNumber, otpCode);
 
     if (result.success) {
-      setSuccessMessage('Login successful! Redirecting...');
-      setTimeout(() => {
-        navigate('/');
-      }, 600);
+      // API call to check user profile status
+      let userProfile = result.userData || {};
+      try {
+        const profileRes = await userAPI.getProfile();
+        if (profileRes?.success && profileRes?.data) {
+          userProfile = profileRes.data;
+        }
+      } catch (profileErr) {
+        console.warn('Could not fetch latest profile on login:', profileErr);
+      }
+
+      const isNameEmpty = !userProfile?.name || userProfile.name.trim() === '' || userProfile.name.trim().toLowerCase() === 'customer';
+      const isEmailEmpty = !userProfile?.email || userProfile.email.trim() === '';
+
+      if (isNameEmpty || isEmailEmpty) {
+        // Show forced profile completion popup before redirecting
+        setProfileModalData({
+          mobile: mobileNumber,
+          name: userProfile?.name && userProfile.name.toLowerCase() !== 'customer' ? userProfile.name : '',
+          email: userProfile?.email || '',
+        });
+        setShowProfileModal(true);
+      } else {
+        setSuccessMessage('Login successful! Redirecting...');
+        setTimeout(() => {
+          navigate('/');
+        }, 600);
+      }
     } else {
       setLocalError(result.message || 'Invalid OTP code. Please try again.');
     }
+  };
+
+  const handleProfileCompleteSuccess = () => {
+    setShowProfileModal(false);
+    window.dispatchEvent(new Event('profile_updated'));
+    setSuccessMessage('Profile saved successfully! Redirecting...');
+    setTimeout(() => {
+      navigate('/');
+    }, 400);
   };
 
   const handleEditMobile = () => {
@@ -742,6 +802,15 @@ const LoginPage = () => {
           </Box>
         </Box>
       </Box>
+
+      {/* Mandatory Uncloseable Profile Completion Popup */}
+      <CompleteProfileModal
+        open={showProfileModal}
+        initialMobile={profileModalData.mobile}
+        initialName={profileModalData.name}
+        initialEmail={profileModalData.email}
+        onSuccess={handleProfileCompleteSuccess}
+      />
     </Box>
   );
 };

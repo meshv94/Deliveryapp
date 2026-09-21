@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import apiClient from '../api/apiClient';
 import {
   Box,
   AppBar,
@@ -43,6 +44,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import PersonIcon from '@mui/icons-material/Person';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCartContext } from '../context/CartContext';
+import CompleteProfileModal from './CompleteProfileModal';
 
 const Layout = ({ children }) => {
   const navigate = useNavigate();
@@ -62,6 +64,124 @@ const Layout = ({ children }) => {
   })();
 
   const token = localStorage.getItem('authToken');
+
+  // Mandatory Profile Completion Modal State
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileModalData, setProfileModalData] = useState({ mobile: '', name: '', email: '' });
+
+  const checkUserProfile = useCallback(async () => {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      setShowProfileModal(false);
+      return;
+    }
+
+    try {
+      const res = await apiClient.get('/app/profile');
+      if (res?.success && res?.data) {
+        const p = res.data;
+        const isNameEmpty = !p.name || p.name.trim() === '' || p.name.trim().toLowerCase() === 'customer';
+        const isEmailEmpty = !p.email || p.email.trim() === '';
+
+        if (isNameEmpty || isEmailEmpty) {
+          setProfileModalData({
+            mobile: p.mobile_number || '',
+            name: p.name && p.name.toLowerCase() !== 'customer' ? p.name : '',
+            email: p.email || '',
+          });
+          setShowProfileModal(true);
+        } else {
+          setShowProfileModal(false);
+        }
+      }
+    } catch (err) {
+      // If unauthorized or network error, don't crash
+      console.warn('Profile check error in Layout:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkUserProfile();
+
+    const handleProfileUpdate = () => {
+      checkUserProfile();
+    };
+
+    window.addEventListener('profile_updated', handleProfileUpdate);
+    window.addEventListener('storage', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('profile_updated', handleProfileUpdate);
+      window.removeEventListener('storage', handleProfileUpdate);
+    };
+  }, [checkUserProfile, location.pathname]);
+
+  // Dynamic Delivery Location / Address
+  const [deliveryLocation, setDeliveryLocation] = useState('Current Location');
+
+  const resolveDeliveryLocation = useCallback(async () => {
+    try {
+      // 1. Check activeDeliveryAddress in localStorage
+      const activeAddrStr = localStorage.getItem('activeDeliveryAddress');
+      if (activeAddrStr) {
+        const parsed = JSON.parse(activeAddrStr);
+        const label = parsed.city || parsed.displayLabel || parsed.address_line_1 || parsed.address;
+        if (label) {
+          setDeliveryLocation(label);
+          return;
+        }
+      }
+
+      // 2. Check userCity or userAddress in localStorage
+      const savedCity = localStorage.getItem('userCity') || localStorage.getItem('userAddress');
+      if (savedCity) {
+        setDeliveryLocation(savedCity);
+        return;
+      }
+
+      // 3. If logged in, fetch saved addresses from backend
+      const authToken = localStorage.getItem('authToken');
+      if (authToken) {
+        try {
+          const res = await apiClient.get('/app/addresses');
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            const defaultAddr = res.data.find((a) => a.isDefault) || res.data[0];
+            const label = defaultAddr.city || defaultAddr.address || 'Saved Address';
+            setDeliveryLocation(label);
+            localStorage.setItem('activeDeliveryAddress', JSON.stringify(defaultAddr));
+            return;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      // 4. Check if coordinates exist
+      const savedCoords = localStorage.getItem('userCoordinates');
+      if (savedCoords) {
+        setDeliveryLocation('Current Location');
+        return;
+      }
+
+      setDeliveryLocation('Select Location');
+    } catch {
+      setDeliveryLocation('Select Location');
+    }
+  }, []);
+
+  useEffect(() => {
+    resolveDeliveryLocation();
+
+    const handleAddressChange = () => {
+      resolveDeliveryLocation();
+    };
+
+    window.addEventListener('address_updated', handleAddressChange);
+    window.addEventListener('storage', handleAddressChange);
+    return () => {
+      window.removeEventListener('address_updated', handleAddressChange);
+      window.removeEventListener('storage', handleAddressChange);
+    };
+  }, [resolveDeliveryLocation]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -397,13 +517,13 @@ const Layout = ({ children }) => {
                         fontSize: '12px',
                         fontWeight: 700,
                         color: '#151515',
-                        maxWidth: 110,
+                        maxWidth: 130,
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                       }}
                     >
-                      Surat, Gujarat
+                      {deliveryLocation}
                     </Typography>
                   </Box>
                 </Button>
@@ -870,6 +990,19 @@ const Layout = ({ children }) => {
           </Box>
         ))}
       </Box>
+
+      {/* Mandatory Uncloseable Profile Completion Popup for any logged-in user with missing name/email */}
+      <CompleteProfileModal
+        open={showProfileModal}
+        initialMobile={profileModalData.mobile}
+        initialName={profileModalData.name}
+        initialEmail={profileModalData.email}
+        onSuccess={() => {
+          setShowProfileModal(false);
+          checkUserProfile();
+          window.dispatchEvent(new Event('profile_updated'));
+        }}
+      />
     </Box>
   );
 };
