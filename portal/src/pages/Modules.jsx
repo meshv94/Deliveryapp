@@ -21,49 +21,42 @@ import {
   Grid,
   CircularProgress,
   Alert,
-  Switch,
   Avatar,
-  Card,
-  CardContent,
   Tooltip,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
   Stack,
   Divider,
   Menu,
+  MenuItem,
   ListItemIcon,
-  ListItemText,
-  InputAdornment,
+  Skeleton,
+  InputBase,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Close as CloseIcon,
-  CloudUpload as UploadIcon,
-  Category as CategoryIcon,
-  Search as SearchIcon,
-  Refresh as RefreshIcon,
-  Inventory2 as ProductIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  MoreVert as MoreVertIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  Clear as ClearIcon,
-  Visibility as ViewIcon,
-  Image as ImageIcon,
-  ArrowForward as ArrowForwardIcon,
-  Storefront as StoreIcon,
+  AddRounded as AddIcon,
+  EditRounded as EditIcon,
+  DeleteOutlineRounded as DeleteIcon,
+  CloseRounded as CloseIcon,
+  CloudUploadRounded as UploadIcon,
+  SearchRounded as SearchIcon,
+  CategoryOutlined as CategoryIcon,
+  Inventory2Outlined as ProductIcon,
+  ChevronLeftRounded as ChevronLeftIcon,
+  ChevronRightRounded as ChevronRightIcon,
+  FilterListRounded as FilterListIcon,
+  RefreshRounded as RefreshIcon,
+  VisibilityOutlined as ViewIcon,
+  CheckCircleRounded as CheckCircleIcon,
+  CancelRounded as CancelIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import moduleService from '../services/moduleService';
 import vendorService from '../services/vendorService';
-import { brandColors } from '../theme/tokens';
+import { useColorMode } from '../theme/ThemeContext';
 
 const Modules = () => {
+  const { BRAND, isDark } = useColorMode();
   const navigate = useNavigate();
 
   // Core Data State
@@ -77,10 +70,8 @@ const Modules = () => {
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-
-  // Pagination State
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 10;
 
   // Dialog & Drawer States
   const [formDialogOpen, setFormDialogOpen] = useState(false);
@@ -88,10 +79,6 @@ const Modules = () => {
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [selectedModule, setSelectedModule] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-
-  // Action Menu State
-  const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
-  const [activeMenuModule, setActiveMenuModule] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -101,7 +88,6 @@ const Modules = () => {
   });
   const [imagePreview, setImagePreview] = useState(null);
 
-  // Load modules and products on mount
   useEffect(() => {
     loadAllData();
   }, []);
@@ -147,75 +133,22 @@ const Modules = () => {
       if (!p) return;
       const modId = p.module_id?._id || p.module_id || p.module?._id || p.module;
       if (!modId) return;
-
-      if (!map[modId]) {
-        map[modId] = [];
-      }
-      map[modId].push(p);
+      map[modId] = (map[modId] || 0) + 1;
     });
 
     return map;
   }, [products]);
 
-  // Total calculations
-  const totalCategories = modules.length;
-  const activeCategoriesCount = modules.filter((m) => m.active).length;
-  const inactiveCategoriesCount = modules.filter((m) => !m.active).length;
-  const totalCategorizedProducts = products.length;
-
-  // Filter and Search Categories
-  const filteredModules = useMemo(() => {
-    if (!Array.isArray(modules)) return [];
-
-    return modules.filter((mod) => {
-      const q = searchQuery.trim().toLowerCase();
-      const matchesSearch = !q || (mod.name && mod.name.toLowerCase().includes(q));
-
-      let matchesStatus = true;
-      if (statusFilter === 'ACTIVE') {
-        matchesStatus = !!mod.active;
-      } else if (statusFilter === 'INACTIVE') {
-        matchesStatus = !mod.active;
-      }
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [modules, searchQuery, statusFilter]);
-
-  // Paginated records
-  const paginatedModules = useMemo(() => {
-    const start = page * rowsPerPage;
-    return filteredModules.slice(start, start + rowsPerPage);
-  }, [filteredModules, page, rowsPerPage]);
-
-  const totalPages = Math.ceil(filteredModules.length / rowsPerPage) || 1;
-
-  // Reset page when filters change
-  useEffect(() => {
-    setPage(0);
-  }, [searchQuery, statusFilter, rowsPerPage]);
-
-  // Action Menu Handlers
-  const handleOpenActionMenu = (event, mod) => {
-    setActionMenuAnchor(event.currentTarget);
-    setActiveMenuModule(mod);
-  };
-
-  const handleCloseActionMenu = () => {
-    setActionMenuAnchor(null);
-    setActiveMenuModule(null);
-  };
-
-  // Open Form Dialog (Create / Edit)
-  const handleOpenFormDialog = (mod = null) => {
-    if (mod) {
-      setSelectedModule(mod);
+  // Open Form
+  const handleOpenFormDialog = (module = null) => {
+    if (module) {
+      setSelectedModule(module);
       setFormData({
-        name: mod.name || '',
-        active: mod.active !== undefined ? mod.active : true,
+        name: module.name || '',
+        active: module.active !== undefined ? module.active : true,
         image: null,
       });
-      setImagePreview(mod.image || null);
+      setImagePreview(module.image || null);
     } else {
       setSelectedModule(null);
       setFormData({
@@ -226,18 +159,30 @@ const Modules = () => {
       setImagePreview(null);
     }
     setFormDialogOpen(true);
-    handleCloseActionMenu();
   };
 
   const handleCloseFormDialog = () => {
     setFormDialogOpen(false);
     setSelectedModule(null);
-    setFormData({
-      name: '',
-      active: true,
-      image: null,
-    });
     setImagePreview(null);
+  };
+
+  const handleOpenViewDrawer = (module) => {
+    setSelectedModule(module);
+    setViewDrawerOpen(true);
+  };
+
+  const handleCloseViewDrawer = () => {
+    setViewDrawerOpen(false);
+    setSelectedModule(null);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, checked, type } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
   const handleImageChange = (e) => {
@@ -251,14 +196,14 @@ const Modules = () => {
     }
   };
 
-  // Submit Create or Update
-  const handleSubmitForm = async (e) => {
-    if (e) e.preventDefault();
-    if (!formData.name.trim()) return;
-
+  const handleSubmit = async () => {
     try {
       setSubmitting(true);
       setError(null);
+
+      if (!formData.name.trim()) {
+        throw new Error('Category name is required.');
+      }
 
       const data = new FormData();
       data.append('name', formData.name.trim());
@@ -270,1458 +215,918 @@ const Modules = () => {
 
       if (selectedModule) {
         await moduleService.updateModule(selectedModule._id, data);
-        setSuccess(`Category "${formData.name.trim()}" updated successfully!`);
+        setSuccess('Category updated successfully!');
       } else {
         await moduleService.createModule(data);
-        setSuccess(`Category "${formData.name.trim()}" created successfully!`);
+        setSuccess('Category created successfully!');
       }
 
       handleCloseFormDialog();
-      await loadAllData(true);
+      loadAllData(true);
     } catch (err) {
       console.error('Error saving category:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to save category.');
+      setError(err.message || 'Failed to save category.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Toggle Active Status
-  const handleToggleActive = async (mod) => {
-    try {
-      const data = {
-        name: mod.name,
-        active: !mod.active,
-      };
-      await moduleService.updateModule(mod._id, data);
-      setSuccess(`Category "${mod.name}" ${!mod.active ? 'activated' : 'deactivated'} successfully!`);
-      await loadAllData(true);
-    } catch (err) {
-      console.error('Error updating category status:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to update category status.');
-    }
-  };
-
-  // Delete Category
-  const handleOpenDeleteDialog = (mod) => {
-    setSelectedModule(mod);
+  const handleDeleteClick = (module) => {
+    setSelectedModule(module);
     setDeleteDialogOpen(true);
-    handleCloseActionMenu();
   };
 
-  const handleConfirmDelete = async () => {
-    if (!selectedModule) return;
+  const handleDeleteConfirm = async () => {
     try {
       setSubmitting(true);
-      setError(null);
-
       await moduleService.deleteModule(selectedModule._id);
-      setSuccess(`Category "${selectedModule.name}" deleted successfully!`);
+      setSuccess('Category deleted successfully!');
       setDeleteDialogOpen(false);
-      if (viewDrawerOpen && selectedModule._id === selectedModule?._id) {
-        setViewDrawerOpen(false);
-      }
       setSelectedModule(null);
-      await loadAllData(true);
+      loadAllData(true);
     } catch (err) {
       console.error('Error deleting category:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to delete category.');
+      setError(err.message || 'Failed to delete category.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // View Category Overview Drawer
-  const handleViewCategory = (mod) => {
-    setSelectedModule(mod);
-    setViewDrawerOpen(true);
-    handleCloseActionMenu();
-  };
+  // Filter Logic
+  const filteredModules = useMemo(() => {
+    return modules.filter((m) => {
+      const q = searchQuery.trim().toLowerCase();
+      const matchesSearch = !q || m.name?.toLowerCase().includes(q);
 
-  const handleClearFilters = () => {
-    setSearchQuery('');
-    setStatusFilter('ALL');
-    setPage(0);
-  };
+      const matchesStatus =
+        statusFilter === 'ALL' ||
+        (statusFilter === 'ACTIVE' && m.active) ||
+        (statusFilter === 'INACTIVE' && !m.active);
 
-  const hasActiveFilters = searchQuery.trim() !== '' || statusFilter !== 'ALL';
+      return matchesSearch && matchesStatus;
+    });
+  }, [modules, searchQuery, statusFilter]);
 
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '65vh',
-          gap: 2,
-        }}
-      >
-        <CircularProgress size={48} thickness={4} sx={{ color: brandColors.primaryGreen }} />
-        <Typography sx={{ color: brandColors.secondaryText, fontWeight: 600, fontSize: '0.95rem' }}>
-          Loading marketplace categories...
-        </Typography>
-      </Box>
-    );
-  }
+  const totalPages = Math.max(1, Math.ceil(filteredModules.length / rowsPerPage));
+  const paginatedModules = filteredModules.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  const activeCount = modules.filter((m) => m.active).length;
+  const inactiveCount = modules.filter((m) => !m.active).length;
 
   return (
-    <Box sx={{ width: '100%', maxWidth: '100%', pb: 6 }}>
-      {/* Alert Notifications */}
+    <Box sx={{ width: '100%', maxWidth: '100%', pb: 4 }}>
+      {/* Alerts */}
       {success && (
-        <Alert
-          severity="success"
-          onClose={() => setSuccess(null)}
-          sx={{
-            mb: 3,
-            borderRadius: '14px',
-            backgroundColor: brandColors.successLight,
-            color: brandColors.success,
-            fontWeight: 600,
-            border: `1px solid ${brandColors.borderGreen}`,
-          }}
-        >
+        <Alert severity="success" sx={{ mb: 2.5, borderRadius: '12px' }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
       )}
-
       {error && (
-        <Alert
-          severity="error"
-          onClose={() => setError(null)}
-          sx={{
-            mb: 3,
-            borderRadius: '14px',
-            backgroundColor: brandColors.errorLight,
-            color: brandColors.error,
-            fontWeight: 600,
-            border: `1px solid #FECACA`,
-          }}
-        >
+        <Alert severity="error" sx={{ mb: 2.5, borderRadius: '12px' }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      {/* Page Header */}
+      {/* ======================================================== */}
+      {/* 1. PAGE HEADER */}
+      {/* ======================================================== */}
       <Box
         sx={{
           display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
           alignItems: { xs: 'flex-start', sm: 'center' },
           justifyContent: 'space-between',
+          flexDirection: { xs: 'column', sm: 'row' },
           gap: 2,
-          mb: 3.5,
+          mb: 3,
         }}
       >
         <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: 800,
-                fontSize: { xs: '1.6rem', md: '2.1rem' },
-                color: brandColors.primaryText,
-                letterSpacing: '-0.02em',
-              }}
-            >
-              Categories
-            </Typography>
-            <Chip
-              icon={<CategoryIcon sx={{ fontSize: '16px !important', color: `${brandColors.primaryGreen} !important` }} />}
-              label="Marketplace Verticals"
-              size="small"
-              sx={{
-                backgroundColor: brandColors.lightGreen,
-                color: brandColors.primaryGreen,
-                fontWeight: 700,
-                fontSize: '12px',
-                borderRadius: '8px',
-                border: `1px solid ${brandColors.borderGreen}`,
-              }}
-            />
-          </Box>
           <Typography
-            variant="body2"
             sx={{
-              color: brandColors.secondaryText,
-              fontWeight: 500,
-              mt: 0.5,
-              fontSize: '0.92rem',
+              fontWeight: 800,
+              fontSize: { xs: '1.25rem', sm: '1.45rem', md: '1.6rem' },
+              color: BRAND.text,
+              letterSpacing: '-0.025em',
+              lineHeight: 1.2,
             }}
           >
-            Manage marketplace business verticals and product categories.
+            Categories & Modules
+          </Typography>
+          <Typography
+            sx={{
+              color: BRAND.muted,
+              fontSize: { xs: '0.8rem', sm: '0.85rem' },
+              fontWeight: 500,
+              mt: 0.2,
+            }}
+          >
+            Organize marketplace category verticals, storefront badges and navigation
           </Typography>
         </Box>
-
-        {/* Header Action Buttons */}
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <Button
-            variant="outlined"
-            startIcon={
-              refreshing ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                <RefreshIcon sx={{ fontSize: 18 }} />
-              )
-            }
-            onClick={() => loadAllData(true)}
-            disabled={refreshing}
-            sx={{
-              borderRadius: '12px',
-              textTransform: 'none',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              borderColor: brandColors.border,
-              color: brandColors.primaryText,
-              backgroundColor: brandColors.white,
-              px: 2,
-              py: 0.9,
-              '&:hover': {
-                borderColor: brandColors.primaryGreen,
-                backgroundColor: '#F8FAFC',
-              },
-            }}
-          >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
-
-          <Button
-            variant="contained"
-            startIcon={<AddIcon sx={{ fontSize: '18px !important' }} />}
-            onClick={() => handleOpenFormDialog()}
-            sx={{
-              backgroundColor: brandColors.primaryGreen,
-              color: '#FFFFFF',
-              borderRadius: '12px',
-              fontSize: '0.875rem',
-              fontWeight: 700,
-              px: 2.5,
-              py: 1.1,
-              boxShadow: '0 4px 14px rgba(8, 127, 91, 0.28)',
-              textTransform: 'none',
-              '&:hover': {
-                backgroundColor: brandColors.darkGreen,
-                boxShadow: '0 6px 18px rgba(8, 127, 91, 0.38)',
-              },
-            }}
-          >
-            Create Category
-          </Button>
-        </Stack>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon sx={{ fontSize: '18px !important' }} />}
+          onClick={() => handleOpenFormDialog()}
+          sx={{
+            backgroundColor: BRAND.green,
+            color: '#FFFFFF',
+            borderRadius: '10px',
+            fontSize: '13px',
+            fontWeight: 700,
+            px: 2.2,
+            py: 0.9,
+            minHeight: 40,
+            boxShadow: '0 4px 12px rgba(8, 127, 91, 0.24)',
+            textTransform: 'none',
+            whiteSpace: 'nowrap',
+            '&:hover': {
+              backgroundColor: BRAND.darkGreen,
+              boxShadow: '0 6px 16px rgba(8, 127, 91, 0.32)',
+            },
+          }}
+        >
+          + Add Category
+        </Button>
       </Box>
 
-      {/* KPI Bento Cards */}
-      <Grid container spacing={2.5} sx={{ mb: 3.5 }}>
-        {/* Total Categories */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
+      {/* ======================================================== */}
+      {/* 2. SUMMARY FILTER TABS */}
+      {/* ======================================================== */}
+      <Box sx={{ display: 'flex', gap: 1.2, flexWrap: 'wrap', mb: 2.5 }}>
+        {[
+          { label: 'All Categories', value: modules.length, filter: 'ALL', bg: BRAND.lightGreen, color: BRAND.green, active: statusFilter === 'ALL' },
+          { label: 'Active', value: activeCount, filter: 'ACTIVE', bg: isDark ? 'rgba(16,185,129,0.18)' : '#DCFCE7', color: '#10B981', active: statusFilter === 'ACTIVE' },
+          { label: 'Inactive', value: inactiveCount, filter: 'INACTIVE', bg: BRAND.redLight, color: BRAND.red, active: statusFilter === 'INACTIVE' },
+        ].map((tab) => (
+          <Box
+            key={tab.filter}
+            onClick={() => {
+              setStatusFilter(tab.filter);
+              setPage(1);
+            }}
             sx={{
-              borderRadius: '20px',
-              backgroundColor: brandColors.white,
-              border: `1px solid ${brandColors.border}`,
-              boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 1.8,
+              py: 0.7,
+              borderRadius: '50px',
+              backgroundColor: tab.active ? (isDark ? 'rgba(16,185,129,0.18)' : tab.bg) : BRAND.white,
+              color: tab.active ? tab.color : BRAND.muted,
+              border: `1px solid ${tab.active ? tab.color + '40' : BRAND.border}`,
+              fontWeight: 700,
+              fontSize: '12px',
+              cursor: 'pointer',
+              userSelect: 'none',
+              transition: 'all 0.15s ease',
+              boxShadow: tab.active ? '0 2px 6px rgba(0,0,0,0.03)' : 'none',
+              '&:hover': {
+                backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : tab.bg,
+                color: tab.color,
+              },
             }}
           >
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: brandColors.secondaryText, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Total Categories
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 800, color: brandColors.primaryText, fontSize: '1.85rem' }}>
-                    {totalCategories}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: brandColors.primaryGreen, fontWeight: 700, mt: 0.5 }}>
-                    Business Verticals
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{
-                    bgcolor: brandColors.lightGreen,
-                    color: brandColors.primaryGreen,
-                    width: 52,
-                    height: 52,
-                    borderRadius: '16px',
-                    border: `1px solid ${brandColors.borderGreen}`,
-                  }}
-                >
-                  <CategoryIcon sx={{ fontSize: 28 }} />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+            <Box
+              sx={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                backgroundColor: tab.active ? tab.color : (isDark ? '#475569' : '#CBD5E1'),
+              }}
+            />
+            {tab.label}
+            <Box
+              sx={{
+                px: 0.8,
+                py: 0.1,
+                borderRadius: '6px',
+                backgroundColor: tab.active ? `${tab.color}25` : BRAND.innerCard,
+                color: tab.active ? tab.color : BRAND.muted,
+                fontSize: '11px',
+                fontWeight: 800,
+              }}
+            >
+              {tab.value}
+            </Box>
+          </Box>
+        ))}
+      </Box>
 
-        {/* Active Categories */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              borderRadius: '20px',
-              backgroundColor: brandColors.white,
-              border: `1px solid ${brandColors.border}`,
-              boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: brandColors.secondaryText, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Active Verticals
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 800, color: '#16A34A', fontSize: '1.85rem' }}>
-                    {activeCategoriesCount}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 700, mt: 0.5 }}>
-                    Visible in marketplace
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{
-                    bgcolor: '#DCFCE7',
-                    color: '#16A34A',
-                    width: 52,
-                    height: 52,
-                    borderRadius: '16px',
-                    border: '1px solid #BBF7D0',
-                  }}
-                >
-                  <CheckCircleIcon sx={{ fontSize: 28 }} />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Inactive Categories */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              borderRadius: '20px',
-              backgroundColor: brandColors.white,
-              border: `1px solid ${brandColors.border}`,
-              boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: brandColors.secondaryText, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Inactive Categories
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 800, color: brandColors.secondaryText, fontSize: '1.85rem' }}>
-                    {inactiveCategoriesCount}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: brandColors.secondaryText, fontWeight: 700, mt: 0.5 }}>
-                    Hidden from storefront
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{
-                    bgcolor: '#F1F5F9',
-                    color: brandColors.secondaryText,
-                    width: 52,
-                    height: 52,
-                    borderRadius: '16px',
-                    border: `1px solid ${brandColors.border}`,
-                  }}
-                >
-                  <CancelIcon sx={{ fontSize: 28 }} />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Total Products */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              borderRadius: '20px',
-              backgroundColor: brandColors.white,
-              border: `1px solid ${brandColors.border}`,
-              boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: brandColors.secondaryText, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Total Products
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 800, color: brandColors.blueAccent, fontSize: '1.85rem' }}>
-                    {totalCategorizedProducts}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: brandColors.blueAccent, fontWeight: 700, mt: 0.5 }}>
-                    Catalog Inventory
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{
-                    bgcolor: brandColors.lightBlue,
-                    color: brandColors.blueAccent,
-                    width: 52,
-                    height: 52,
-                    borderRadius: '16px',
-                    border: `1px solid ${brandColors.borderBlue}`,
-                  }}
-                >
-                  <ProductIcon sx={{ fontSize: 28 }} />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Search & Filter Bar */}
+      {/* ======================================================== */}
+      {/* 3. MAIN TABLE & TOOLBAR CARD */}
+      {/* ======================================================== */}
       <Paper
         elevation={0}
         sx={{
-          p: 2.5,
-          mb: 3.5,
-          borderRadius: '20px',
-          backgroundColor: brandColors.white,
-          border: `1px solid ${brandColors.border}`,
-          boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
+          borderRadius: '16px',
+          backgroundColor: BRAND.white,
+          border: `1px solid ${BRAND.border}`,
+          boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+          p: { xs: 2, sm: 2.5 },
+          overflow: 'hidden',
         }}
       >
-        <Grid container spacing={2} alignItems="center">
-          {/* Search Input */}
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Search by category name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: brandColors.secondaryText, fontSize: 20 }} />
-                  </InputAdornment>
-                ),
-                endAdornment: searchQuery ? (
-                  <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearchQuery('')}>
-                      <CloseIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </InputAdornment>
-                ) : null,
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '12px',
-                  backgroundColor: '#F8FAFC',
-                  fontSize: '0.88rem',
-                  '& fieldset': {
-                    borderColor: brandColors.border,
-                  },
-                  '&:hover fieldset': {
-                    borderColor: brandColors.primaryGreen,
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: brandColors.primaryGreen,
-                  },
-                },
-              }}
-            />
-          </Grid>
+        {/* Toolbar */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            mb: 2.5,
+          }}
+        >
+          <Box>
+            <Typography sx={{ fontWeight: 800, fontSize: '14px', color: BRAND.text }}>
+              Category Directory
+            </Typography>
+            <Typography sx={{ fontSize: '11.5px', color: BRAND.muted, mt: 0.2 }}>
+              {filteredModules.length} {filteredModules.length === 1 ? 'category' : 'categories'} configured
+            </Typography>
+          </Box>
 
-          {/* Status Filter */}
-          <Grid item xs={12} sm={6} md={3.5}>
-            <FormControl fullWidth size="small">
-              <InputLabel sx={{ fontSize: '0.88rem', color: brandColors.secondaryText }}>Display Status</InputLabel>
-              <Select
-                value={statusFilter}
-                label="Display Status"
-                onChange={(e) => setStatusFilter(e.target.value)}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexWrap: 'wrap' }}>
+            {/* Search */}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: BRAND.innerCard,
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: '10px',
+                px: 1.5,
+                py: 0.55,
+                width: { xs: '100%', sm: 220 },
+                transition: 'border-color 0.15s ease',
+                '&:focus-within': { borderColor: BRAND.green },
+              }}
+            >
+              <SearchIcon sx={{ color: BRAND.muted, fontSize: 17, mr: 1 }} />
+              <InputBase
+                placeholder="Search categories..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
                 sx={{
-                  borderRadius: '12px',
-                  backgroundColor: '#F8FAFC',
-                  fontSize: '0.88rem',
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: brandColors.border,
-                  },
+                  fontSize: '12.5px',
+                  fontWeight: 500,
+                  color: BRAND.text,
+                  width: '100%',
+                  '& input::placeholder': { color: BRAND.muted, opacity: 1 },
+                }}
+              />
+            </Box>
+
+            {/* Refresh */}
+            <Tooltip title="Refresh categories">
+              <IconButton
+                size="small"
+                onClick={() => loadAllData(true)}
+                sx={{
+                  backgroundColor: BRAND.white,
+                  border: `1px solid ${BRAND.border}`,
+                  borderRadius: '8px',
+                  width: 34,
+                  height: 34,
+                  '&:hover': { backgroundColor: BRAND.innerCard, borderColor: BRAND.green },
                 }}
               >
-                <MenuItem value="ALL">All Categories</MenuItem>
-                <MenuItem value="ACTIVE">Active Only</MenuItem>
-                <MenuItem value="INACTIVE">Inactive Only</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-
-          {/* Clear Button */}
-          <Grid item xs={12} sm={6} md={2.5}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              {hasActiveFilters && (
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  size="small"
-                  onClick={handleClearFilters}
-                  startIcon={<ClearIcon />}
+                <RefreshIcon
                   sx={{
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    color: brandColors.orange,
-                    borderColor: brandColors.borderOrange,
-                    backgroundColor: brandColors.lightOrange,
-                    py: 0.9,
-                    '&:hover': {
-                      backgroundColor: brandColors.borderOrange,
-                      borderColor: brandColors.orange,
+                    fontSize: 17,
+                    color: BRAND.muted,
+                    animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                    '@keyframes spin': { '100%': { transform: 'rotate(360deg)' } },
+                  }}
+                />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+
+        {/* ======================================================== */}
+        {/* DESKTOP DATA TABLE */}
+        {/* ======================================================== */}
+        <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+          <TableContainer>
+            <Table size="small" sx={{ minWidth: 700 }}>
+              <TableHead>
+                <TableRow
+                  sx={{
+                    '& th': {
+                      borderBottom: `1.5px solid ${BRAND.border}`,
+                      color: BRAND.muted,
+                      fontWeight: 700,
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      py: 1.3,
+                      backgroundColor: BRAND.innerCard,
+                      whiteSpace: 'nowrap',
                     },
                   }}
                 >
-                  Reset Filters
-                </Button>
-              )}
-            </Stack>
-          </Grid>
-        </Grid>
-
-        {/* Filter Summary & Rows Per Page */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            mt: 2,
-            pt: 2,
-            borderTop: `1px solid ${brandColors.divider}`,
-          }}
-        >
-          <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, fontWeight: 600 }}>
-            Showing <strong>{filteredModules.length}</strong> of <strong>{modules.length}</strong> categories
-            {hasActiveFilters && ' (filtered)'}
-          </Typography>
-
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, fontWeight: 500 }}>
-              Rows per page:
-            </Typography>
-            <Select
-              size="small"
-              value={rowsPerPage}
-              onChange={(e) => setRowsPerPage(Number(e.target.value))}
-              sx={{
-                height: 32,
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                borderRadius: '8px',
-                '& .MuiSelect-select': { py: 0.5, px: 1.5 },
-              }}
-            >
-              <MenuItem value={10}>10</MenuItem>
-              <MenuItem value={25}>25</MenuItem>
-              <MenuItem value={50}>50</MenuItem>
-            </Select>
-          </Stack>
-        </Box>
-      </Paper>
-
-      {/* Main Categories Table Paper */}
-      <Paper
-        elevation={0}
-        sx={{
-          borderRadius: '24px',
-          border: `1px solid ${brandColors.border}`,
-          boxShadow: '0 4px 20px rgba(20, 33, 61, 0.04)',
-          backgroundColor: brandColors.white,
-          overflow: 'hidden',
-          width: '100%',
-        }}
-      >
-        <TableContainer>
-          <Table sx={{ minWidth: 780 }}>
-            <TableHead>
-              <TableRow
-                sx={{
-                  backgroundColor: '#F8FAFC',
-                  '& th': {
-                    borderBottom: `1px solid ${brandColors.border}`,
-                    color: brandColors.secondaryText,
-                    fontWeight: 700,
-                    fontSize: '0.8rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    py: 2,
-                    px: 2.5,
-                  },
-                }}
-              >
-                <TableCell>Icon / Image</TableCell>
-                <TableCell>Category Name</TableCell>
-                <TableCell align="center">Products</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Created Date</TableCell>
-                <TableCell>Active Toggle</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {paginatedModules.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
-                      <Avatar
-                        sx={{
-                          width: 56,
-                          height: 56,
-                          bgcolor: brandColors.adminBg,
-                          color: brandColors.secondaryText,
-                        }}
-                      >
-                        <CategoryIcon sx={{ fontSize: 32 }} />
-                      </Avatar>
-                      <Typography sx={{ fontWeight: 700, color: brandColors.primaryText, fontSize: '1rem' }}>
-                        No categories found
-                      </Typography>
-                      <Typography sx={{ color: brandColors.secondaryText, fontSize: '0.85rem' }}>
-                        Create your first category or adjust your search filter.
-                      </Typography>
-                    </Box>
-                  </TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell align="center">Products Count</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ) : (
-                paginatedModules.map((mod) => {
-                  const productCount = categoryProductsMap[mod._id]?.length || 0;
-
-                  return (
-                    <TableRow
-                      key={mod._id}
-                      hover
-                      sx={{
-                        transition: 'all 0.15s ease',
-                        '&:hover': {
-                          backgroundColor: '#F8FAFC',
-                        },
-                        '& td': {
-                          borderBottom: `1px solid ${brandColors.divider}`,
-                          py: 2,
-                          px: 2.5,
-                        },
-                      }}
-                    >
-                      {/* Icon / Image */}
-                      <TableCell>
-                        <Avatar
-                          src={mod.image || ''}
-                          alt={mod.name}
-                          variant="rounded"
-                          sx={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: '14px',
-                            background: mod.image
-                              ? '#FFFFFF'
-                              : `linear-gradient(135deg, ${brandColors.primaryGreen} 0%, ${brandColors.darkGreen} 100%)`,
-                            color: '#FFFFFF',
-                            fontWeight: 800,
-                            fontSize: '1.1rem',
-                            border: `1px solid ${brandColors.border}`,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                          }}
-                        >
-                          {!mod.image && (mod.name ? mod.name[0].toUpperCase() : 'C')}
-                        </Avatar>
-                      </TableCell>
-
-                      {/* Category Name */}
-                      <TableCell>
-                        <Box>
-                          <Typography
-                            onClick={() => handleViewCategory(mod)}
-                            sx={{
-                              fontWeight: 700,
-                              color: brandColors.primaryText,
-                              fontSize: '0.95rem',
-                              cursor: 'pointer',
-                              '&:hover': {
-                                color: brandColors.primaryGreen,
-                                textDecoration: 'underline',
-                              },
-                            }}
-                          >
-                            {mod.name}
-                          </Typography>
-                          <Typography sx={{ fontSize: '0.75rem', color: brandColors.secondaryText, mt: 0.2 }}>
-                            ID: {mod._id ? `${mod._id.slice(0, 8)}...` : '-'}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-
-                      {/* Products Count */}
-                      <TableCell align="center">
-                        <Chip
-                          icon={<ProductIcon sx={{ fontSize: '14px !important', color: productCount > 0 ? `${brandColors.blueAccent} !important` : `${brandColors.secondaryText} !important` }} />}
-                          label={`${productCount} ${productCount === 1 ? 'product' : 'products'}`}
-                          size="small"
-                          onClick={() => handleViewCategory(mod)}
-                          clickable
-                          sx={{
-                            fontWeight: 700,
-                            fontSize: '12px',
-                            backgroundColor: productCount > 0 ? brandColors.lightBlue : '#F1F5F9',
-                            color: productCount > 0 ? brandColors.blueAccent : brandColors.secondaryText,
-                            borderRadius: '8px',
-                            border: productCount > 0 ? `1px solid ${brandColors.borderBlue}` : 'none',
-                          }}
-                        />
-                      </TableCell>
-
-                      {/* Status */}
-                      <TableCell>
-                        <Box
-                          sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 0.75,
-                            px: 1.4,
-                            py: 0.45,
-                            borderRadius: '50px',
-                            backgroundColor: mod.active ? '#DCFCE7' : '#F1F5F9',
-                            color: mod.active ? '#15803D' : '#64748B',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: '50%',
-                              backgroundColor: mod.active ? '#22C55E' : '#94A3B8',
-                            }}
-                          />
-                          {mod.active ? 'Active' : 'Inactive'}
-                        </Box>
-                      </TableCell>
-
-                      {/* Created Date */}
-                      <TableCell>
-                        <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, fontWeight: 600 }}>
-                          {mod.createdAt
-                            ? new Date(mod.createdAt).toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })
-                            : '-'}
-                        </Typography>
-                      </TableCell>
-
-                      {/* Active Toggle */}
-                      <TableCell>
-                        <Switch
-                          checked={Boolean(mod.active)}
-                          onChange={() => handleToggleActive(mod)}
-                          sx={{
-                            '& .MuiSwitch-switchBase.Mui-checked': {
-                              color: brandColors.primaryGreen,
-                            },
-                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                              backgroundColor: brandColors.primaryGreen,
-                            },
-                          }}
-                        />
-                      </TableCell>
-
-                      {/* Actions */}
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.75 }}>
-                          {/* Quick View Button */}
-                          <Tooltip title="View Category Overview">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleViewCategory(mod)}
-                              sx={{
-                                color: brandColors.blueAccent,
-                                backgroundColor: brandColors.lightBlue,
-                                borderRadius: '10px',
-                                p: 0.85,
-                                '&:hover': {
-                                  backgroundColor: '#DBEAFE',
-                                },
-                              }}
-                            >
-                              <ViewIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
-
-                          {/* Quick Edit Button */}
-                          <Tooltip title="Edit Category">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenFormDialog(mod)}
-                              sx={{
-                                color: brandColors.primaryGreen,
-                                backgroundColor: brandColors.lightGreen,
-                                borderRadius: '10px',
-                                p: 0.85,
-                                '&:hover': {
-                                  backgroundColor: brandColors.borderGreen,
-                                },
-                              }}
-                            >
-                              <EditIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
-
-                          {/* More Options Dropdown */}
-                          <IconButton
-                            size="small"
-                            onClick={(e) => handleOpenActionMenu(e, mod)}
-                            sx={{
-                              color: brandColors.secondaryText,
-                              backgroundColor: '#F8FAFC',
-                              borderRadius: '10px',
-                              p: 0.85,
-                              '&:hover': {
-                                backgroundColor: '#E2E8F0',
-                                color: brandColors.primaryText,
-                              },
-                            }}
-                          >
-                            <MoreVertIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Box>
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  [1, 2, 3, 4].map((i) => (
+                    <TableRow key={i}>
+                      <TableCell colSpan={4} sx={{ py: 1.6 }}>
+                        <Skeleton variant="text" width="100%" height={32} />
                       </TableCell>
                     </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                  ))
+                ) : paginatedModules.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
+                      <CategoryIcon sx={{ fontSize: 44, color: BRAND.muted, mb: 1, display: 'block', mx: 'auto' }} />
+                      <Typography sx={{ color: BRAND.text, fontWeight: 700, fontSize: '14px' }}>
+                        No categories found
+                      </Typography>
+                      <Typography sx={{ color: BRAND.muted, fontSize: '12px', mt: 0.3, mb: 1.5 }}>
+                        {searchQuery || statusFilter !== 'ALL'
+                          ? 'No categories match your search or filter.'
+                          : 'Create your first marketplace category to get started.'}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedModules.map((module) => {
+                    const count = categoryProductsMap[module._id] || 0;
 
-        {/* Table Pagination Footer */}
+                    return (
+                      <TableRow
+                        key={module._id}
+                        hover
+                        sx={{
+                          '& td': { borderBottom: `1px solid ${BRAND.border}`, py: 1.3 },
+                          cursor: 'pointer',
+                          '&:hover': { backgroundColor: BRAND.tableHover },
+                          transition: 'background-color 0.12s ease',
+                        }}
+                      >
+                        {/* Category Info */}
+                        <TableCell onClick={() => handleOpenViewDrawer(module)}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Avatar
+                              src={module.image}
+                              alt={module.name}
+                              variant="rounded"
+                              sx={{
+                                width: 38,
+                                height: 38,
+                                borderRadius: '8px',
+                                backgroundColor: BRAND.lightGreen,
+                                color: BRAND.green,
+                                border: `1px solid ${BRAND.border}`,
+                              }}
+                            >
+                              <CategoryIcon sx={{ fontSize: 20 }} />
+                            </Avatar>
+                            <Typography sx={{ fontWeight: 700, fontSize: '13px', color: BRAND.text }}>
+                              {module.name}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+
+                        {/* Products Count */}
+                        <TableCell align="center" onClick={() => handleOpenViewDrawer(module)}>
+                          <Tooltip title="View category products">
+                            <Chip
+                              icon={<ProductIcon sx={{ fontSize: '13px !important', color: count > 0 ? `${BRAND.green} !important` : `${BRAND.muted} !important` }} />}
+                              label={`${count} ${count === 1 ? 'product' : 'products'}`}
+                              size="small"
+                              sx={{
+                                fontWeight: 700,
+                                fontSize: '11px',
+                                backgroundColor: count > 0 ? BRAND.lightGreen : BRAND.innerCard,
+                                color: count > 0 ? BRAND.green : BRAND.muted,
+                                borderRadius: '6px',
+                                height: 24,
+                              }}
+                            />
+                          </Tooltip>
+                        </TableCell>
+
+                        {/* Status */}
+                        <TableCell onClick={() => handleOpenViewDrawer(module)}>
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 0.6,
+                              px: 1.2,
+                              py: 0.3,
+                              borderRadius: '50px',
+                              backgroundColor: module.active ? BRAND.lightGreen : BRAND.redLight,
+                              color: module.active ? BRAND.green : BRAND.red,
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                            }}
+                          >
+                            <Box sx={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: module.active ? BRAND.green : BRAND.red }} />
+                            {module.active ? 'Active' : 'Inactive'}
+                          </Box>
+                        </TableCell>
+
+                        {/* Actions */}
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
+                            <Tooltip title="View Category">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenViewDrawer(module)}
+                                sx={{
+                                  color: BRAND.blue,
+                                  backgroundColor: BRAND.lightBlue,
+                                  borderRadius: '8px',
+                                  width: 28,
+                                  height: 28,
+                                  '&:hover': { opacity: 0.8 },
+                                }}
+                              >
+                                <ViewIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Edit Category">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenFormDialog(module)}
+                                sx={{
+                                  color: BRAND.muted,
+                                  backgroundColor: BRAND.innerCard,
+                                  borderRadius: '8px',
+                                  width: 28,
+                                  height: 28,
+                                  '&:hover': { backgroundColor: BRAND.border, color: BRAND.text },
+                                }}
+                              >
+                                <EditIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Delete Category">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDeleteClick(module)}
+                                sx={{
+                                  color: BRAND.red,
+                                  backgroundColor: BRAND.redLight,
+                                  borderRadius: '8px',
+                                  width: 28,
+                                  height: 28,
+                                  '&:hover': { opacity: 0.8 },
+                                }}
+                              >
+                                <DeleteIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+
+        {/* ======================================================== */}
+        {/* MOBILE RESPONSIVE CARDS */}
+        {/* ======================================================== */}
+        <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 1.5 }}>
+          {loading ? (
+            [1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={80} sx={{ borderRadius: '12px' }} />)
+          ) : paginatedModules.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <CategoryIcon sx={{ fontSize: 36, color: BRAND.muted, display: 'block', mx: 'auto', mb: 1 }} />
+              <Typography sx={{ color: BRAND.muted, fontSize: '13px' }}>No categories found</Typography>
+            </Box>
+          ) : (
+            paginatedModules.map((module) => {
+              const count = categoryProductsMap[module._id] || 0;
+
+              return (
+                <Paper
+                  key={module._id}
+                  elevation={0}
+                  onClick={() => handleOpenViewDrawer(module)}
+                  sx={{
+                    p: 1.8,
+                    borderRadius: '12px',
+                    backgroundColor: BRAND.innerCard,
+                    border: `1px solid ${BRAND.border}`,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                      <Avatar
+                        src={module.image}
+                        alt={module.name}
+                        variant="rounded"
+                        sx={{ width: 36, height: 36, borderRadius: '8px', border: `1px solid ${BRAND.border}` }}
+                      >
+                        <CategoryIcon sx={{ fontSize: 18 }} />
+                      </Avatar>
+                      <Box>
+                        <Typography sx={{ fontWeight: 700, fontSize: '13px', color: BRAND.text }}>
+                          {module.name}
+                        </Typography>
+                        <Typography sx={{ fontSize: '11px', color: BRAND.muted }}>
+                          {count} {count === 1 ? 'product' : 'products'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Chip
+                      label={module.active ? 'Active' : 'Inactive'}
+                      size="small"
+                      sx={{
+                        bgcolor: module.active ? BRAND.lightGreen : BRAND.redLight,
+                        color: module.active ? BRAND.green : BRAND.red,
+                        fontWeight: 700,
+                        height: 20,
+                        fontSize: '10.5px',
+                      }}
+                    />
+                  </Box>
+                </Paper>
+              );
+            })
+          )}
+        </Box>
+
+        {/* ======================================================== */}
+        {/* PAGINATION */}
+        {/* ======================================================== */}
         <Box
           sx={{
             display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            alignItems: 'center',
             justifyContent: 'space-between',
-            p: 2.5,
-            borderTop: `1px solid ${brandColors.divider}`,
-            gap: 2,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            mt: 2.5,
+            pt: 2,
+            borderTop: `1px solid ${BRAND.border}`,
           }}
         >
-          <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, fontWeight: 500 }}>
-            Showing <strong>{filteredModules.length === 0 ? 0 : page * rowsPerPage + 1}</strong> to{' '}
-            <strong>{Math.min((page + 1) * rowsPerPage, filteredModules.length)}</strong> of{' '}
-            <strong>{filteredModules.length}</strong> categories
+          <Typography sx={{ fontSize: '12px', color: BRAND.muted, fontWeight: 600 }}>
+            Showing {(page - 1) * rowsPerPage + 1}–{Math.min(page * rowsPerPage, filteredModules.length)} of {filteredModules.length} categories
           </Typography>
-
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Button
-              variant="outlined"
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+            <IconButton
               size="small"
-              disabled={page === 0}
-              onClick={() => setPage((prev) => Math.max(0, prev - 1))}
-              startIcon={<ChevronLeftIcon />}
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
               sx={{
-                borderRadius: '10px',
-                textTransform: 'none',
-                fontWeight: 700,
-                fontSize: '0.82rem',
-                borderColor: brandColors.border,
-                color: brandColors.primaryText,
-                '&:hover': {
-                  borderColor: brandColors.primaryGreen,
-                  backgroundColor: '#F8FAFC',
-                },
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: '8px',
+                width: 32,
+                height: 32,
+                color: BRAND.muted,
+                '&:disabled': { opacity: 0.35 },
               }}
             >
-              Previous
-            </Button>
-
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: brandColors.primaryText, px: 1 }}>
-              Page {page + 1} of {totalPages}
-            </Typography>
-
-            <Button
-              variant="outlined"
+              <ChevronLeftIcon fontSize="small" />
+            </IconButton>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+              const n = start + i;
+              if (n > totalPages) return null;
+              return (
+                <IconButton
+                  key={n}
+                  size="small"
+                  onClick={() => setPage(n)}
+                  sx={{
+                    border: `1px solid ${n === page ? BRAND.green : BRAND.border}`,
+                    borderRadius: '8px',
+                    width: 32,
+                    height: 32,
+                    backgroundColor: n === page ? BRAND.green : BRAND.white,
+                    color: n === page ? '#FFFFFF' : BRAND.muted,
+                    fontWeight: 700,
+                    fontSize: '12px',
+                    '&:hover': { backgroundColor: n === page ? BRAND.darkGreen : BRAND.tableHover },
+                  }}
+                >
+                  {n}
+                </IconButton>
+              );
+            })}
+            <IconButton
               size="small"
-              disabled={page >= totalPages - 1}
-              onClick={() => setPage((prev) => Math.min(totalPages - 1, prev + 1))}
-              endIcon={<ChevronRightIcon />}
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               sx={{
-                borderRadius: '10px',
-                textTransform: 'none',
-                fontWeight: 700,
-                fontSize: '0.82rem',
-                borderColor: brandColors.border,
-                color: brandColors.primaryText,
-                '&:hover': {
-                  borderColor: brandColors.primaryGreen,
-                  backgroundColor: '#F8FAFC',
-                },
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: '8px',
+                width: 32,
+                height: 32,
+                backgroundColor: BRAND.green,
+                color: '#FFFFFF',
+                '&:hover': { backgroundColor: BRAND.darkGreen },
+                '&:disabled': { backgroundColor: BRAND.innerCard, color: BRAND.muted },
               }}
             >
-              Next
-            </Button>
-          </Stack>
+              <ChevronRightIcon fontSize="small" />
+            </IconButton>
+          </Box>
         </Box>
       </Paper>
 
-      {/* Row Action Menu */}
-      <Menu
-        anchorEl={actionMenuAnchor}
-        open={Boolean(actionMenuAnchor)}
-        onClose={handleCloseActionMenu}
-        PaperProps={{
-          sx: {
-            borderRadius: '14px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-            minWidth: 190,
-            py: 0.5,
-            border: `1px solid ${brandColors.border}`,
-          },
-        }}
-      >
-        <MenuItem onClick={() => handleViewCategory(activeMenuModule)}>
-          <ListItemIcon sx={{ color: brandColors.blueAccent }}>
-            <ViewIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Category Overview" primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }} />
-        </MenuItem>
-
-        <MenuItem onClick={() => handleOpenFormDialog(activeMenuModule)}>
-          <ListItemIcon sx={{ color: brandColors.primaryGreen }}>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Edit Category" primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }} />
-        </MenuItem>
-
-        <MenuItem onClick={() => { const m = activeMenuModule; handleCloseActionMenu(); if (m) handleToggleActive(m); }}>
-          <ListItemIcon sx={{ color: activeMenuModule?.active ? '#D97706' : '#16A34A' }}>
-            {activeMenuModule?.active ? <CancelIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
-          </ListItemIcon>
-          <ListItemText
-            primary={activeMenuModule?.active ? 'Deactivate Category' : 'Activate Category'}
-            primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }}
-          />
-        </MenuItem>
-
-        <Divider sx={{ my: 0.5 }} />
-
-        <MenuItem onClick={() => handleOpenDeleteDialog(activeMenuModule)} sx={{ color: '#EF4444' }}>
-          <ListItemIcon sx={{ color: '#EF4444' }}>
-            <DeleteIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Delete Category" primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }} />
-        </MenuItem>
-      </Menu>
-
       {/* ======================================================== */}
-      {/* CATEGORY DETAILS DRAWER */}
+      {/* 4. VIEW CATEGORY DETAILS DRAWER */}
       {/* ======================================================== */}
       <Drawer
         anchor="right"
         open={viewDrawerOpen}
-        onClose={() => setViewDrawerOpen(false)}
+        onClose={handleCloseViewDrawer}
         PaperProps={{
           sx: {
-            width: { xs: '100%', sm: 500, md: 540 },
-            p: 3.5,
-            backgroundColor: '#FFFFFF',
+            width: { xs: '100%', sm: 380 },
+            p: 3,
+            boxSizing: 'border-box',
+            backgroundColor: BRAND.white,
+            color: BRAND.text,
+            borderLeft: `1px solid ${BRAND.border}`,
           },
         }}
       >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.1rem', color: BRAND.text }}>
+            Category Details
+          </Typography>
+          <IconButton onClick={handleCloseViewDrawer} size="small" sx={{ color: BRAND.muted }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+
         {selectedModule && (
-          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {/* Drawer Header */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 800, color: brandColors.primaryText }}>
-                Category Overview
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Avatar
+                src={selectedModule.image}
+                alt={selectedModule.name}
+                variant="rounded"
+                sx={{
+                  width: 90,
+                  height: 90,
+                  mx: 'auto',
+                  borderRadius: '12px',
+                  border: `1px solid ${BRAND.border}`,
+                }}
+              />
+              <Typography sx={{ fontWeight: 800, fontSize: '1.15rem', color: BRAND.text, mt: 1.5 }}>
+                {selectedModule.name}
               </Typography>
-              <IconButton
-                onClick={() => setViewDrawerOpen(false)}
-                sx={{
-                  color: brandColors.secondaryText,
-                  borderRadius: '10px',
-                  '&:hover': { backgroundColor: '#F1F5F9' },
-                }}
-              >
-                <CloseIcon />
-              </IconButton>
-            </Box>
-
-            <Divider sx={{ mb: 3 }} />
-
-            {/* Scrollable Content */}
-            <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
-              {/* Category Profile Card */}
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 3,
-                  mb: 3,
-                  borderRadius: '20px',
-                  backgroundColor: '#F8FAFC',
-                  border: `1px solid ${brandColors.border}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2.5,
-                }}
-              >
-                <Avatar
-                  src={selectedModule.image || ''}
-                  alt={selectedModule.name}
-                  variant="rounded"
-                  sx={{
-                    width: 68,
-                    height: 68,
-                    borderRadius: '18px',
-                    fontWeight: 800,
-                    fontSize: '1.5rem',
-                    background: selectedModule.image
-                      ? '#FFFFFF'
-                      : `linear-gradient(135deg, ${brandColors.primaryGreen} 0%, ${brandColors.darkGreen} 100%)`,
-                    color: '#FFFFFF',
-                    border: `1px solid ${brandColors.border}`,
-                  }}
-                >
-                  {!selectedModule.image && selectedModule.name?.charAt(0).toUpperCase()}
-                </Avatar>
-
-                <Box sx={{ flex: 1 }}>
-                  <Typography sx={{ fontWeight: 800, fontSize: '1.2rem', color: brandColors.primaryText }}>
-                    {selectedModule.name}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, mt: 0.4 }}>
-                    ID: {selectedModule._id}
-                  </Typography>
-
-                  <Box sx={{ mt: 1.5 }}>
-                    <Chip
-                      label={selectedModule.active ? 'Active on Marketplace' : 'Inactive / Hidden'}
-                      size="small"
-                      sx={{
-                        height: 22,
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        backgroundColor: selectedModule.active ? '#DCFCE7' : '#F1F5F9',
-                        color: selectedModule.active ? '#15803D' : '#64748B',
-                        borderRadius: '50px',
-                      }}
-                    />
-                  </Box>
-                </Box>
-              </Paper>
-
-              {/* Metric Highlights */}
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: '16px',
-                      border: `1px solid ${brandColors.border}`,
-                      backgroundColor: brandColors.white,
-                    }}
-                  >
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: brandColors.secondaryText, textTransform: 'uppercase' }}>
-                      Linked Products
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 800, color: brandColors.blueAccent, mt: 0.5 }}>
-                      {categoryProductsMap[selectedModule._id]?.length || 0}
-                    </Typography>
-                  </Paper>
-                </Grid>
-
-                <Grid item xs={6}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: '16px',
-                      border: `1px solid ${brandColors.border}`,
-                      backgroundColor: brandColors.white,
-                    }}
-                  >
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: brandColors.secondaryText, textTransform: 'uppercase' }}>
-                      Status
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 800, color: selectedModule.active ? '#16A34A' : '#64748B', mt: 0.5 }}>
-                      {selectedModule.active ? 'Active' : 'Inactive'}
-                    </Typography>
-                  </Paper>
-                </Grid>
-              </Grid>
-
-              {/* Linked Products List */}
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: brandColors.primaryText }}>
-                  Associated Products ({categoryProductsMap[selectedModule._id]?.length || 0})
-                </Typography>
-                <Button
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 0.5 }}>
+                <Chip
+                  label={selectedModule.active ? 'Active' : 'Inactive'}
                   size="small"
-                  onClick={() => {
-                    setViewDrawerOpen(false);
-                    navigate('/products');
-                  }}
-                  endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
                   sx={{
-                    textTransform: 'none',
+                    bgcolor: selectedModule.active ? BRAND.lightGreen : BRAND.redLight,
+                    color: selectedModule.active ? BRAND.green : BRAND.red,
                     fontWeight: 700,
-                    fontSize: '0.8rem',
-                    color: brandColors.primaryGreen,
+                    height: 20,
                   }}
-                >
-                  View in Products
-                </Button>
+                />
               </Box>
-
-              {categoryProductsMap[selectedModule._id]?.length > 0 ? (
-                <Stack spacing={1.5} sx={{ mb: 3 }}>
-                  {categoryProductsMap[selectedModule._id].slice(0, 6).map((prod) => (
-                    <Paper
-                      key={prod._id}
-                      elevation={0}
-                      sx={{
-                        p: 1.8,
-                        borderRadius: '14px',
-                        border: `1px solid ${brandColors.border}`,
-                        backgroundColor: '#F8FAFC',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Avatar
-                          src={prod.image || ''}
-                          alt={prod.name}
-                          variant="rounded"
-                          sx={{ width: 40, height: 40, borderRadius: '10px', backgroundColor: '#FFFFFF', border: `1px solid ${brandColors.border}` }}
-                        >
-                          <ProductIcon sx={{ fontSize: 20, color: brandColors.secondaryText }} />
-                        </Avatar>
-                        <Box>
-                          <Typography sx={{ fontWeight: 700, fontSize: '0.88rem', color: brandColors.primaryText }}>
-                            {prod.name}
-                          </Typography>
-                          <Typography sx={{ fontSize: '0.75rem', color: brandColors.secondaryText }}>
-                            Vendor: {prod.vendor_id?.name || prod.vendor?.name || 'Local Store'}
-                          </Typography>
-                        </Box>
-                      </Box>
-
-                      <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: brandColors.primaryGreen }}>
-                        ₹{Number(prod.special_price || prod.main_price || 0).toLocaleString('en-IN')}
-                      </Typography>
-                    </Paper>
-                  ))}
-                </Stack>
-              ) : (
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 3,
-                    mb: 3,
-                    textAlign: 'center',
-                    borderRadius: '14px',
-                    border: `1px dashed ${brandColors.border}`,
-                    backgroundColor: '#F8FAFC',
-                  }}
-                >
-                  <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, fontWeight: 500 }}>
-                    No products currently assigned to this category.
-                  </Typography>
-                </Paper>
-              )}
             </Box>
 
-            {/* Drawer Bottom Actions */}
-            <Box sx={{ pt: 2, borderTop: `1px solid ${brandColors.divider}` }}>
-              <Grid container spacing={1.5}>
-                <Grid item xs={6}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<EditIcon />}
-                    onClick={() => {
-                      setViewDrawerOpen(false);
-                      handleOpenFormDialog(selectedModule);
-                    }}
-                    sx={{
-                      borderRadius: '12px',
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      borderColor: brandColors.border,
-                      color: brandColors.primaryText,
-                      py: 1,
-                    }}
-                  >
-                    Edit Category
-                  </Button>
-                </Grid>
-                <Grid item xs={6}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={() => {
-                      setViewDrawerOpen(false);
-                      handleToggleActive(selectedModule);
-                    }}
-                    sx={{
-                      borderRadius: '12px',
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      backgroundColor: selectedModule.active ? '#D97706' : '#16A34A',
-                      color: '#FFFFFF',
-                      py: 1,
-                      '&:hover': {
-                        backgroundColor: selectedModule.active ? '#B45309' : '#15803D',
-                      },
-                    }}
-                  >
-                    {selectedModule.active ? 'Deactivate' : 'Activate'}
-                  </Button>
-                </Grid>
-              </Grid>
+            <Paper elevation={0} sx={{ p: 2, borderRadius: '12px', bgcolor: BRAND.innerCard, border: `1px solid ${BRAND.border}` }}>
+              <Stack spacing={1.2}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography sx={{ fontSize: '12.5px', color: BRAND.muted }}>Associated Products:</Typography>
+                  <Typography sx={{ fontSize: '13px', fontWeight: 800, color: BRAND.green }}>
+                    {categoryProductsMap[selectedModule._id] || 0} items
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+
+            <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  const m = selectedModule;
+                  handleCloseViewDrawer();
+                  handleOpenFormDialog(m);
+                }}
+                sx={{ flex: 1, textTransform: 'none', fontWeight: 700, borderRadius: '8px', borderColor: BRAND.border, color: BRAND.text }}
+              >
+                Edit Category
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  const m = selectedModule;
+                  handleCloseViewDrawer();
+                  handleDeleteClick(m);
+                }}
+                sx={{ flex: 1, textTransform: 'none', fontWeight: 700, borderRadius: '8px', bgcolor: BRAND.red, '&:hover': { bgcolor: '#B91C1C' } }}
+              >
+                Delete
+              </Button>
             </Box>
           </Box>
         )}
       </Drawer>
 
       {/* ======================================================== */}
-      {/* CREATE / EDIT CATEGORY DIALOG */}
+      {/* 5. ADD / EDIT CATEGORY FORM MODAL */}
       {/* ======================================================== */}
       <Dialog
         open={formDialogOpen}
         onClose={handleCloseFormDialog}
-        maxWidth="sm"
+        maxWidth="xs"
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: '20px',
-            p: 1,
+            borderRadius: '16px',
+            margin: { xs: 1.5, sm: 3 },
+            backgroundColor: BRAND.white,
+            color: BRAND.text,
+            border: `1px solid ${BRAND.border}`,
           },
         }}
       >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1.5 }}>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, color: brandColors.primaryText }}>
-              {selectedModule ? 'Edit Category' : 'Create New Category'}
+            <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.15rem', color: BRAND.text }}>
+              {selectedModule ? 'Edit Category' : 'Add New Category'}
             </Typography>
-            <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, mt: 0.2 }}>
-              Configure category name, icon badge, and storefront visibility
+            <Typography sx={{ fontSize: '11.5px', color: BRAND.muted }}>
+              {selectedModule ? 'Update category name and icon' : 'Create a marketplace product category'}
             </Typography>
           </Box>
-          <IconButton onClick={handleCloseFormDialog} size="small">
+          <IconButton onClick={handleCloseFormDialog} size="small" sx={{ color: BRAND.muted }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent dividers sx={{ borderColor: brandColors.divider, py: 3 }}>
-          <Grid container spacing={2.5}>
-            {/* Category Name */}
+        <DialogContent dividers sx={{ p: 2.5, borderColor: BRAND.border }}>
+          <Grid container spacing={2}>
+            {/* Image upload */}
+            <Grid item xs={12} sx={{ textAlign: 'center' }}>
+              {imagePreview ? (
+                <Avatar
+                  src={imagePreview}
+                  variant="rounded"
+                  sx={{ width: 70, height: 70, mx: 'auto', mb: 1, borderRadius: '10px', border: `1px solid ${BRAND.border}` }}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    width: 70,
+                    height: 70,
+                    mx: 'auto',
+                    mb: 1,
+                    borderRadius: '10px',
+                    border: `1.5px dashed ${BRAND.border}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: BRAND.innerCard,
+                  }}
+                >
+                  <CategoryIcon sx={{ color: BRAND.muted, fontSize: 26 }} />
+                </Box>
+              )}
+              <Button
+                variant="outlined"
+                component="label"
+                size="small"
+                startIcon={<UploadIcon />}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontSize: '11.5px',
+                  borderRadius: '8px',
+                  borderColor: BRAND.border,
+                  color: BRAND.text,
+                }}
+              >
+                {imagePreview ? 'Replace Image' : 'Upload Icon/Image'}
+                <input type="file" hidden accept="image/*" onChange={handleImageChange} />
+              </Button>
+            </Grid>
+
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Category Name"
+                size="small"
+                label="Category Name *"
+                name="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={handleInputChange}
                 required
-                placeholder="e.g. Grocery, Fruits & Vegetables, Bakery"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
+                InputProps={{
+                  sx: {
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    backgroundColor: BRAND.innerCard,
+                    color: BRAND.text,
                   },
                 }}
               />
             </Grid>
 
-            {/* Category Icon / Image Upload */}
             <Grid item xs={12}>
-              <Typography sx={{ fontWeight: 700, fontSize: '0.88rem', color: brandColors.primaryText, mb: 1 }}>
-                Category Icon / Image
-              </Typography>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar
-                  src={imagePreview || ''}
-                  variant="rounded"
-                  sx={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: '16px',
-                    border: `1.5px dashed ${brandColors.border}`,
-                    backgroundColor: '#F8FAFC',
-                  }}
-                >
-                  <ImageIcon sx={{ fontSize: 32, color: brandColors.secondaryText }} />
-                </Avatar>
-
-                <Box sx={{ flex: 1 }}>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<UploadIcon />}
-                    sx={{
-                      borderRadius: '10px',
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      borderColor: brandColors.border,
-                      color: brandColors.primaryText,
-                      mb: 0.5,
-                      '&:hover': {
-                        borderColor: brandColors.primaryGreen,
-                      },
-                    }}
-                  >
-                    {imagePreview ? 'Change Image' : 'Upload Icon / Image'}
-                    <input type="file" hidden accept="image/*" onChange={handleImageChange} />
-                  </Button>
-                  <Typography sx={{ fontSize: '0.75rem', color: brandColors.secondaryText }}>
-                    Recommended format: PNG/JPEG, square aspect ratio
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.active}
+                    onChange={handleInputChange}
+                    name="active"
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography sx={{ fontSize: '13px', fontWeight: 600, color: BRAND.text }}>
+                    Active & Visible in Marketplace
                   </Typography>
-                </Box>
-              </Box>
-            </Grid>
-
-            {/* Active Toggle */}
-            <Grid item xs={12}>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2,
-                  borderRadius: '14px',
-                  backgroundColor: '#F8FAFC',
-                  border: `1px solid ${brandColors.border}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Box>
-                  <Typography sx={{ fontWeight: 700, fontSize: '0.88rem', color: brandColors.primaryText }}>
-                    Display on Marketplace
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.78rem', color: brandColors.secondaryText }}>
-                    When enabled, this vertical is available for store vendors and customer browsing.
-                  </Typography>
-                </Box>
-                <Switch
-                  checked={formData.active}
-                  onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: brandColors.primaryGreen,
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: brandColors.primaryGreen,
-                    },
-                  }}
-                />
-              </Paper>
+                }
+              />
             </Grid>
           </Grid>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2.5, gap: 1 }}>
-          <Button
-            onClick={handleCloseFormDialog}
-            disabled={submitting}
-            sx={{
-              borderRadius: '10px',
-              textTransform: 'none',
-              fontWeight: 700,
-              color: brandColors.secondaryText,
-            }}
-          >
+        <DialogActions sx={{ p: 2, borderTop: `1px solid ${BRAND.border}`, justifyContent: 'space-between' }}>
+          <Button onClick={handleCloseFormDialog} disabled={submitting} sx={{ textTransform: 'none', color: BRAND.muted, fontWeight: 600 }}>
             Cancel
           </Button>
           <Button
             variant="contained"
-            onClick={handleSubmitForm}
-            disabled={submitting || !formData.name.trim()}
+            onClick={handleSubmit}
+            disabled={submitting}
             sx={{
-              borderRadius: '10px',
+              backgroundColor: BRAND.green,
               textTransform: 'none',
+              borderRadius: '8px',
               fontWeight: 700,
-              backgroundColor: brandColors.primaryGreen,
-              color: '#FFFFFF',
               px: 3,
-              '&:hover': {
-                backgroundColor: brandColors.darkGreen,
-              },
+              py: 0.8,
+              '&:hover': { backgroundColor: BRAND.darkGreen },
             }}
           >
-            {submitting ? (
-              <CircularProgress size={20} color="inherit" />
-            ) : selectedModule ? (
-              'Update Category'
-            ) : (
-              'Create Category'
-            )}
+            {submitting ? <CircularProgress size={20} color="inherit" /> : selectedModule ? 'Save Category' : 'Create Category'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* ======================================================== */}
-      {/* DELETE CONFIRMATION DIALOG */}
+      {/* 6. DELETE CATEGORY CONFIRMATION DIALOG */}
       {/* ======================================================== */}
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
-        maxWidth="xs"
-        fullWidth
         PaperProps={{
           sx: {
-            borderRadius: '20px',
+            borderRadius: '14px',
             p: 1,
+            backgroundColor: BRAND.white,
+            color: BRAND.text,
+            border: `1px solid ${BRAND.border}`,
           },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 800, color: '#DC2626' }}>
+        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.1rem', color: BRAND.text }}>
           Delete Category?
         </DialogTitle>
         <DialogContent>
-          <Typography sx={{ fontSize: '0.9rem', color: brandColors.secondaryText, lineHeight: 1.5 }}>
-            Are you sure you want to permanently delete category{' '}
-            <strong>{selectedModule?.name}</strong>?
+          <Typography sx={{ fontSize: '13px', color: BRAND.muted }}>
+            Are you sure you want to delete <strong style={{ color: BRAND.text }}>{selectedModule?.name}</strong>?
           </Typography>
-          <Alert severity="warning" sx={{ mt: 2, borderRadius: '10px', fontSize: '0.82rem' }}>
-            Products linked to this category may need to be reassigned.
-          </Alert>
         </DialogContent>
-        <DialogActions sx={{ p: 2.5, gap: 1 }}>
-          <Button
-            onClick={() => setDeleteDialogOpen(false)}
-            disabled={submitting}
-            sx={{
-              borderRadius: '10px',
-              textTransform: 'none',
-              fontWeight: 700,
-              color: brandColors.secondaryText,
-            }}
-          >
+        <DialogActions sx={{ p: 1.5 }}>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={submitting} sx={{ textTransform: 'none', color: BRAND.muted }}>
             Cancel
           </Button>
           <Button
             variant="contained"
-            onClick={handleConfirmDelete}
+            onClick={handleDeleteConfirm}
             disabled={submitting}
             sx={{
-              borderRadius: '10px',
-              textTransform: 'none',
-              fontWeight: 700,
-              backgroundColor: '#EF4444',
+              bgcolor: BRAND.red,
               color: '#FFFFFF',
-              px: 2.5,
-              '&:hover': {
-                backgroundColor: '#DC2626',
-              },
+              fontWeight: 700,
+              textTransform: 'none',
+              borderRadius: '8px',
+              '&:hover': { bgcolor: '#B91C1C' },
             }}
           >
             {submitting ? <CircularProgress size={20} color="inherit" /> : 'Delete Category'}

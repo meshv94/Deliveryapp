@@ -12,6 +12,9 @@ const adminService = {
   },
 
   // Add new admin
+  createAdmin: async (data) => {
+    return await apiClient.post('/admins', data);
+  },
   addAdmin: async (data) => {
     return await apiClient.post('/admins', data);
   },

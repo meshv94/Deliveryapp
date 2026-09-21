@@ -27,31 +27,53 @@ import {
   InputBase,
   Tooltip,
   ListItemIcon,
+  Skeleton,
+  Divider,
+  Stack,
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Close as CloseIcon,
-  CloudUpload as UploadIcon,
-  MyLocation as MyLocationIcon,
-  Search as SearchIcon,
-  Inventory as InventoryIcon,
-  MoreHoriz as MoreHorizIcon,
-  FilterList as FilterListIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  Storefront as StorefrontIcon,
-  Email as EmailIcon,
-  Phone as PhoneIcon,
-  LocationOn as LocationIcon,
+  AddRounded as AddIcon,
+  EditRounded as EditIcon,
+  DeleteOutlineRounded as DeleteIcon,
+  CloseRounded as CloseIcon,
+  CloudUploadRounded as UploadIcon,
+  MyLocationRounded as MyLocationIcon,
+  SearchRounded as SearchIcon,
+  Inventory2Outlined as InventoryIcon,
+  FilterListRounded as FilterListIcon,
+  ChevronLeftRounded as ChevronLeftIcon,
+  ChevronRightRounded as ChevronRightIcon,
+  StorefrontRounded as StorefrontIcon,
+  EmailOutlined as EmailIcon,
+  PhoneOutlined as PhoneIcon,
+  LocationOnOutlined as LocationIcon,
+  VisibilityOutlined as ViewIcon,
+  AccessTimeRounded as TimeIcon,
+  PaymentsOutlined as MoneyIcon,
+  LocalShippingOutlined as DeliveryIcon,
+  CategoryOutlined as CategoryIcon,
+  ShoppingBagOutlined as OrdersIcon,
+  CheckCircleRounded as CheckCircleIcon,
+  CancelRounded as BlockIcon,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import vendorService from '../services/vendorService';
 import moduleService from '../services/moduleService';
 import orderService from '../services/orderService';
-import DashboardBanner from '../components/DashboardBanner';
+import { useColorMode } from '../theme/ThemeContext';
+
+const formatCurrency = (val) => {
+  const num = Number(val) || 0;
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(num);
+};
 
 const Vendors = () => {
+  const { BRAND, isDark } = useColorMode();
+  const navigate = useNavigate();
   const [vendors, setVendors] = useState([]);
   const [modules, setModules] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
@@ -65,8 +87,6 @@ const Vendors = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [moduleFilter, setModuleFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState([]);
-  const [actionAnchor, setActionAnchor] = useState(null);
-  const [actionVendor, setActionVendor] = useState(null);
   const [filterAnchor, setFilterAnchor] = useState(null);
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
@@ -74,6 +94,8 @@ const Vendors = () => {
   // Dialog states
   const [openDialog, setOpenDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
+  const [viewVendorDialog, setViewVendorDialog] = useState(false);
+  const [viewingVendor, setViewingVendor] = useState(null);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -119,8 +141,6 @@ const Vendors = () => {
     address: '',
     latitude: '',
     longitude: '',
-    // city: '',
-    // pincode: '',
     open_time: '',
     close_time: '',
     timezone: 'Asia/Kolkata',
@@ -187,7 +207,7 @@ const Vendors = () => {
   useEffect(() => {
     if (!mapLoaded || !openDialog || !mapRef.current) return;
 
-    const defaultCenter = currentLocation || { lat: 28.6139, lng: 77.209 }; // Default to Delhi
+    const defaultCenter = currentLocation || { lat: 21.1702, lng: 72.8311 }; // Default to Surat, Gujarat
 
     const map = new window.google.maps.Map(mapRef.current, {
       center: defaultCenter,
@@ -341,8 +361,6 @@ const Vendors = () => {
         address: vendor.address || '',
         latitude: vendor.latitude || '',
         longitude: vendor.longitude || '',
-        // city: vendor.city || '',
-        // pincode: vendor.pincode || '',
         open_time: vendor.open_time || '',
         close_time: vendor.close_time || '',
         timezone: vendor.timezone || 'Asia/Kolkata',
@@ -356,7 +374,6 @@ const Vendors = () => {
       });
       setImagePreview(vendor.vendor_image || null);
 
-      // Set map location if coordinates exist
       if (vendor.latitude && vendor.longitude) {
         setCurrentLocation({
           lat: parseFloat(vendor.latitude),
@@ -376,8 +393,6 @@ const Vendors = () => {
         address: '',
         latitude: '',
         longitude: '',
-        // city: '',
-        // pincode: '',
         open_time: '',
         close_time: '',
         timezone: 'Asia/Kolkata',
@@ -386,7 +401,7 @@ const Vendors = () => {
         delivery_charge: 0,
         convenience_charge: 0,
         status: 1,
-        module: '',
+        module: modules[0]?._id || '',
         vendor_image: null,
       });
       setImagePreview(null);
@@ -398,28 +413,17 @@ const Vendors = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedVendor(null);
-    setFormData({
-      name: '',
-      email: '',
-      description: '',
-      mobile_number: '',
-      address: '',
-      latitude: '',
-      longitude: '',
-      // city: '',
-      // pincode: '',
-      open_time: '',
-      close_time: '',
-      timezone: 'Asia/Kolkata',
-      preparation_time_minute: 0,
-      packaging_charge: 0,
-      delivery_charge: 0,
-      convenience_charge: 0,
-      status: 1,
-      module: '',
-      vendor_image: null,
-    });
     setImagePreview(null);
+  };
+
+  const handleOpenViewDetails = (vendor) => {
+    setViewingVendor(vendor);
+    setViewVendorDialog(true);
+  };
+
+  const handleCloseViewDetails = () => {
+    setViewVendorDialog(false);
+    setViewingVendor(null);
   };
 
   const handleInputChange = (e) => {
@@ -456,7 +460,6 @@ const Vendors = () => {
       const longitude = lng.toString();
       const address = place.formatted_address || '';
 
-      // Extract city and pincode from address components
       let city = '';
       let pincode = '';
 
@@ -481,7 +484,6 @@ const Vendors = () => {
         pincode: pincode || prev.pincode,
       }));
 
-      // Update map marker and center
       if (markerRef.current) {
         markerRef.current.setPosition({ lat, lng });
         markerRef.current.getMap().setCenter({ lat, lng });
@@ -512,7 +514,7 @@ const Vendors = () => {
         },
         (error) => {
           console.error('Error getting location:', error);
-          alert('Unable to get your location. Please allow location access.');
+          alert('Unable to get your location. Please allow location access in browser.');
         },
         {
           enableHighAccuracy: true,
@@ -552,7 +554,7 @@ const Vendors = () => {
         }
 
         reverseGeocode(lat, lng);
-        setSearchQuery(''); // Clear search after successful search
+        setSearchQuery('');
       } else {
         alert('Location not found. Please try a different search.');
       }
@@ -564,37 +566,32 @@ const Vendors = () => {
       setSubmitting(true);
       setError(null);
 
-      // Create FormData
       const data = new FormData();
       data.append('name', formData.name);
       data.append('email', formData.email);
-      data.append('description', formData.description);
+      data.append('description', formData.description || '');
       data.append('mobile_number', formData.mobile_number);
-      data.append('address', formData.address);
-      data.append('latitude', formData.latitude);
-      data.append('longitude', formData.longitude);
-      // data.append('city', formData.city);
-      // data.append('pincode', formData.pincode);
-      data.append('open_time', formData.open_time);
-      data.append('close_time', formData.close_time);
-      data.append('timezone', formData.timezone);
-      data.append('preparation_time_minute', formData.preparation_time_minute);
-      data.append('packaging_charge', formData.packaging_charge);
-      data.append('delivery_charge', formData.delivery_charge);
-      data.append('convenience_charge', formData.convenience_charge);
-      data.append('status', formData.status);
-      data.append('module', formData.module);
+      data.append('address', formData.address || '');
+      data.append('latitude', formData.latitude || '');
+      data.append('longitude', formData.longitude || '');
+      data.append('open_time', formData.open_time || '');
+      data.append('close_time', formData.close_time || '');
+      data.append('timezone', formData.timezone || 'Asia/Kolkata');
+      data.append('preparation_time_minute', formData.preparation_time_minute || 0);
+      data.append('packaging_charge', formData.packaging_charge || 0);
+      data.append('delivery_charge', formData.delivery_charge || 0);
+      data.append('convenience_charge', formData.convenience_charge || 0);
+      data.append('status', formData.status !== undefined ? formData.status : 1);
+      data.append('module', formData.module || '');
 
       if (formData.vendor_image) {
         data.append('vendor_image', formData.vendor_image);
       }
 
       if (selectedVendor) {
-        // Update
         await vendorService.updateVendor(selectedVendor._id, data);
         setSuccess('Vendor updated successfully!');
       } else {
-        // Create
         await vendorService.createVendor(data);
         setSuccess('Vendor created successfully!');
       }
@@ -683,17 +680,6 @@ const Vendors = () => {
   const handleCloseProductForm = () => {
     setProductFormDialog(false);
     setSelectedProduct(null);
-    setProductFormData({
-      name: '',
-      main_price: '',
-      special_price: '',
-      preparation_time_minute: 0,
-      packaging_charge: 0,
-      vendor_id: '',
-      module_id: '',
-      isActive: true,
-      image: null,
-    });
     setProductImagePreview(null);
   };
 
@@ -745,6 +731,7 @@ const Vendors = () => {
 
       handleCloseProductForm();
       await fetchVendorProducts(currentVendor._id);
+      fetchVendors(); // Refresh product count in main list
     } catch (err) {
       setError(err.message || 'Failed to save product');
     } finally {
@@ -765,6 +752,7 @@ const Vendors = () => {
       setProductDeleteDialog(false);
       setSelectedProduct(null);
       await fetchVendorProducts(currentVendor._id);
+      fetchVendors();
     } catch (err) {
       setError(err.message || 'Failed to delete product');
     } finally {
@@ -772,189 +760,382 @@ const Vendors = () => {
     }
   };
 
-    // Filter logic
-    const filteredVendors = vendors.filter((v) => {
-      const matchesSearch =
-        !tableSearch ||
-        v.name?.toLowerCase().includes(tableSearch.toLowerCase()) ||
-        v.email?.toLowerCase().includes(tableSearch.toLowerCase()) ||
-        v.mobile_number?.includes(tableSearch) ||
-        v.city?.toLowerCase().includes(tableSearch.toLowerCase()) ||
-        v.address?.toLowerCase().includes(tableSearch.toLowerCase());
-      const matchesStatus =
-        statusFilter === 'all' ||
-        (statusFilter === 'active' && !v.isBlocked) ||
-        (statusFilter === 'blocked' && v.isBlocked);
-      const matchesModule =
-        moduleFilter === 'all' ||
-        v.module?._id === moduleFilter ||
-        v.module === moduleFilter;
-      return matchesSearch && matchesStatus && matchesModule;
-    });
+  // Filter logic
+  const filteredVendors = vendors.filter((v) => {
+    const matchesSearch =
+      !tableSearch ||
+      v.name?.toLowerCase().includes(tableSearch.toLowerCase()) ||
+      v.email?.toLowerCase().includes(tableSearch.toLowerCase()) ||
+      v.mobile_number?.includes(tableSearch) ||
+      v.city?.toLowerCase().includes(tableSearch.toLowerCase()) ||
+      v.address?.toLowerCase().includes(tableSearch.toLowerCase());
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'active' && !v.isBlocked && v.status !== 0) ||
+      (statusFilter === 'blocked' && (v.isBlocked || v.status === 0));
+    const matchesModule =
+      moduleFilter === 'all' ||
+      v.module?._id === moduleFilter ||
+      v.module === moduleFilter;
+    return matchesSearch && matchesStatus && matchesModule;
+  });
 
-    const totalPages = Math.max(1, Math.ceil(filteredVendors.length / rowsPerPage));
-    const paginatedVendors = filteredVendors.slice((page - 1) * rowsPerPage, page * rowsPerPage);
-    const activeCount = vendors.filter((v) => !v.isBlocked).length;
-    const blockedCount = vendors.filter((v) => v.isBlocked).length;
+  const totalPages = Math.max(1, Math.ceil(filteredVendors.length / rowsPerPage));
+  const paginatedVendors = filteredVendors.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  const activeCount = vendors.filter((v) => !v.isBlocked && v.status !== 0).length;
+  const blockedCount = vendors.filter((v) => v.isBlocked || v.status === 0).length;
 
-    const handleSelectAll = (e) => {
-      if (e.target.checked) {
-        setSelectedIds(paginatedVendors.map((v) => v._id));
-      } else {
-        setSelectedIds([]);
-      }
-    };
-
-    const handleSelectRow = (id) => {
-      setSelectedIds((prev) =>
-        prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-      );
-    };
-
-    const handleActionOpen = (event, vendor) => {
-      setActionAnchor(event.currentTarget);
-      setActionVendor(vendor);
-    };
-
-    const handleActionClose = () => {
-      setActionAnchor(null);
-      setActionVendor(null);
-    };
-
-    if (loading) {
-      return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', flexDirection: 'column', gap: 2 }}>
-          <CircularProgress size={44} thickness={4} sx={{ color: '#087F5B' }} />
-          <Typography sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.9rem' }}>Loading vendors…</Typography>
-        </Box>
-      );
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(paginatedVendors.map((v) => v._id));
+    } else {
+      setSelectedIds([]);
     }
+  };
 
-    return (
-      <Box sx={{ width: '100%', maxWidth: '100%' }}>
-        {/* Alerts */}
-        {success && (
-          <Alert severity="success" sx={{ mb: 2.5, borderRadius: '14px' }} onClose={() => setSuccess(null)}>
-            {success}
-          </Alert>
-        )}
-        {error && (
-          <Alert severity="error" sx={{ mb: 2.5, borderRadius: '14px' }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
+  const handleSelectRow = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
 
-        {/* ── Page Header ────────────────────────────────────────────────── */}
-        <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 3.5 }}>
-          <Box>
-            <Typography sx={{ fontWeight: 800, fontSize: { xs: '1.45rem', md: '1.75rem' }, color: '#14213D', letterSpacing: '-0.025em', lineHeight: 1.2 }}>
-              Vendor Management
-            </Typography>
-            <Typography sx={{ color: '#64748B', fontSize: '0.88rem', fontWeight: 500, mt: 0.4 }}>
-              Manage AapnuBazaar marketplace vendors and stores
-            </Typography>
-          </Box>
-          {isSuperAdmin && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon sx={{ fontSize: '18px !important' }} />}
-              onClick={() => handleOpenDialog()}
-              sx={{ backgroundColor: '#087F5B', color: '#FFFFFF', borderRadius: '12px', fontSize: '0.875rem', fontWeight: 700, px: 2.5, py: 1.2, minHeight: 44, boxShadow: '0 4px 14px rgba(8, 127, 91, 0.28)', textTransform: 'none', whiteSpace: 'nowrap', '&:hover': { backgroundColor: '#075B43', boxShadow: '0 6px 18px rgba(8, 127, 91, 0.38)' } }}
-            >
-              Add Vendor
-            </Button>
-          )}
+  return (
+    <Box sx={{ width: '100%', maxWidth: '100%', pb: 4 }}>
+      {/* Alerts */}
+      {success && (
+        <Alert severity="success" sx={{ mb: 2.5, borderRadius: '12px' }} onClose={() => setSuccess(null)}>
+          {success}
+        </Alert>
+      )}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2.5, borderRadius: '12px' }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      {/* ======================================================== */}
+      {/* 1. PAGE HEADER */}
+      {/* ======================================================== */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          justifyContent: 'space-between',
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Box>
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: '1.25rem', sm: '1.45rem', md: '1.6rem' },
+              color: BRAND.text,
+              letterSpacing: '-0.025em',
+              lineHeight: 1.2,
+            }}
+          >
+            Vendors Management
+          </Typography>
+          <Typography
+            sx={{
+              color: BRAND.muted,
+              fontSize: { xs: '0.8rem', sm: '0.85rem' },
+              fontWeight: 500,
+              mt: 0.2,
+            }}
+          >
+            Manage AapnuBazaar marketplace vendors, stores and catalogs
+          </Typography>
         </Box>
+        {isSuperAdmin && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon sx={{ fontSize: '18px !important' }} />}
+            onClick={() => handleOpenDialog()}
+            sx={{
+              backgroundColor: BRAND.green,
+              color: '#FFFFFF',
+              borderRadius: '10px',
+              fontSize: '13px',
+              fontWeight: 700,
+              px: 2.2,
+              py: 0.9,
+              minHeight: 40,
+              boxShadow: '0 4px 12px rgba(8, 127, 91, 0.24)',
+              textTransform: 'none',
+              whiteSpace: 'nowrap',
+              '&:hover': {
+                backgroundColor: BRAND.darkGreen,
+                boxShadow: '0 6px 16px rgba(8, 127, 91, 0.32)',
+              },
+            }}
+          >
+            + Add Vendor
+          </Button>
+        )}
+      </Box>
 
-        {/* ── Summary chips ─────────────────────────────────────────────── */}
-        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 3 }}>
-          {[
-            { label: `All Vendors`, value: vendors.length, filter: 'all', bg: '#F1F5F9', color: '#475569', active: statusFilter === 'all' },
-            { label: 'Active', value: activeCount, filter: 'active', bg: '#DCFCE7', color: '#15803D', active: statusFilter === 'active' },
-            { label: 'Blocked', value: blockedCount, filter: 'blocked', bg: '#FEE2E2', color: '#B91C1C', active: statusFilter === 'blocked' },
-          ].map((c) => (
+      {/* ======================================================== */}
+      {/* 2. SUMMARY FILTER TABS */}
+      {/* ======================================================== */}
+      <Box sx={{ display: 'flex', gap: 1.2, flexWrap: 'wrap', mb: 2.5 }}>
+        {[
+          { label: 'All Vendors', value: vendors.length, filter: 'all', bg: BRAND.lightGreen, color: BRAND.green, active: statusFilter === 'all' },
+          { label: 'Active', value: activeCount, filter: 'active', bg: '#DCFCE7', color: '#16A34A', active: statusFilter === 'active' },
+          { label: 'Blocked', value: blockedCount, filter: 'blocked', bg: BRAND.redLight, color: BRAND.red, active: statusFilter === 'blocked' },
+        ].map((tab) => (
+          <Box
+            key={tab.filter}
+            onClick={() => {
+              setStatusFilter(tab.filter);
+              setPage(1);
+            }}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 1.8,
+              py: 0.7,
+              borderRadius: '50px',
+              backgroundColor: tab.active ? tab.bg : BRAND.white,
+              color: tab.active ? tab.color : BRAND.muted,
+              border: `1px solid ${tab.active ? tab.color + '40' : BRAND.border}`,
+              fontWeight: 700,
+              fontSize: '12px',
+              cursor: 'pointer',
+              userSelect: 'none',
+              transition: 'all 0.15s ease',
+              boxShadow: tab.active ? '0 2px 6px rgba(0,0,0,0.03)' : 'none',
+              '&:hover': {
+                backgroundColor: tab.bg,
+                color: tab.color,
+              },
+            }}
+          >
             <Box
-              key={c.filter}
-              onClick={() => { setStatusFilter(c.filter); setPage(1); }}
-              sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 2, py: 0.9, borderRadius: '50px', backgroundColor: c.active ? c.bg : '#FFFFFF', color: c.active ? c.color : '#64748B', border: `1.5px solid ${c.active ? c.color + '50' : '#E2E8F0'}`, fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', transition: 'all 0.15s ease', '&:hover': { backgroundColor: c.bg, color: c.color } }}
+              sx={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                backgroundColor: tab.active ? tab.color : (isDark ? '#475569' : '#CBD5E1'),
+              }}
+            />
+            {tab.label}
+            <Box
+              sx={{
+                px: 0.8,
+                py: 0.1,
+                borderRadius: '6px',
+                backgroundColor: tab.active ? `${tab.color}18` : BRAND.innerCard,
+                color: tab.active ? tab.color : BRAND.muted,
+                fontSize: '11px',
+                fontWeight: 800,
+              }}
             >
-              <Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: c.active ? c.color : '#CBD5E1' }} />
-              {c.label}
-              <Box sx={{ px: 0.9, py: 0.1, borderRadius: '6px', backgroundColor: c.active ? `${c.color}20` : '#F1F5F9', color: c.active ? c.color : '#94A3B8', fontSize: '0.75rem', fontWeight: 800 }}>{c.value}</Box>
-            </Box>
-          ))}
-        </Box>
-
-        {/* ── Main Table Card ────────────────────────────────────────────── */}
-        <Paper
-          elevation={0}
-          sx={{ borderRadius: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(20, 33, 61, 0.04)', p: { xs: 2, sm: 3.5 }, overflow: 'hidden' }}
-        >
-          {/* ── Toolbar ── */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 3 }}>
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1rem', color: '#14213D', letterSpacing: '-0.02em' }}>Vendors</Typography>
-              <Typography sx={{ fontSize: '0.78rem', color: '#64748B', mt: 0.3 }}>{filteredVendors.length} results</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-              {/* Search */}
-              <Box sx={{ display: 'flex', alignItems: 'center', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', px: 1.8, py: 0.7, width: { xs: '100%', sm: 220 } }}>
-                <SearchIcon sx={{ color: '#94A3B8', fontSize: 18, mr: 1 }} />
-                <InputBase
-                  placeholder="Search vendors…"
-                  value={tableSearch}
-                  onChange={(e) => { setTableSearch(e.target.value); setPage(1); }}
-                  sx={{ fontSize: '13px', fontWeight: 500, color: '#1E293B', width: '100%', '& input::placeholder': { color: '#94A3B8', opacity: 1 } }}
-                />
-              </Box>
-              {/* Category filter */}
-              {modules.length > 0 && (
-                <Box
-                  component="select"
-                  value={moduleFilter}
-                  onChange={(e) => { setModuleFilter(e.target.value); setPage(1); }}
-                  sx={{ border: '1px solid #E2E8F0', borderRadius: '12px', px: 1.5, py: 0.85, fontSize: '13px', fontWeight: 600, color: '#64748B', backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none', minWidth: 140, '&:hover': { borderColor: '#CBD5E1' } }}
-                >
-                  <option value="all">All Categories</option>
-                  {modules.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
-                </Box>
-              )}
-              {/* Filter (status) button */}
-              <Button
-                variant="outlined"
-                startIcon={<FilterListIcon sx={{ fontSize: '17px !important' }} />}
-                onClick={(e) => setFilterAnchor(e.currentTarget)}
-                sx={{ borderColor: '#E2E8F0', color: '#64748B', borderRadius: '12px', fontSize: '13px', fontWeight: 700, px: 2, py: 0.85, textTransform: 'none', '&:hover': { borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' } }}
-              >
-                {statusFilter === 'all' ? 'Status' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
-              </Button>
-              <Menu
-                anchorEl={filterAnchor}
-                open={Boolean(filterAnchor)}
-                onClose={() => setFilterAnchor(null)}
-                PaperProps={{ sx: { borderRadius: '16px', minWidth: 160, p: 0.5, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' } }}
-              >
-                {['all', 'active', 'blocked'].map((f) => (
-                  <MenuItem key={f} selected={statusFilter === f} onClick={() => { setStatusFilter(f); setFilterAnchor(null); setPage(1); }} sx={{ borderRadius: '8px', fontSize: '13px', fontWeight: 600, py: 1 }}>
-                    {f === 'all' ? 'All Statuses' : f.charAt(0).toUpperCase() + f.slice(1)}
-                  </MenuItem>
-                ))}
-              </Menu>
+              {tab.value}
             </Box>
           </Box>
+        ))}
+      </Box>
 
-          {/* ── Table ── */}
-          <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
-            <Table sx={{ minWidth: 920 }}>
+      {/* ======================================================== */}
+      {/* 3. MAIN TABLE & TOOLBAR CARD */}
+      {/* ======================================================== */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: '16px',
+          backgroundColor: BRAND.white,
+          border: `1px solid ${BRAND.border}`,
+          boxShadow: '0 2px 10px rgba(20, 33, 61, 0.02)',
+          p: { xs: 2, sm: 2.5 },
+          overflow: 'hidden',
+        }}
+      >
+        {/* Toolbar */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            mb: 2.5,
+          }}
+        >
+          <Box>
+            <Typography sx={{ fontWeight: 800, fontSize: '14px', color: BRAND.text }}>
+              Vendors Directory
+            </Typography>
+            <Typography sx={{ fontSize: '11.5px', color: BRAND.muted, mt: 0.2 }}>
+              {filteredVendors.length} {filteredVendors.length === 1 ? 'store' : 'stores'} found
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexWrap: 'wrap' }}>
+            {/* Search Input */}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: BRAND.innerCard,
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: '10px',
+                px: 1.5,
+                py: 0.55,
+                width: { xs: '100%', sm: 220 },
+                transition: 'border-color 0.15s ease',
+                '&:focus-within': { borderColor: BRAND.green },
+              }}
+            >
+              <SearchIcon sx={{ color: BRAND.muted, fontSize: 17, mr: 1 }} />
+              <InputBase
+                placeholder="Search vendors..."
+                value={tableSearch}
+                onChange={(e) => {
+                  setTableSearch(e.target.value);
+                  setPage(1);
+                }}
+                sx={{
+                  fontSize: '12.5px',
+                  fontWeight: 500,
+                  color: BRAND.text,
+                  width: '100%',
+                  '& input::placeholder': { color: BRAND.muted, opacity: 1 },
+                }}
+              />
+            </Box>
+
+            {/* Category Dropdown */}
+            {modules.length > 0 && (
+              <Box
+                component="select"
+                value={moduleFilter}
+                onChange={(e) => {
+                  setModuleFilter(e.target.value);
+                  setPage(1);
+                }}
+                sx={{
+                  border: `1px solid ${BRAND.border}`,
+                  borderRadius: '10px',
+                  px: 1.2,
+                  py: 0.65,
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  color: BRAND.text,
+                  backgroundColor: BRAND.innerCard,
+                  cursor: 'pointer',
+                  outline: 'none',
+                  minWidth: 130,
+                  '&:hover': { borderColor: BRAND.green },
+                }}
+              >
+                <option value="all" style={{ background: BRAND.white, color: BRAND.text }}>All Categories</option>
+                {modules.map((m) => (
+                  <option key={m._id} value={m._id} style={{ background: BRAND.white, color: BRAND.text }}>
+                    {m.name}
+                  </option>
+                ))}
+              </Box>
+            )}
+
+            {/* Status Dropdown Filter Button */}
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<FilterListIcon sx={{ fontSize: '16px !important' }} />}
+              onClick={(e) => setFilterAnchor(e.currentTarget)}
+              sx={{
+                borderColor: BRAND.border,
+                color: BRAND.muted,
+                borderRadius: '10px',
+                fontSize: '12px',
+                fontWeight: 700,
+                px: 1.6,
+                py: 0.6,
+                textTransform: 'none',
+                '&:hover': { borderColor: BRAND.green, backgroundColor: BRAND.innerCard },
+              }}
+            >
+              {statusFilter === 'all'
+                ? 'Status'
+                : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+            </Button>
+            <Menu
+              anchorEl={filterAnchor}
+              open={Boolean(filterAnchor)}
+              onClose={() => setFilterAnchor(null)}
+              PaperProps={{
+                sx: {
+                  borderRadius: '12px',
+                  minWidth: 150,
+                  p: 0.5,
+                  bgcolor: BRAND.white,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                  border: `1px solid ${BRAND.border}`,
+                },
+              }}
+            >
+              {['all', 'active', 'blocked'].map((f) => (
+                <MenuItem
+                  key={f}
+                  selected={statusFilter === f}
+                  onClick={() => {
+                    setStatusFilter(f);
+                    setFilterAnchor(null);
+                    setPage(1);
+                  }}
+                  sx={{ borderRadius: '8px', fontSize: '12.5px', fontWeight: 600, py: 0.8 }}
+                >
+                  {f === 'all' ? 'All Statuses' : f.charAt(0).toUpperCase() + f.slice(1)}
+                </MenuItem>
+              ))}
+            </Menu>
+          </Box>
+        </Box>
+
+        {/* ======================================================== */}
+        {/* DESKTOP DATA TABLE */}
+        {/* ======================================================== */}
+        <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+          <TableContainer>
+            <Table size="small" sx={{ minWidth: 920 }}>
               <TableHead>
-                <TableRow sx={{ '& th': { borderBottom: '1.5px solid #F1F5F9', color: '#94A3B8', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', py: 1.6, backgroundColor: '#FAFBFC', whiteSpace: 'nowrap' } }}>
+                <TableRow
+                  sx={{
+                    '& th': {
+                      borderBottom: `1.5px solid ${BRAND.border}`,
+                      color: BRAND.muted,
+                      fontWeight: 700,
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      py: 1.3,
+                      backgroundColor: BRAND.innerCard,
+                      whiteSpace: 'nowrap',
+                    },
+                  }}
+                >
                   <TableCell padding="checkbox">
-                    <Checkbox checked={paginatedVendors.length > 0 && paginatedVendors.every((v) => selectedIds.includes(v._id))} indeterminate={paginatedVendors.some((v) => selectedIds.includes(v._id)) && !paginatedVendors.every((v) => selectedIds.includes(v._id))} onChange={handleSelectAll} sx={{ color: '#CBD5E1', '&.Mui-checked': { color: '#087F5B' } }} />
+                    <Checkbox
+                      checked={
+                        paginatedVendors.length > 0 &&
+                        paginatedVendors.every((v) => selectedIds.includes(v._id))
+                      }
+                      indeterminate={
+                        paginatedVendors.some((v) => selectedIds.includes(v._id)) &&
+                        !paginatedVendors.every((v) => selectedIds.includes(v._id))
+                      }
+                      onChange={handleSelectAll}
+                      sx={{ color: BRAND.border, '&.Mui-checked': { color: BRAND.green } }}
+                    />
                   </TableCell>
-                  <TableCell>Store Name</TableCell>
+                  <TableCell>Store</TableCell>
                   <TableCell>Vendor / Owner</TableCell>
                   <TableCell>Category</TableCell>
-                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Location</TableCell>
+                  <TableCell>Location</TableCell>
                   <TableCell align="center">Products</TableCell>
                   <TableCell align="center">Orders</TableCell>
                   <TableCell>Status</TableCell>
@@ -962,139 +1143,293 @@ const Vendors = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paginatedVendors.length === 0 ? (
+                {loading ? (
+                  [1, 2, 3, 4, 5].map((i) => (
+                    <TableRow key={i}>
+                      <TableCell colSpan={9} sx={{ py: 1.6 }}>
+                        <Skeleton variant="text" width="100%" height={32} />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : paginatedVendors.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
-                      <StorefrontIcon sx={{ fontSize: 48, color: '#E2E8F0', mb: 1.5, display: 'block', mx: 'auto' }} />
-                      <Typography sx={{ color: '#64748B', fontWeight: 700, fontSize: '0.95rem' }}>No stores found</Typography>
-                      <Typography sx={{ color: '#94A3B8', fontSize: '0.82rem', mt: 0.5 }}>
-                        {tableSearch ? `No results for "${tableSearch}"` : 'Add your first store to get started'}
+                      <StorefrontIcon sx={{ fontSize: 44, color: BRAND.muted, mb: 1, display: 'block', mx: 'auto' }} />
+                      <Typography sx={{ color: BRAND.text, fontWeight: 700, fontSize: '14px' }}>
+                        No vendors found
                       </Typography>
+                      <Typography sx={{ color: BRAND.muted, fontSize: '12px', mt: 0.3, mb: 1.5 }}>
+                        {tableSearch || statusFilter !== 'all' || moduleFilter !== 'all'
+                          ? 'No vendors match your current search or filters.'
+                          : 'Add your first vendor to get started.'}
+                      </Typography>
+                      {(tableSearch || statusFilter !== 'all' || moduleFilter !== 'all') && (
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setTableSearch('');
+                            setStatusFilter('all');
+                            setModuleFilter('all');
+                          }}
+                          sx={{
+                            textTransform: 'none',
+                            fontWeight: 700,
+                            fontSize: '12px',
+                            color: BRAND.green,
+                          }}
+                        >
+                          Clear Filters
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginatedVendors.map((vendor) => {
                     const isSelected = selectedIds.includes(vendor._id);
-                    const isActive = !vendor.isBlocked;
-                    const vendorProductsCount = allProducts.filter((p) => (p.vendor_id?._id || p.vendor_id || p.vendor?._id || p.vendor) === vendor._id).length;
-                    const vendorOrdersCount = allOrders.filter((o) => (o.vendor?._id || o.vendor) === vendor._id).length;
+                    const isActive = !vendor.isBlocked && vendor.status !== 0;
+                    const vendorProductsCount = allProducts.filter(
+                      (p) => (p.vendor_id?._id || p.vendor_id || p.vendor?._id || p.vendor) === vendor._id
+                    ).length;
+                    const vendorOrdersCount = allOrders.filter(
+                      (o) => (o.vendor?._id || o.vendor) === vendor._id
+                    ).length;
 
                     return (
                       <TableRow
                         key={vendor._id}
                         hover
                         selected={isSelected}
-                        sx={{ '& td': { borderBottom: '1px solid #F8FAFC', py: 1.6 }, '&.Mui-selected': { backgroundColor: 'rgba(8,127,91,0.03)' }, '&:hover': { backgroundColor: '#FAFCFF' }, transition: 'background-color 0.12s ease' }}
+                        sx={{
+                          '& td': { borderBottom: `1px solid ${BRAND.divider}`, py: 1.3 },
+                          '&.Mui-selected': { backgroundColor: 'rgba(16,185,129,0.08)' },
+                          cursor: 'pointer',
+                          '&:hover': { backgroundColor: BRAND.innerCard },
+                          transition: 'background-color 0.12s ease',
+                        }}
                       >
                         {/* Checkbox */}
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={isSelected} onChange={() => handleSelectRow(vendor._id)} sx={{ color: '#CBD5E1', '&.Mui-checked': { color: '#087F5B' } }} />
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={() => handleSelectRow(vendor._id)}
+                            sx={{ color: BRAND.border, '&.Mui-checked': { color: BRAND.green } }}
+                          />
                         </TableCell>
 
-                        {/* Store Name */}
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.8 }}>
+                        {/* Store info */}
+                        <TableCell onClick={() => handleOpenViewDetails(vendor)}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                             <Avatar
                               src={vendor.vendor_image}
                               alt={vendor.name}
                               variant="rounded"
-                              sx={{ width: 44, height: 44, borderRadius: '12px', backgroundColor: '#F1F5F9', border: '1px solid #E2E8F0' }}
+                              sx={{
+                                width: 38,
+                                height: 38,
+                                borderRadius: '10px',
+                                backgroundColor: BRAND.innerCard,
+                                border: `1px solid ${BRAND.border}`,
+                              }}
                             >
-                              <StorefrontIcon sx={{ color: '#94A3B8', fontSize: 22 }} />
+                              <StorefrontIcon sx={{ color: BRAND.muted, fontSize: 20 }} />
                             </Avatar>
                             <Box>
-                              <Typography sx={{ fontWeight: 700, fontSize: '13.5px', color: '#14213D', lineHeight: 1.3 }}>{vendor.name}</Typography>
-                              {vendor.open_time && vendor.close_time ? (
-                                <Typography sx={{ fontSize: '11px', color: '#94A3B8', mt: 0.2 }}>
-                                  {vendor.open_time} – {vendor.close_time}
-                                </Typography>
-                              ) : (
-                                <Typography sx={{ fontSize: '11px', color: '#94A3B8', mt: 0.2 }}>
-                                  Delivery: ₹{vendor.delivery_charge || 0}
-                                </Typography>
-                              )}
+                              <Typography sx={{ fontWeight: 700, fontSize: '13px', color: BRAND.text, lineHeight: 1.2 }}>
+                                {vendor.name}
+                              </Typography>
+                              <Typography sx={{ fontSize: '11px', color: BRAND.muted, mt: 0.2 }}>
+                                {vendor.open_time && vendor.close_time
+                                  ? `${vendor.open_time} – ${vendor.close_time}`
+                                  : `Delivery fee: ₹${vendor.delivery_charge || 0}`}
+                              </Typography>
                             </Box>
                           </Box>
                         </TableCell>
 
-                        {/* Vendor / Owner Contact */}
-                        <TableCell>
-                          <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>{vendor.email || '—'}</Typography>
-                          <Typography sx={{ fontSize: '12px', color: '#64748B', mt: 0.2 }}>{vendor.mobile_number || '—'}</Typography>
+                        {/* Vendor / Owner */}
+                        <TableCell onClick={() => handleOpenViewDetails(vendor)}>
+                          <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: BRAND.text }}>
+                            {vendor.email || '—'}
+                          </Typography>
+                          <Typography sx={{ fontSize: '11px', color: BRAND.muted, mt: 0.1 }}>
+                            {vendor.mobile_number || '—'}
+                          </Typography>
                         </TableCell>
 
                         {/* Category */}
-                        <TableCell>
-                          <Box sx={{ display: 'inline-flex', alignItems: 'center', px: 1.4, py: 0.4, borderRadius: '8px', backgroundColor: '#EBFBEE', color: '#087F5B', fontSize: '12px', fontWeight: 700 }}>
-                            {vendor.module?.name || '—'}
+                        <TableCell onClick={() => handleOpenViewDetails(vendor)}>
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              px: 1.2,
+                              py: 0.3,
+                              borderRadius: '6px',
+                              backgroundColor: BRAND.lightGreen,
+                              color: BRAND.green,
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {vendor.module?.name || 'Store'}
                           </Box>
                         </TableCell>
 
                         {/* Location */}
-                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                          <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>{vendor.city || 'Surat'}</Typography>
-                          <Typography sx={{ fontSize: '11.5px', color: '#94A3B8', maxWidth: 160, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={vendor.address || ''}>
-                            {vendor.address || 'Address not set'}
+                        <TableCell onClick={() => handleOpenViewDetails(vendor)}>
+                          <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: BRAND.text }}>
+                            {vendor.city || 'Surat'}
+                          </Typography>
+                          <Typography
+                            sx={{
+                              fontSize: '11px',
+                              color: BRAND.muted,
+                              maxWidth: 160,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                            title={vendor.address || ''}
+                          >
+                            {vendor.address || 'Location registered'}
                           </Typography>
                         </TableCell>
 
-                        {/* Products Count */}
-                        <TableCell align="center">
-                          <Chip
-                            icon={<InventoryIcon sx={{ fontSize: '14px !important', color: vendorProductsCount > 0 ? '#087F5B !important' : '#94A3B8 !important' }} />}
-                            label={`${vendorProductsCount} ${vendorProductsCount === 1 ? 'item' : 'items'}`}
-                            size="small"
-                            onClick={() => handleOpenProductsDialog(vendor)}
-                            clickable
-                            sx={{
-                              fontWeight: 700,
-                              fontSize: '11.5px',
-                              backgroundColor: vendorProductsCount > 0 ? '#EBFBEE' : '#F1F5F9',
-                              color: vendorProductsCount > 0 ? '#087F5B' : '#64748B',
-                              borderRadius: '8px',
-                            }}
-                          />
+                        {/* Products */}
+                        <TableCell align="center" onClick={(e) => { e.stopPropagation(); handleOpenProductsDialog(vendor); }}>
+                          <Tooltip title="Manage store products">
+                            <Chip
+                              icon={<InventoryIcon sx={{ fontSize: '13px !important', color: vendorProductsCount > 0 ? `${BRAND.green} !important` : `${BRAND.muted} !important` }} />}
+                              label={`${vendorProductsCount} ${vendorProductsCount === 1 ? 'item' : 'items'}`}
+                              size="small"
+                              clickable
+                              sx={{
+                                fontWeight: 700,
+                                fontSize: '11px',
+                                backgroundColor: vendorProductsCount > 0 ? BRAND.lightGreen : BRAND.innerCard,
+                                color: vendorProductsCount > 0 ? BRAND.green : BRAND.muted,
+                                borderRadius: '6px',
+                                height: 24,
+                              }}
+                            />
+                          </Tooltip>
                         </TableCell>
 
-                        {/* Orders Count */}
-                        <TableCell align="center">
-                          <Box sx={{ display: 'inline-flex', alignItems: 'center', px: 1.4, py: 0.4, borderRadius: '8px', backgroundColor: vendorOrdersCount > 0 ? '#EFF6FF' : '#F1F5F9', color: vendorOrdersCount > 0 ? '#2563EB' : '#64748B', fontSize: '12px', fontWeight: 700 }}>
+                        {/* Orders */}
+                        <TableCell align="center" onClick={() => handleOpenViewDetails(vendor)}>
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              px: 1.2,
+                              py: 0.3,
+                              borderRadius: '6px',
+                              backgroundColor: vendorOrdersCount > 0 ? BRAND.lightBlue : BRAND.innerCard,
+                              color: vendorOrdersCount > 0 ? BRAND.blue : BRAND.muted,
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                            }}
+                          >
                             {vendorOrdersCount} {vendorOrdersCount === 1 ? 'order' : 'orders'}
                           </Box>
                         </TableCell>
 
                         {/* Status */}
-                        <TableCell>
-                          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.8, px: 1.4, py: 0.4, borderRadius: '50px', backgroundColor: isActive ? '#DCFCE7' : '#FEE2E2', color: isActive ? '#15803D' : '#B91C1C', fontSize: '12px', fontWeight: 700 }}>
-                            <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: isActive ? '#16A34A' : '#EF4444' }} />
+                        <TableCell onClick={() => handleOpenViewDetails(vendor)}>
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 0.6,
+                              px: 1.2,
+                              py: 0.3,
+                              borderRadius: '50px',
+                              backgroundColor: isActive ? (isDark ? 'rgba(52,211,153,0.15)' : '#DCFCE7') : BRAND.redLight,
+                              color: isActive ? BRAND.success || '#16A34A' : BRAND.red,
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                            }}
+                          >
+                            <Box sx={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: isActive ? (BRAND.success || '#16A34A') : BRAND.red }} />
                             {isActive ? 'Active' : 'Blocked'}
                           </Box>
                         </TableCell>
 
                         {/* Actions */}
-                        <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                          <Tooltip title="Manage Products">
-                            <IconButton size="small" onClick={() => handleOpenProductsDialog(vendor)} sx={{ color: '#087F5B', backgroundColor: '#EBFBEE', borderRadius: '10px', mr: 0.8, '&:hover': { backgroundColor: '#DCFCE7' } }}>
-                              <InventoryIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          {canUpdateVendor && (
-                            <Tooltip title="Edit Store">
-                              <IconButton size="small" onClick={() => handleOpenDialog(vendor)} sx={{ color: '#64748B', backgroundColor: '#F1F5F9', borderRadius: '10px', mr: 0.8, '&:hover': { backgroundColor: '#E2E8F0', color: '#14213D' } }}>
-                                <EditIcon fontSize="small" />
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
+                            <Tooltip title="View Store Details">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenViewDetails(vendor)}
+                                sx={{
+                                  color: BRAND.blue,
+                                  backgroundColor: BRAND.lightBlue,
+                                  borderRadius: '8px',
+                                  width: 28,
+                                  height: 28,
+                                  '&:hover': { backgroundColor: isDark ? 'rgba(96,165,250,0.25)' : '#DBEAFE' },
+                                }}
+                              >
+                                <ViewIcon sx={{ fontSize: 16 }} />
                               </IconButton>
                             </Tooltip>
-                          )}
-                          {isSuperAdmin && (
-                            <Tooltip title="Delete Store">
-                              <IconButton size="small" onClick={() => handleDeleteClick(vendor)} sx={{ color: '#EF4444', backgroundColor: '#FEE2E2', borderRadius: '10px', mr: 0.8, '&:hover': { backgroundColor: '#FECACA' } }}>
-                                <DeleteIcon fontSize="small" />
+
+                            <Tooltip title="Manage Products">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenProductsDialog(vendor)}
+                                sx={{
+                                  color: BRAND.green,
+                                  backgroundColor: BRAND.lightGreen,
+                                  borderRadius: '8px',
+                                  width: 28,
+                                  height: 28,
+                                  '&:hover': { backgroundColor: isDark ? 'rgba(16,185,129,0.25)' : '#DCFCE7' },
+                                }}
+                              >
+                                <InventoryIcon sx={{ fontSize: 16 }} />
                               </IconButton>
                             </Tooltip>
-                          )}
-                          <IconButton size="small" onClick={(e) => handleActionOpen(e, vendor)} sx={{ color: '#94A3B8', borderRadius: '10px', '&:hover': { color: '#087F5B', backgroundColor: '#EBFBEE' } }}>
-                            <MoreHorizIcon fontSize="small" />
-                          </IconButton>
+
+                            {canUpdateVendor && (
+                              <Tooltip title="Edit Store">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleOpenDialog(vendor)}
+                                  sx={{
+                                    color: BRAND.muted,
+                                    backgroundColor: BRAND.innerCard,
+                                    borderRadius: '8px',
+                                    width: 28,
+                                    height: 28,
+                                    '&:hover': { backgroundColor: BRAND.border, color: BRAND.text },
+                                  }}
+                                >
+                                  <EditIcon sx={{ fontSize: 16 }} />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+
+                            {isSuperAdmin && (
+                              <Tooltip title="Delete Store">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleDeleteClick(vendor)}
+                                  sx={{
+                                    color: BRAND.red,
+                                    backgroundColor: BRAND.redLight,
+                                    borderRadius: '8px',
+                                    width: 28,
+                                    height: 28,
+                                    '&:hover': { backgroundColor: isDark ? 'rgba(248,113,113,0.25)' : '#FECACA' },
+                                  }}
+                                >
+                                  <DeleteIcon sx={{ fontSize: 16 }} />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                          </Box>
                         </TableCell>
                       </TableRow>
                     );
@@ -1103,93 +1438,481 @@ const Vendors = () => {
               </TableBody>
             </Table>
           </TableContainer>
+        </Box>
 
-          {/* ── Pagination ── */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mt: 3, pt: 2.5, borderTop: '1px solid #F1F5F9' }}>
-            <Box sx={{ px: 2, py: 0.7, borderRadius: '50px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#64748B', fontSize: '12px', fontWeight: 700 }}>
-              {filteredVendors.length} vendor{filteredVendors.length !== 1 ? 's' : ''} · Page {page} of {totalPages}
+        {/* ======================================================== */}
+        {/* MOBILE RESPONSIVE CARDS */}
+        {/* ======================================================== */}
+        <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 1.5 }}>
+          {loading ? (
+            [1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={130} sx={{ borderRadius: '12px' }} />)
+          ) : paginatedVendors.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <StorefrontIcon sx={{ fontSize: 36, color: '#CBD5E1', display: 'block', mx: 'auto', mb: 1 }} />
+              <Typography sx={{ color: BRAND.muted, fontSize: '13px' }}>No vendors found</Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-              <IconButton size="small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} sx={{ border: '1px solid #E2E8F0', borderRadius: '10px', width: 34, height: 34, color: '#64748B', '&:disabled': { opacity: 0.35 } }}>
-                <ChevronLeftIcon fontSize="small" />
-              </IconButton>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const start = Math.max(1, Math.min(page - 2, totalPages - 4));
-                const n = start + i;
-                if (n > totalPages) return null;
-                return (
-                  <IconButton key={n} size="small" onClick={() => setPage(n)} sx={{ border: `1px solid ${n === page ? '#087F5B' : '#E2E8F0'}`, borderRadius: '10px', width: 34, height: 34, backgroundColor: n === page ? '#087F5B' : '#FFFFFF', color: n === page ? '#FFFFFF' : '#64748B', fontWeight: 700, fontSize: '13px', '&:hover': { backgroundColor: n === page ? '#075B43' : '#F8FAFC' } }}>
-                    {n}
-                  </IconButton>
-                );
-              })}
-              <IconButton size="small" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} sx={{ border: '1px solid #E2E8F0', borderRadius: '10px', width: 34, height: 34, backgroundColor: '#087F5B', color: '#FFFFFF', '&:hover': { backgroundColor: '#075B43' }, '&:disabled': { backgroundColor: '#E2E8F0', color: '#94A3B8' } }}>
-                <ChevronRightIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          </Box>
-        </Paper>
+          ) : (
+            paginatedVendors.map((vendor) => {
+              const isActive = !vendor.isBlocked && vendor.status !== 0;
+              const vendorProductsCount = allProducts.filter(
+                (p) => (p.vendor_id?._id || p.vendor_id || p.vendor?._id || p.vendor) === vendor._id
+              ).length;
+              const vendorOrdersCount = allOrders.filter(
+                (o) => (o.vendor?._id || o.vendor) === vendor._id
+              ).length;
 
-        {/* ── Action Dropdown Menu ── */}
-        <Menu
-          anchorEl={actionAnchor}
-          open={Boolean(actionAnchor)}
-          onClose={handleActionClose}
-          PaperProps={{ sx: { borderRadius: '16px', minWidth: 190, boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: '1px solid #F1F5F9', p: 0.5 } }}
+              return (
+                <Paper
+                  key={vendor._id}
+                  elevation={0}
+                  onClick={() => handleOpenViewDetails(vendor)}
+                  sx={{
+                    p: 1.8,
+                    borderRadius: '12px',
+                    backgroundColor: BRAND.innerCard,
+                    border: `1px solid ${BRAND.border}`,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.2,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                      <Avatar
+                        src={vendor.vendor_image}
+                        alt={vendor.name}
+                        variant="rounded"
+                        sx={{ width: 40, height: 40, borderRadius: '8px', border: `1px solid ${BRAND.border}` }}
+                      >
+                        <StorefrontIcon sx={{ fontSize: 20 }} />
+                      </Avatar>
+                      <Box>
+                        <Typography sx={{ fontWeight: 700, fontSize: '13.5px', color: BRAND.text }}>
+                          {vendor.name}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 0.8, alignItems: 'center', mt: 0.2 }}>
+                          <Box sx={{ fontSize: '11px', fontWeight: 700, color: BRAND.green }}>
+                            {vendor.module?.name || 'Store'}
+                          </Box>
+                          <Typography sx={{ fontSize: '11px', color: BRAND.muted }}>&bull;</Typography>
+                          <Typography sx={{ fontSize: '11px', color: isActive ? (BRAND.success || '#16A34A') : BRAND.red, fontWeight: 700 }}>
+                            {isActive ? 'Active' : 'Blocked'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: BRAND.muted, pt: 0.5, borderTop: `1px solid ${BRAND.divider}` }}>
+                    <Box>
+                      <Typography sx={{ fontSize: '11.5px', color: BRAND.text, fontWeight: 600 }}>
+                        {vendor.email || vendor.mobile_number || 'No contact'}
+                      </Typography>
+                      <Typography sx={{ fontSize: '11px', color: BRAND.muted }}>
+                        {vendor.city || 'Surat'} &bull; {vendor.open_time ? `${vendor.open_time}–${vendor.close_time}` : '24h'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'right' }}>
+                      <Typography sx={{ fontSize: '12px', fontWeight: 700, color: BRAND.green }}>
+                        {vendorProductsCount} items
+                      </Typography>
+                      <Typography sx={{ fontSize: '11px', color: BRAND.blue, fontWeight: 600 }}>
+                        {vendorOrdersCount} orders
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 1, borderTop: `1px solid ${BRAND.divider}` }} onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="small"
+                      onClick={() => handleOpenProductsDialog(vendor)}
+                      sx={{ textTransform: 'none', fontSize: '11px', fontWeight: 700, color: BRAND.green, borderRadius: '6px', px: 1, py: 0.3, border: `1px solid ${BRAND.border}` }}
+                    >
+                      Products
+                    </Button>
+                    <Button
+                      size="small"
+                      onClick={() => handleOpenDialog(vendor)}
+                      sx={{ textTransform: 'none', fontSize: '11px', fontWeight: 700, color: BRAND.text, borderRadius: '6px', px: 1, py: 0.3, border: `1px solid ${BRAND.border}` }}
+                    >
+                      Edit
+                    </Button>
+                  </Box>
+                </Paper>
+              );
+            })
+          )}
+        </Box>
+
+        {/* ======================================================== */}
+        {/* PAGINATION */}
+        {/* ======================================================== */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            mt: 2.5,
+            pt: 2,
+            borderTop: `1px solid ${BRAND.divider}`,
+          }}
         >
-          <MenuItem onClick={() => { const v = actionVendor; handleActionClose(); if (v) handleOpenProductsDialog(v); }} sx={{ borderRadius: '10px', fontSize: '13px', fontWeight: 600, py: 1 }}>
-            <ListItemIcon sx={{ color: '#087F5B', minWidth: 32 }}><InventoryIcon fontSize="small" /></ListItemIcon>
-            Manage Products
-          </MenuItem>
-          {canUpdateVendor && (
-            <MenuItem onClick={() => { const v = actionVendor; handleActionClose(); if (v) handleOpenDialog(v); }} sx={{ borderRadius: '10px', fontSize: '13px', fontWeight: 600, py: 1 }}>
-              <ListItemIcon sx={{ color: '#64748B', minWidth: 32 }}><EditIcon fontSize="small" /></ListItemIcon>
-              Edit Vendor
-            </MenuItem>
-          )}
-          {isSuperAdmin && (
-            <MenuItem onClick={() => { const v = actionVendor; handleActionClose(); if (v) handleDeleteClick(v); }} sx={{ borderRadius: '10px', fontSize: '13px', fontWeight: 600, py: 1, color: '#EF4444', '&:hover': { backgroundColor: '#FEF2F2' } }}>
-              <ListItemIcon sx={{ color: '#EF4444', minWidth: 32 }}><DeleteIcon fontSize="small" /></ListItemIcon>
-              Delete Vendor
-            </MenuItem>
-          )}
-        </Menu>
+          <Typography sx={{ fontSize: '12px', color: BRAND.muted, fontWeight: 600 }}>
+            Showing {(page - 1) * rowsPerPage + 1}–{Math.min(page * rowsPerPage, filteredVendors.length)} of {filteredVendors.length} vendors
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+            <IconButton
+              size="small"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              sx={{
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: '8px',
+                width: 32,
+                height: 32,
+                color: BRAND.muted,
+                '&:disabled': { opacity: 0.35 },
+              }}
+            >
+              <ChevronLeftIcon fontSize="small" />
+            </IconButton>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+              const n = start + i;
+              if (n > totalPages) return null;
+              return (
+                <IconButton
+                  key={n}
+                  size="small"
+                  onClick={() => setPage(n)}
+                  sx={{
+                    border: `1px solid ${n === page ? BRAND.green : BRAND.border}`,
+                    borderRadius: '8px',
+                    width: 32,
+                    height: 32,
+                    backgroundColor: n === page ? BRAND.green : BRAND.white,
+                    color: n === page ? '#FFFFFF' : BRAND.muted,
+                    fontWeight: 700,
+                    fontSize: '12px',
+                    '&:hover': { backgroundColor: n === page ? BRAND.darkGreen : BRAND.innerCard },
+                  }}
+                >
+                  {n}
+                </IconButton>
+              );
+            })}
+            <IconButton
+              size="small"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              sx={{
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: '8px',
+                width: 32,
+                height: 32,
+                backgroundColor: BRAND.green,
+                color: '#FFFFFF',
+                '&:hover': { backgroundColor: BRAND.darkGreen },
+                '&:disabled': { backgroundColor: isDark ? '#1E293B' : '#E2E8F0', color: '#94A3B8' },
+              }}
+            >
+              <ChevronRightIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </Box>
+      </Paper>
 
-      {/* Add/Edit Dialog */}
+
+      {/* ======================================================== */}
+      {/* 4. VIEW VENDOR DETAILS MODAL */}
+      {/* ======================================================== */}
       <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
+        open={viewVendorDialog}
+        onClose={handleCloseViewDetails}
         maxWidth="md"
         fullWidth
-        sx={{
-          '& .MuiDialog-paper': {
-            margin: { xs: 2, sm: 3 },
-            maxHeight: { xs: 'calc(100% - 32px)', sm: 'calc(100% - 64px)' },
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            p: 0.5,
           },
         }}
       >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            {selectedVendor ? 'Edit Vendor' : 'Add New Vendor'}
-          </Typography>
-          <IconButton onClick={handleCloseDialog}>
-            <CloseIcon />
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Avatar
+              src={viewingVendor?.vendor_image}
+              variant="rounded"
+              sx={{ width: 44, height: 44, borderRadius: '10px', bgcolor: BRAND.lightGreen, color: BRAND.green }}
+            >
+              <StorefrontIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.1rem', color: BRAND.text }}>
+                {viewingVendor?.name || 'Store Details'}
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.2 }}>
+                <Chip label={viewingVendor?.module?.name || 'General'} size="small" sx={{ bgcolor: BRAND.lightGreen, color: BRAND.green, fontWeight: 700, height: 20, fontSize: '11px' }} />
+                <Chip label={viewingVendor?.isBlocked ? 'Blocked' : 'Active'} size="small" sx={{ bgcolor: viewingVendor?.isBlocked ? BRAND.redLight : '#DCFCE7', color: viewingVendor?.isBlocked ? BRAND.red : '#16A34A', fontWeight: 700, height: 20, fontSize: '11px' }} />
+              </Box>
+            </Box>
+          </Box>
+          <IconButton onClick={handleCloseViewDetails} size="small" sx={{ color: BRAND.muted }}>
+            <CloseIcon fontSize="small" />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={2}>
-            {/* Map Section - Full Width */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.secondary' }}>
-                Select Location on Map
-              </Typography>
+        <DialogContent dividers sx={{ py: 2.5 }}>
+          <Grid container spacing={2.5}>
+            {/* Contact Information */}
+            <Grid item xs={12} sm={6}>
+              <Paper elevation={0} sx={{ p: 2, borderRadius: '12px', bgcolor: BRAND.innerCard, border: `1px solid ${BRAND.border}` }}>
+                <Typography sx={{ fontSize: '12px', fontWeight: 800, color: BRAND.muted, textTransform: 'uppercase', mb: 1.5, letterSpacing: '0.04em' }}>
+                  Contact Information
+                </Typography>
+                <Stack spacing={1.2}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <EmailIcon sx={{ fontSize: 16, color: BRAND.muted }} />
+                    <Typography sx={{ fontSize: '13px', color: BRAND.text, fontWeight: 600 }}>
+                      {viewingVendor?.email || 'N/A'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <PhoneIcon sx={{ fontSize: 16, color: BRAND.muted }} />
+                    <Typography sx={{ fontSize: '13px', color: BRAND.text, fontWeight: 600 }}>
+                      {viewingVendor?.mobile_number || 'N/A'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                    <LocationIcon sx={{ fontSize: 16, color: BRAND.muted, mt: 0.2 }} />
+                    <Typography sx={{ fontSize: '12.5px', color: BRAND.text }}>
+                      {viewingVendor?.address || 'Address not registered'}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+            </Grid>
 
-              {/* Search Bar */}
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+            {/* Operating & Logistics */}
+            <Grid item xs={12} sm={6}>
+              <Paper elevation={0} sx={{ p: 2, borderRadius: '12px', bgcolor: BRAND.innerCard, border: `1px solid ${BRAND.border}` }}>
+                <Typography sx={{ fontSize: '12px', fontWeight: 800, color: BRAND.muted, textTransform: 'uppercase', mb: 1.5, letterSpacing: '0.04em' }}>
+                  Operations & Fees
+                </Typography>
+                <Stack spacing={1.2}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography sx={{ fontSize: '12.5px', color: BRAND.muted }}>Operating Hours:</Typography>
+                    <Typography sx={{ fontSize: '12.5px', fontWeight: 700, color: BRAND.text }}>
+                      {viewingVendor?.open_time && viewingVendor?.close_time ? `${viewingVendor.open_time} – ${viewingVendor.close_time}` : 'Not configured'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography sx={{ fontSize: '12.5px', color: BRAND.muted }}>Preparation Time:</Typography>
+                    <Typography sx={{ fontSize: '12.5px', fontWeight: 700, color: BRAND.text }}>
+                      {viewingVendor?.preparation_time_minute || 0} minutes
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography sx={{ fontSize: '12.5px', color: BRAND.muted }}>Delivery Charge:</Typography>
+                    <Typography sx={{ fontSize: '12.5px', fontWeight: 700, color: BRAND.green }}>
+                      ₹{viewingVendor?.delivery_charge || 0}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography sx={{ fontSize: '12.5px', color: BRAND.muted }}>Packaging Charge:</Typography>
+                    <Typography sx={{ fontSize: '12.5px', fontWeight: 700, color: BRAND.text }}>
+                      ₹{viewingVendor?.packaging_charge || 0}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
+          <Button onClick={handleCloseViewDetails} sx={{ textTransform: 'none', color: BRAND.muted, fontWeight: 600 }}>
+            Close
+          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                const v = viewingVendor;
+                handleCloseViewDetails();
+                if (v) handleOpenProductsDialog(v);
+              }}
+              sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '8px', borderColor: BRAND.border, color: BRAND.green }}
+            >
+              Manage Products
+            </Button>
+            {canUpdateVendor && (
+              <Button
+                variant="contained"
+                onClick={() => {
+                  const v = viewingVendor;
+                  handleCloseViewDetails();
+                  if (v) handleOpenDialog(v);
+                }}
+                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '8px', bgcolor: BRAND.green, '&:hover': { bgcolor: BRAND.darkGreen } }}
+              >
+                Edit Vendor
+              </Button>
+            )}
+          </Box>
+        </DialogActions>
+      </Dialog>
+
+      {/* ======================================================== */}
+      {/* 5. ADD / EDIT VENDOR FORM MODAL (REDESIGNED) */}
+      {/* ======================================================== */}
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        maxWidth={false}
+        fullWidth
+        sx={{
+          '& .MuiDialog-container': {
+            p: { xs: 1, sm: 2.5 },
+          },
+          '& .MuiDialog-paper': {
+            width: '100%',
+            maxWidth: '1120px',
+            height: { xs: 'calc(100% - 16px)', sm: '90vh' },
+            maxHeight: '90vh',
+            borderRadius: '22px',
+            backgroundColor: BRAND.white,
+            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.4)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            m: 0,
+          },
+        }}
+      >
+        {/* Sticky Modal Header */}
+        <DialogTitle
+          sx={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+            backgroundColor: BRAND.white,
+            borderBottom: `1px solid ${BRAND.divider}`,
+            px: { xs: 2.5, sm: 3.5 },
+            py: 2.2,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 800,
+                  fontSize: { xs: '1.2rem', sm: '1.35rem' },
+                  color: BRAND.text,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {selectedVendor ? 'Edit Vendor' : 'Add New Vendor'}
+              </Typography>
+              <Chip
+                label={selectedVendor ? 'Editing Mode' : 'Store Onboarding'}
+                size="small"
+                sx={{
+                  backgroundColor: selectedVendor ? BRAND.lightBlue : BRAND.lightGreen,
+                  color: selectedVendor ? BRAND.blue : BRAND.green,
+                  fontWeight: 700,
+                  fontSize: '11px',
+                  height: 22,
+                  borderRadius: '6px',
+                  border: `1px solid ${selectedVendor ? BRAND.borderBlue : BRAND.borderGreen}`,
+                }}
+              />
+            </Box>
+            <Typography sx={{ fontSize: '12.5px', color: BRAND.muted, mt: 0.3 }}>
+              {selectedVendor
+                ? 'Update vendor profile, operating hours and marketplace fee configurations'
+                : 'Create a new neighborhood store partner on AapnuBazaar'}
+            </Typography>
+          </Box>
+          <IconButton
+            onClick={handleCloseDialog}
+            size="small"
+            sx={{
+              color: BRAND.muted,
+              backgroundColor: BRAND.innerCard,
+              border: `1px solid ${BRAND.border}`,
+              borderRadius: '10px',
+              width: 34,
+              height: 34,
+              '&:hover': {
+                backgroundColor: BRAND.divider,
+                color: BRAND.text,
+              },
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+
+        {/* Scrollable Form Body */}
+        <DialogContent
+          sx={{
+            p: { xs: 2, sm: 3.5 },
+            overflowY: 'auto',
+            backgroundColor: BRAND.adminBg,
+            flexGrow: 1,
+          }}
+        >
+          <Stack spacing={3.5}>
+            {/* ── SECTION 1: VENDOR LOCATION ── */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 2, sm: 3 },
+                borderRadius: '18px',
+                border: `1px solid ${BRAND.border}`,
+                backgroundColor: BRAND.white,
+              }}
+            >
+              {/* Section Header */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '9px',
+                    backgroundColor: BRAND.lightGreen,
+                    color: BRAND.green,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    border: `1px solid ${BRAND.borderGreen}`,
+                  }}
+                >
+                  1
+                </Box>
+                <Box>
+                  <Typography sx={{ fontWeight: 800, fontSize: '14px', color: BRAND.text }}>
+                    Vendor Location
+                  </Typography>
+                  <Typography sx={{ fontSize: '11.5px', color: BRAND.muted }}>
+                    Set precise GPS location for dispatch routing and neighborhood customer discovery
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Location Search Toolbar */}
+              <Box sx={{ display: 'flex', gap: 1.2, mb: 2 }}>
                 <TextField
                   fullWidth
-                  size="small"
-                  placeholder="Search for a location on map..."
+                  placeholder="Search locality, landmark or address on Google Maps..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={(e) => {
@@ -1198,7 +1921,15 @@ const Vendors = () => {
                     }
                   }}
                   InputProps={{
-                    startAdornment: <SearchIcon sx={{ mr: 1, color: '#0088FF' }} />,
+                    startAdornment: <SearchIcon sx={{ mr: 1, color: BRAND.muted, fontSize: 20 }} />,
+                    sx: {
+                      borderRadius: '12px',
+                      fontSize: '13.5px',
+                      backgroundColor: BRAND.inputBg,
+                      '& fieldset': { borderColor: BRAND.border },
+                      '&:hover fieldset': { borderColor: BRAND.green },
+                      '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                    },
                   }}
                 />
                 <Button
@@ -1206,338 +1937,758 @@ const Vendors = () => {
                   onClick={handleMapSearch}
                   disabled={searching || !searchQuery.trim()}
                   sx={{
-                    minWidth: 100,
-                    borderColor: '#0088FF',
-                    color: '#0088FF',
+                    minWidth: 90,
+                    borderColor: BRAND.border,
+                    color: BRAND.text,
                     textTransform: 'none',
-                    fontWeight: 600,
-                    '&:hover': {
-                      borderColor: '#5568d3',
-                      backgroundColor: 'rgba(102, 126, 234, 0.05)',
-                    },
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    borderRadius: '12px',
+                    px: 2.5,
+                    '&:hover': { borderColor: BRAND.green, backgroundColor: BRAND.lightGreen },
                   }}
                 >
-                  {searching ? <CircularProgress size={20} /> : 'Search'}
+                  {searching ? <CircularProgress size={18} /> : 'Search'}
                 </Button>
                 <Button
                   variant="contained"
                   onClick={getCurrentLocation}
                   sx={{
-                    minWidth: 50,
-                    background: '#0088FF',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #5568d3 0%, #653a8a 100%)',
-                    },
+                    minWidth: 46,
+                    backgroundColor: BRAND.green,
+                    color: '#FFFFFF',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(8, 127, 91, 0.2)',
+                    '&:hover': { backgroundColor: BRAND.darkGreen },
                   }}
+                  title="Detect Current Location (GPS)"
                 >
-                  <MyLocationIcon />
+                  <MyLocationIcon sx={{ fontSize: 20 }} />
                 </Button>
               </Box>
 
-              {/* Google Map */}
+              {/* Google Maps Container */}
               <Box
                 ref={mapRef}
                 sx={{
                   width: '100%',
-                  height: 300,
-                  borderRadius: 2,
-                  border: '2px solid #e0e0e0',
-                  backgroundColor: '#f5f5f5',
-                  mb: 1,
+                  height: { xs: 230, sm: 280 },
+                  borderRadius: '16px',
+                  border: `1.5px solid ${BRAND.border}`,
+                  backgroundColor: BRAND.innerCard,
+                  mb: 1.5,
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
                 }}
               />
-              <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 2 }}>
-                Click on the map or drag the marker to select vendor location
-              </Typography>
 
-              {/* Coordinates Display */}
-              {formData.latitude && formData.longitude && (
+              {/* Helper text & Coordinates Badge */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: { xs: 'flex-start', sm: 'center' },
+                  justifyContent: 'space-between',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  gap: 1,
+                }}
+              >
+                <Typography sx={{ fontSize: '11.5px', color: BRAND.muted, fontWeight: 500 }}>
+                  Click anywhere on the map or drag the marker to fine-tune the exact storefront location.
+                </Typography>
+
+                {formData.latitude && formData.longitude && (
+                  <Box
+                    sx={{
+                      px: 1.8,
+                      py: 0.6,
+                      borderRadius: '50px',
+                      backgroundColor: BRAND.lightGreen,
+                      border: `1px solid ${BRAND.borderGreen}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: BRAND.green }} />
+                    <Typography sx={{ fontSize: '11.5px', fontWeight: 700, color: BRAND.green, fontFamily: 'monospace' }}>
+                      Lat: {parseFloat(formData.latitude).toFixed(5)}, Lng: {parseFloat(formData.longitude).toFixed(5)}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Paper>
+
+            {/* ── SECTION 2: BASIC INFORMATION ── */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 2, sm: 3 },
+                borderRadius: '18px',
+                border: `1px solid ${BRAND.border}`,
+                backgroundColor: BRAND.white,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
                 <Box
                   sx={{
-                    p: 2,
-                    borderRadius: 2,
-                    backgroundColor: '#f5f7fa',
-                    border: '1px solid #e0e0e0',
-                    mb: 2,
+                    width: 32,
+                    height: 32,
+                    borderRadius: '9px',
+                    backgroundColor: BRAND.lightBlue,
+                    color: BRAND.blue,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    border: `1px solid ${BRAND.borderBlue}`,
                   }}
                 >
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    Selected Coordinates:
+                  2
+                </Box>
+                <Box>
+                  <Typography sx={{ fontWeight: 800, fontSize: '14px', color: BRAND.text }}>
+                    Basic Information
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.5 }}>
-                    Lat: {formData.latitude}, Lng: {formData.longitude}
+                  <Typography sx={{ fontSize: '11.5px', color: BRAND.muted }}>
+                    Primary merchant identity, category taxonomy and contact credentials
                   </Typography>
                 </Box>
-              )}
-            </Grid>
-
-            {/* Basic Information */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0088FF', mb: 1, mt: 2 }}>
-                Basic Information
-              </Typography>
-            </Grid>
-
-            {/* Image Upload and Vendor Name side by side */}
-            <Grid item xs={12} sm={3}>
-              <Box sx={{ textAlign: 'center' }}>
-                {imagePreview && (
-                  <Avatar
-                    src={imagePreview}
-                    sx={{ width: 100, height: 100, mx: 'auto', mb: 1 }}
-                  />
-                )}
-                <Button
-                  variant="outlined"
-                  component="label"
-                  startIcon={<UploadIcon />}
-                  size="small"
-                  sx={{ width: '100%' }}
-                >
-                  Upload Image
-                  <input type="file" hidden accept="image/*" onChange={handleImageChange} />
-                </Button>
               </Box>
-            </Grid>
-            <Grid item xs={12} sm={9}>
-              <TextField
-                fullWidth
-                label="Vendor Name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                required
-              />
-            </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Mobile Number"
-                name="mobile_number"
-                value={formData.mobile_number}
-                onChange={handleInputChange}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                multiline
-                rows={3}
-              />
-            </Grid>
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Store Name *"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="e.g. Royal Fresh Mart"
+                    InputProps={{
+                      sx: {
+                        borderRadius: '12px',
+                        fontSize: '13.5px',
+                        '& fieldset': { borderColor: BRAND.border },
+                        '&:hover fieldset': { borderColor: BRAND.green },
+                        '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                      },
+                    }}
+                  />
+                </Grid>
 
-            {/* Location Information */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0088FF', mb: 1, mt: 2 }}>
-                Location Information
-              </Typography>
-            </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Owner Email *"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="merchant@example.com"
+                    InputProps={{
+                      sx: {
+                        borderRadius: '12px',
+                        fontSize: '13.5px',
+                        '& fieldset': { borderColor: BRAND.border },
+                        '&:hover fieldset': { borderColor: BRAND.green },
+                        '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                      },
+                    }}
+                  />
+                </Grid>
 
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Address"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                required
-                inputRef={addressInputRef}
-                placeholder="Search for a location..."
-              />
-            </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Mobile Number *"
+                    name="mobile_number"
+                    value={formData.mobile_number}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="10-digit phone number"
+                    InputProps={{
+                      sx: {
+                        borderRadius: '12px',
+                        fontSize: '13.5px',
+                        '& fieldset': { borderColor: BRAND.border },
+                        '&:hover fieldset': { borderColor: BRAND.green },
+                        '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                      },
+                    }}
+                  />
+                </Grid>
 
-            {/* Pricing */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0088FF', mb: 1, mt: 2 }}>
-                Pricing & Charges
-              </Typography>
-            </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="Category / Module *"
+                    name="module"
+                    value={formData.module}
+                    onChange={handleInputChange}
+                    required
+                    InputProps={{
+                      sx: {
+                        borderRadius: '12px',
+                        fontSize: '13.5px',
+                        '& fieldset': { borderColor: BRAND.border },
+                        '&:hover fieldset': { borderColor: BRAND.green },
+                        '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                      },
+                    }}
+                  >
+                    {modules.map((m) => (
+                      <MenuItem key={m._id} value={m._id} sx={{ fontSize: '13px', fontWeight: 600 }}>
+                        {m.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
 
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Packaging Charge"
-                name="packaging_charge"
-                type="number"
-                value={formData.packaging_charge}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Delivery Charge"
-                name="delivery_charge"
-                type="number"
-                value={formData.delivery_charge}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Convenience Charge"
-                name="convenience_charge"
-                type="number"
-                value={formData.convenience_charge}
-                onChange={handleInputChange}
-              />
-            </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Store Description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    multiline
+                    rows={3}
+                    placeholder="Describe store specialties, fresh products, organic options and service guarantees..."
+                    InputProps={{
+                      sx: {
+                        borderRadius: '12px',
+                        fontSize: '13.5px',
+                        '& fieldset': { borderColor: BRAND.border },
+                        '&:hover fieldset': { borderColor: BRAND.green },
+                        '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                      },
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
 
-            {/* Operating Hours */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0088FF', mb: 1, mt: 2 }}>
-                Operating Hours
-              </Typography>
-            </Grid>
+            {/* ── SECTION 3: STORE IMAGE & FULL ADDRESS ── */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 2, sm: 3 },
+                borderRadius: '18px',
+                border: `1px solid ${BRAND.border}`,
+                backgroundColor: BRAND.white,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '9px',
+                    backgroundColor: BRAND.lightOrange,
+                    color: BRAND.orange,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    border: `1px solid ${BRAND.borderOrange}`,
+                  }}
+                >
+                  3
+                </Box>
+                <Box>
+                  <Typography sx={{ fontWeight: 800, fontSize: '14px', color: BRAND.text }}>
+                    Store Image & Full Address
+                  </Typography>
+                  <Typography sx={{ fontSize: '11.5px', color: BRAND.muted }}>
+                    Branded storefront banner and detailed customer-facing address
+                  </Typography>
+                </Box>
+              </Box>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Opening Time"
-                name="open_time"
-                type="time"
-                value={formData.open_time}
-                onChange={handleInputChange}
-                required
-                InputLabelProps={{ shrink: true }}
-                helperText="24-hour format (HH:mm)"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Closing Time"
-                name="close_time"
-                type="time"
-                value={formData.close_time}
-                onChange={handleInputChange}
-                required
-                InputLabelProps={{ shrink: true }}
-                helperText="24-hour format (HH:mm)"
-              />
-            </Grid>
+              <Grid container spacing={3}>
+                {/* Store Image Upload Area */}
+                <Grid item xs={12} md={4.5}>
+                  <Typography sx={{ fontSize: '12px', fontWeight: 700, color: BRAND.text, mb: 1 }}>
+                    Storefront Photo
+                  </Typography>
+                  <Box
+                    sx={{
+                      p: 2,
+                      borderRadius: '16px',
+                      border: `1.5px dashed ${imagePreview ? BRAND.green : BRAND.border}`,
+                      backgroundColor: imagePreview ? (isDark ? 'rgba(16,185,129,0.1)' : '#F4FBF7') : BRAND.innerCard,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      minHeight: 180,
+                      position: 'relative',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        borderColor: BRAND.green,
+                        backgroundColor: isDark ? 'rgba(16,185,129,0.15)' : '#F4FBF7',
+                      },
+                    }}
+                  >
+                    {imagePreview ? (
+                      <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar
+                          src={imagePreview}
+                          variant="rounded"
+                          sx={{
+                            width: '100%',
+                            height: 110,
+                            borderRadius: '12px',
+                            border: `1px solid ${BRAND.borderGreen}`,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                          }}
+                        />
+                        <Button
+                          variant="outlined"
+                          component="label"
+                          size="small"
+                          startIcon={<UploadIcon />}
+                          sx={{
+                            textTransform: 'none',
+                            fontWeight: 700,
+                            fontSize: '12px',
+                            borderRadius: '10px',
+                            borderColor: BRAND.borderGreen,
+                            color: BRAND.green,
+                            backgroundColor: BRAND.white,
+                            '&:hover': { borderColor: BRAND.green, backgroundColor: BRAND.lightGreen },
+                          }}
+                        >
+                          Change Photo
+                          <input type="file" hidden accept="image/*" onChange={handleImageChange} />
+                        </Button>
+                      </Box>
+                    ) : (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                        <Box
+                          sx={{
+                            width: 52,
+                            height: 52,
+                            borderRadius: '14px',
+                            backgroundColor: BRAND.innerCard,
+                            border: `1px solid ${BRAND.border}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                          }}
+                        >
+                          <StorefrontIcon sx={{ color: BRAND.muted, fontSize: 26 }} />
+                        </Box>
+                        <Box>
+                          <Typography sx={{ fontSize: '12.5px', fontWeight: 700, color: BRAND.text }}>
+                            Drag & drop or upload
+                          </Typography>
+                          <Typography sx={{ fontSize: '11px', color: BRAND.muted, mt: 0.2 }}>
+                            PNG, JPG or WebP (max 5MB)
+                          </Typography>
+                        </Box>
+                        <Button
+                          variant="outlined"
+                          component="label"
+                          size="small"
+                          startIcon={<UploadIcon />}
+                          sx={{
+                            mt: 0.5,
+                            textTransform: 'none',
+                            fontWeight: 700,
+                            fontSize: '12px',
+                            borderRadius: '10px',
+                            borderColor: BRAND.border,
+                            color: BRAND.text,
+                            backgroundColor: BRAND.white,
+                            '&:hover': { borderColor: BRAND.green, color: BRAND.green, backgroundColor: BRAND.lightGreen },
+                          }}
+                        >
+                          Upload Image
+                          <input type="file" hidden accept="image/*" onChange={handleImageChange} />
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+                </Grid>
 
-            {/* Module & Configuration */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0088FF', mb: 1, mt: 2 }}>
-                Module & Configuration
-              </Typography>
-            </Grid>
+                {/* Full Address Input */}
+                <Grid item xs={12} md={7.5}>
+                  <Typography sx={{ fontSize: '12px', fontWeight: 700, color: BRAND.text, mb: 1 }}>
+                    Full Store Address *
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    required
+                    inputRef={addressInputRef}
+                    multiline
+                    rows={4}
+                    placeholder="Shop No., Complex name, Street, Landmark, Area, City, Pincode..."
+                    helperText="Use the complete address customers can use to find the store on order receipts."
+                    InputProps={{
+                      sx: {
+                        borderRadius: '12px',
+                        fontSize: '13.5px',
+                        '& fieldset': { borderColor: BRAND.border },
+                        '&:hover fieldset': { borderColor: BRAND.green },
+                        '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                      },
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                select
-                label="Module"
-                name="module"
-                value={formData.module}
-                onChange={handleInputChange}
-                required
-                helperText="Select the module/category for this vendor"
-              >
-                {modules.map((module) => (
-                  <MenuItem key={module._id} value={module._id}>
-                    {module.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
+            {/* ── SECTION 4: OPERATING HOURS ── */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 2, sm: 3 },
+                borderRadius: '18px',
+                border: `1px solid ${BRAND.border}`,
+                backgroundColor: BRAND.white,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '9px',
+                    backgroundColor: BRAND.innerCard,
+                    color: BRAND.text,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    border: `1px solid ${BRAND.border}`,
+                  }}
+                >
+                  4
+                </Box>
+                <Box>
+                  <Typography sx={{ fontWeight: 800, fontSize: '14px', color: BRAND.text }}>
+                    Operating Hours & Status
+                  </Typography>
+                  <Typography sx={{ fontSize: '11.5px', color: BRAND.muted }}>
+                    Store operational schedule and active marketplace visibility
+                  </Typography>
+                </Box>
+              </Box>
 
-            {/* Timezone */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                select
-                label="Timezone"
-                name="timezone"
-                value={formData.timezone}
-                onChange={handleInputChange}
-              >
-                <MenuItem value="Asia/Kolkata">Asia/Kolkata</MenuItem>
-                <MenuItem value="Asia/Bangalore">Asia/Bangalore</MenuItem>
-                <MenuItem value="UTC">UTC</MenuItem>
-              </TextField>
-            </Grid>
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField
+                    fullWidth
+                    label="Opening Time"
+                    name="open_time"
+                    type="time"
+                    value={formData.open_time}
+                    onChange={handleInputChange}
+                    InputLabelProps={{ shrink: true }}
+                    InputProps={{
+                      sx: {
+                        borderRadius: '12px',
+                        fontSize: '13.5px',
+                        '& fieldset': { borderColor: BRAND.border },
+                        '&:hover fieldset': { borderColor: BRAND.green },
+                        '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                      },
+                    }}
+                  />
+                </Grid>
 
-            {/* Preparation Time */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Preparation Time (minutes)"
-                name="preparation_time_minute"
-                type="number"
-                value={formData.preparation_time_minute}
-                onChange={handleInputChange}
-                helperText="Average time to prepare orders"
-              />
-            </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField
+                    fullWidth
+                    label="Closing Time"
+                    name="close_time"
+                    type="time"
+                    value={formData.close_time}
+                    onChange={handleInputChange}
+                    InputLabelProps={{ shrink: true }}
+                    InputProps={{
+                      sx: {
+                        borderRadius: '12px',
+                        fontSize: '13.5px',
+                        '& fieldset': { borderColor: BRAND.border },
+                        '&:hover fieldset': { borderColor: BRAND.green },
+                        '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                      },
+                    }}
+                  />
+                </Grid>
 
-            {/* Status */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                select
-                label="Status"
-                name="status"
-                value={formData.status}
-                onChange={handleInputChange}
-              >
-                <MenuItem value={1}>Active</MenuItem>
-                <MenuItem value={0}>Inactive</MenuItem>
-              </TextField>
-            </Grid>
-          </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField
+                    fullWidth
+                    label="Preparation Time"
+                    name="preparation_time_minute"
+                    type="number"
+                    value={formData.preparation_time_minute}
+                    onChange={handleInputChange}
+                    helperText="Average kitchen / packing time (minutes)"
+                    InputProps={{
+                      sx: {
+                        borderRadius: '12px',
+                        fontSize: '13.5px',
+                        '& fieldset': { borderColor: BRAND.border },
+                        '&:hover fieldset': { borderColor: BRAND.green },
+                        '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                      },
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="Store Status"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    InputProps={{
+                      sx: {
+                        borderRadius: '12px',
+                        fontSize: '13.5px',
+                        '& fieldset': { borderColor: BRAND.border },
+                        '&:hover fieldset': { borderColor: BRAND.green },
+                        '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                      },
+                    }}
+                  >
+                    <MenuItem value={1} sx={{ fontSize: '13px', fontWeight: 600, color: '#16A34A' }}>
+                      Active (Live on App)
+                    </MenuItem>
+                    <MenuItem value={0} sx={{ fontSize: '13px', fontWeight: 600, color: BRAND.red }}>
+                      Inactive (Suspended)
+                    </MenuItem>
+                  </TextField>
+                </Grid>
+              </Grid>
+            </Paper>
+
+            {/* ── SECTION 5: MARKETPLACE CHARGES ── */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 2, sm: 3 },
+                borderRadius: '18px',
+                border: `1px solid ${BRAND.border}`,
+                backgroundColor: BRAND.white,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '9px',
+                    backgroundColor: BRAND.lightGreen,
+                    color: BRAND.green,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    border: `1px solid ${BRAND.borderGreen}`,
+                  }}
+                >
+                  5
+                </Box>
+                <Box>
+                  <Typography sx={{ fontWeight: 800, fontSize: '14px', color: BRAND.text }}>
+                    Marketplace Charges & Customer Fees
+                  </Typography>
+                  <Typography sx={{ fontSize: '11.5px', color: BRAND.muted }}>
+                    Default delivery, packaging and convenience rates applied to shopper checkouts
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Delivery Charge (₹)"
+                    name="delivery_charge"
+                    type="number"
+                    value={formData.delivery_charge}
+                    onChange={handleInputChange}
+                    InputProps={{
+                      sx: {
+                        borderRadius: '12px',
+                        fontSize: '13.5px',
+                        '& fieldset': { borderColor: BRAND.border },
+                        '&:hover fieldset': { borderColor: BRAND.green },
+                        '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                      },
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Packaging Fee (₹)"
+                    name="packaging_charge"
+                    type="number"
+                    value={formData.packaging_charge}
+                    onChange={handleInputChange}
+                    InputProps={{
+                      sx: {
+                        borderRadius: '12px',
+                        fontSize: '13.5px',
+                        '& fieldset': { borderColor: BRAND.border },
+                        '&:hover fieldset': { borderColor: BRAND.green },
+                        '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                      },
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Platform / Convenience Fee (₹)"
+                    name="convenience_charge"
+                    type="number"
+                    value={formData.convenience_charge}
+                    onChange={handleInputChange}
+                    InputProps={{
+                      sx: {
+                        borderRadius: '12px',
+                        fontSize: '13.5px',
+                        '& fieldset': { borderColor: BRAND.border },
+                        '&:hover fieldset': { borderColor: BRAND.green },
+                        '&.Mui-focused fieldset': { borderColor: BRAND.green },
+                      },
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
+          </Stack>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleCloseDialog} disabled={submitting} sx={{ textTransform: 'none', borderRadius: '10px' }}>Cancel</Button>
-          <Button variant="contained" onClick={handleSubmit} disabled={submitting} sx={{ backgroundColor: '#087F5B', textTransform: 'none', borderRadius: '10px', fontWeight: 700, '&:hover': { backgroundColor: '#075B43' } }}>
-            {submitting ? <CircularProgress size={22} color="inherit" /> : selectedVendor ? 'Update Vendor' : 'Create Vendor'}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)}>
-        <DialogTitle>Delete Vendor?</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete <strong>{selectedVendor?.name}</strong>? This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialog(false)} disabled={submitting}>
+        {/* Sticky Modal Footer */}
+        <DialogActions
+          sx={{
+            position: 'sticky',
+            bottom: 0,
+            zIndex: 10,
+            backgroundColor: BRAND.white,
+            borderTop: `1px solid ${BRAND.divider}`,
+            px: { xs: 2.5, sm: 3.5 },
+            py: 2,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Button
+            onClick={handleCloseDialog}
+            disabled={submitting}
+            sx={{
+              textTransform: 'none',
+              color: BRAND.muted,
+              fontWeight: 700,
+              fontSize: '13.5px',
+              borderRadius: '12px',
+              px: 2.5,
+              py: 1,
+              '&:hover': {
+                backgroundColor: BRAND.innerCard,
+                color: BRAND.text,
+              },
+            }}
+          >
             Cancel
           </Button>
           <Button
             variant="contained"
-            color="error"
-            onClick={handleDeleteConfirm}
-            disabled={submitting}
+            onClick={handleSubmit}
+            disabled={submitting || !formData.name || !formData.email || !formData.mobile_number}
+            sx={{
+              backgroundColor: BRAND.green,
+              color: '#FFFFFF',
+              textTransform: 'none',
+              borderRadius: '12px',
+              fontWeight: 700,
+              fontSize: '13.5px',
+              px: 4,
+              py: 1.15,
+              boxShadow: '0 4px 14px rgba(8, 127, 91, 0.25)',
+              '&:hover': {
+                backgroundColor: BRAND.darkGreen,
+                boxShadow: '0 6px 18px rgba(8, 127, 91, 0.35)',
+              },
+              '&:disabled': {
+                backgroundColor: isDark ? '#334155' : '#CBD5E1',
+                color: '#94A3B8',
+              },
+            }}
           >
-            {submitting ? <CircularProgress size={24} color="inherit" /> : 'Delete'}
+            {submitting ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : selectedVendor ? (
+              'Save Changes'
+            ) : (
+              'Create Vendor'
+            )}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Products Management Dialog */}
+      {/* ======================================================== */}
+      {/* 6. DELETE VENDOR CONFIRMATION DIALOG */}
+      {/* ======================================================== */}
+      <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)} PaperProps={{ sx: { borderRadius: '14px', p: 1 } }}>
+        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.1rem', color: BRAND.text }}>
+          Delete Vendor?
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: '13px', color: BRAND.muted }}>
+            Are you sure you want to delete <strong>{selectedVendor?.name}</strong>? This action cannot be undone and will remove associated catalog links.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 1.5 }}>
+          <Button onClick={() => setDeleteDialog(false)} disabled={submitting} sx={{ textTransform: 'none', color: BRAND.muted }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleDeleteConfirm}
+            disabled={submitting}
+            sx={{
+              bgcolor: BRAND.red,
+              color: '#FFFFFF',
+              fontWeight: 700,
+              textTransform: 'none',
+              borderRadius: '8px',
+              '&:hover': { bgcolor: '#B91C1C' },
+            }}
+          >
+            {submitting ? <CircularProgress size={20} color="inherit" /> : 'Delete Vendor'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ======================================================== */}
+      {/* 7. PRODUCTS MANAGEMENT DIALOG */}
+      {/* ======================================================== */}
       <Dialog
         open={productsDialog}
         onClose={() => setProductsDialog(false)}
@@ -1545,142 +2696,122 @@ const Vendors = () => {
         fullWidth
         sx={{
           '& .MuiDialog-paper': {
+            borderRadius: '16px',
             margin: { xs: 1, sm: 3 },
-            maxHeight: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 64px)' },
+            maxHeight: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 48px)' },
           },
         }}
       >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2, pb: 2 }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-              Products - {currentVendor?.name}
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1.5 }}>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.15rem', color: BRAND.text }}>
+              Store Catalog: {currentVendor?.name}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Manage products for this vendor
+            <Typography sx={{ fontSize: '11.5px', color: BRAND.muted }}>
+              Manage products, prices and inventory for this vendor
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
-            {(() => {
-              const adminData = JSON.parse(localStorage.getItem('adminData') || '{}');
-              const hasPermission = adminData.role === 'super_admin' || adminData.permissions?.canManageProducts;
-              return hasPermission && (
-                <>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => handleOpenProductForm()}
-                    size="small"
-                    sx={{ backgroundColor: '#087F5B', textTransform: 'none', fontWeight: 700, borderRadius: '10px', display: { xs: 'none', sm: 'flex' }, '&:hover': { backgroundColor: '#075B43' } }}
-                  >
-                    Add Product
-                  </Button>
-                  <IconButton onClick={() => handleOpenProductForm()} sx={{ display: { xs: 'flex', sm: 'none' }, backgroundColor: '#087F5B', color: 'white', borderRadius: '10px', '&:hover': { backgroundColor: '#075B43' } }} size="small">
-                    <AddIcon />
-                  </IconButton>
-                </>
-              );
-            })()}
-            <IconButton onClick={() => setProductsDialog(false)}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            {canManageProducts && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon sx={{ fontSize: '16px !important' }} />}
+                onClick={() => handleOpenProductForm()}
+                size="small"
+                sx={{
+                  backgroundColor: BRAND.green,
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  borderRadius: '8px',
+                  '&:hover': { backgroundColor: BRAND.darkGreen },
+                }}
+              >
+                + Add Product
+              </Button>
+            )}
+            <IconButton onClick={() => setProductsDialog(false)} size="small" sx={{ color: BRAND.muted }}>
               <CloseIcon />
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ p: 2 }}>
           {loadingProducts ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress sx={{ color: '#0088FF' }} />
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
+              <CircularProgress sx={{ color: BRAND.green }} />
             </Box>
           ) : products.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 6 }}>
-              <InventoryIcon sx={{ fontSize: 80, color: '#e0e0e0', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                No Products Found
+              <InventoryIcon sx={{ fontSize: 48, color: '#CBD5E1', mb: 1, display: 'block', mx: 'auto' }} />
+              <Typography sx={{ color: BRAND.text, fontWeight: 700, fontSize: '14px' }}>
+                No products found
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                {(() => {
-                  const adminData = JSON.parse(localStorage.getItem('adminData') || '{}');
-                  const hasPermission = adminData.role === 'super_admin' || adminData.permissions?.canManageProducts;
-                  return hasPermission ? 'Add your first product to get started' : 'No products available for this vendor';
-                })()}
+              <Typography sx={{ color: BRAND.muted, fontSize: '12px', mt: 0.3, mb: 1.5 }}>
+                Add products to start accepting customer orders for this store.
               </Typography>
-              {(() => {
-                const adminData = JSON.parse(localStorage.getItem('adminData') || '{}');
-                const hasPermission = adminData.role === 'super_admin' || adminData.permissions?.canManageProducts;
-                return hasPermission && (
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => handleOpenProductForm()}
-                    sx={{
-                      background: '#0088FF',
-                      textTransform: 'none',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Add Product
-                  </Button>
-                );
-              })()}
+              {canManageProducts && (
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => handleOpenProductForm()}
+                  size="small"
+                  sx={{ backgroundColor: BRAND.green, textTransform: 'none', fontWeight: 700, borderRadius: '8px', '&:hover': { backgroundColor: BRAND.darkGreen } }}
+                >
+                  Add Product
+                </Button>
+              )}
             </Box>
           ) : (
-            <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
-              <Table sx={{ minWidth: { xs: 300, sm: 600 } }}>
+            <TableContainer>
+              <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f7fa' }}>
-                    <TableCell sx={{ fontWeight: 700, display: { xs: 'none', sm: 'table-cell' } }}>Image</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Product Name</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Main Price</TableCell>
-                    <TableCell sx={{ fontWeight: 700, display: { xs: 'none', md: 'table-cell' } }}>Special Price</TableCell>
-                    <TableCell sx={{ fontWeight: 700, display: { xs: 'none', lg: 'table-cell' } }}>Prep Time</TableCell>
-                    <TableCell sx={{ fontWeight: 700, display: { xs: 'none', lg: 'table-cell' } }}>Pack Charge</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
+                  <TableRow sx={{ '& th': { borderBottom: `1.5px solid ${BRAND.border}`, color: BRAND.muted, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', py: 1.2 } }}>
+                    <TableCell>Product</TableCell>
+                    <TableCell>Price</TableCell>
+                    <TableCell>Special Price</TableCell>
+                    <TableCell>Prep Time</TableCell>
+                    <TableCell>Pack Fee</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {products.map((product) => (
-                    <TableRow key={product._id} hover>
-                      <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                        <Avatar src={product.image} alt={product.name} variant="rounded" />
+                    <TableRow key={product._id} hover sx={{ '& td': { borderBottom: `1px solid ${BRAND.divider}`, py: 1.2 } }}>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                          <Avatar src={product.image} alt={product.name} variant="rounded" sx={{ width: 32, height: 32, borderRadius: '6px' }} />
+                          <Typography sx={{ fontWeight: 700, fontSize: '12.5px', color: BRAND.text }}>{product.name}</Typography>
+                        </Box>
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>{product.name}</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>₹{product.main_price}</TableCell>
-                      <TableCell sx={{ fontWeight: 600, display: { xs: 'none', md: 'table-cell' } }}>
-                        {product.special_price ? `₹${product.special_price}` : '-'}
-                      </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
-                        {product.preparation_time_minute} min
-                      </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
-                        ₹{product.packaging_charge}
-                      </TableCell>
+                      <TableCell><Typography sx={{ fontWeight: 800, color: BRAND.text, fontSize: '12.5px' }}>₹{product.main_price}</Typography></TableCell>
+                      <TableCell><Typography sx={{ fontWeight: 600, color: BRAND.orange, fontSize: '12px' }}>{product.special_price ? `₹${product.special_price}` : '—'}</Typography></TableCell>
+                      <TableCell><Typography sx={{ color: BRAND.muted, fontSize: '12px' }}>{product.preparation_time_minute} min</Typography></TableCell>
+                      <TableCell><Typography sx={{ color: BRAND.muted, fontSize: '12px' }}>₹{product.packaging_charge}</Typography></TableCell>
                       <TableCell>
                         <Chip
                           label={product.isActive ? 'Active' : 'Inactive'}
                           size="small"
-                          color={product.isActive ? 'success' : 'error'}
-                          variant="outlined"
+                          sx={{
+                            bgcolor: product.isActive ? (isDark ? 'rgba(52,211,153,0.15)' : '#DCFCE7') : BRAND.redLight,
+                            color: product.isActive ? (BRAND.success || '#16A34A') : BRAND.red,
+                            fontWeight: 700,
+                            fontSize: '10.5px',
+                            height: 20,
+                          }}
                         />
                       </TableCell>
-                      <TableCell>
-                        {(() => {
-                          const adminData = JSON.parse(localStorage.getItem('adminData') || '{}');
-                          const hasPermission = adminData.role === 'super_admin' || adminData.permissions?.canManageProducts;
-                          return hasPermission ? (
-                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                              <IconButton size="small" color="info" onClick={() => handleOpenProductForm(product)} title="Edit Product">
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton size="small" color="error" onClick={() => handleProductDeleteClick(product)} title="Delete Product">
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          ) : (
-                            <Typography variant="caption" color="text.secondary">
-                              No actions
-                            </Typography>
-                          );
-                        })()}
+                      <TableCell align="right">
+                        {canManageProducts && (
+                          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                            <IconButton size="small" onClick={() => handleOpenProductForm(product)} sx={{ color: BRAND.muted, borderRadius: '6px', '&:hover': { color: BRAND.text, bgcolor: BRAND.innerCard } }}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton size="small" onClick={() => handleProductDeleteClick(product)} sx={{ color: BRAND.red, borderRadius: '6px', '&:hover': { bgcolor: BRAND.redLight } }}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1697,162 +2828,68 @@ const Vendors = () => {
         onClose={handleCloseProductForm}
         maxWidth="sm"
         fullWidth
-        sx={{
-          '& .MuiDialog-paper': {
-            margin: { xs: 2, sm: 3 },
-            maxHeight: { xs: 'calc(100% - 32px)', sm: 'calc(100% - 64px)' },
-          },
-        }}
+        PaperProps={{ sx: { borderRadius: '14px', p: 0.5 } }}
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.1rem', color: BRAND.text }}>
             {selectedProduct ? 'Edit Product' : 'Add New Product'}
           </Typography>
-          <IconButton onClick={handleCloseProductForm}>
-            <CloseIcon />
-          </IconButton>
+          <IconButton onClick={handleCloseProductForm} size="small"><CloseIcon /></IconButton>
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ p: 2 }}>
           <Grid container spacing={2}>
-            {/* Image Upload */}
             <Grid item xs={12} sx={{ textAlign: 'center' }}>
               {productImagePreview && (
-                <Avatar
-                  src={productImagePreview}
-                  variant="rounded"
-                  sx={{ width: 150, height: 150, mx: 'auto', mb: 2 }}
-                />
+                <Avatar src={productImagePreview} variant="rounded" sx={{ width: 90, height: 90, mx: 'auto', mb: 1, borderRadius: '10px' }} />
               )}
-              <Button
-                variant="outlined"
-                component="label"
-                startIcon={<UploadIcon />}
-                sx={{ width: '100%' }}
-              >
-                Upload Product Image
+              <Button variant="outlined" component="label" size="small" startIcon={<UploadIcon />} sx={{ borderRadius: '8px', textTransform: 'none', fontSize: '12px' }}>
+                {productImagePreview ? 'Replace Product Image' : 'Upload Product Image'}
                 <input type="file" hidden accept="image/*" onChange={handleProductImageChange} />
               </Button>
             </Grid>
-
-            {/* Product Name */}
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Product Name"
-                name="name"
-                value={productFormData.name}
-                onChange={handleProductInputChange}
-                required
-              />
+              <TextField fullWidth size="small" label="Product Name *" name="name" value={productFormData.name} onChange={handleProductInputChange} required InputProps={{ sx: { borderRadius: '8px' } }} />
             </Grid>
-
-            {/* Main Price */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Main Price"
-                name="main_price"
-                type="number"
-                value={productFormData.main_price}
-                onChange={handleProductInputChange}
-                required
-                InputProps={{
-                  startAdornment: <Typography sx={{ mr: 1 }}>₹</Typography>,
-                }}
-              />
+            <Grid item xs={6}>
+              <TextField fullWidth size="small" label="Main Price (₹) *" name="main_price" type="number" value={productFormData.main_price} onChange={handleProductInputChange} required InputProps={{ sx: { borderRadius: '8px' } }} />
             </Grid>
-
-            {/* Special Price */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Special Price (Optional)"
-                name="special_price"
-                type="number"
-                value={productFormData.special_price}
-                onChange={handleProductInputChange}
-                InputProps={{
-                  startAdornment: <Typography sx={{ mr: 1 }}>₹</Typography>,
-                }}
-                helperText="Leave empty if no special price"
-              />
+            <Grid item xs={6}>
+              <TextField fullWidth size="small" label="Special Price (₹)" name="special_price" type="number" value={productFormData.special_price} onChange={handleProductInputChange} InputProps={{ sx: { borderRadius: '8px' } }} />
             </Grid>
-
-            {/* Preparation Time */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Preparation Time (minutes)"
-                name="preparation_time_minute"
-                type="number"
-                value={productFormData.preparation_time_minute}
-                onChange={handleProductInputChange}
-                helperText="Time required to prepare this product"
-              />
+            <Grid item xs={6}>
+              <TextField fullWidth size="small" label="Prep Time (mins)" name="preparation_time_minute" type="number" value={productFormData.preparation_time_minute} onChange={handleProductInputChange} InputProps={{ sx: { borderRadius: '8px' } }} />
             </Grid>
-
-            {/* Packaging Charge */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Packaging Charge"
-                name="packaging_charge"
-                type="number"
-                value={productFormData.packaging_charge}
-                onChange={handleProductInputChange}
-                InputProps={{
-                  startAdornment: <Typography sx={{ mr: 1 }}>₹</Typography>,
-                }}
-              />
+            <Grid item xs={6}>
+              <TextField fullWidth size="small" label="Packaging Fee (₹)" name="packaging_charge" type="number" value={productFormData.packaging_charge} onChange={handleProductInputChange} InputProps={{ sx: { borderRadius: '8px' } }} />
             </Grid>
-
-            {/* Status */}
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                select
-                label="Status"
-                name="isActive"
-                value={productFormData.isActive.toString()}
-                onChange={(e) =>
-                  setProductFormData((prev) => ({ ...prev, isActive: e.target.value === 'true' }))
-                }
-              >
+              <TextField fullWidth size="small" select label="Status" name="isActive" value={productFormData.isActive.toString()} onChange={(e) => setProductFormData((prev) => ({ ...prev, isActive: e.target.value === 'true' }))} InputProps={{ sx: { borderRadius: '8px' } }}>
                 <MenuItem value="true">Active</MenuItem>
                 <MenuItem value="false">Inactive</MenuItem>
               </TextField>
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleCloseProductForm} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button variant="contained" onClick={handleProductSubmit} disabled={submitting} sx={{ backgroundColor: '#087F5B', textTransform: 'none', borderRadius: '10px', fontWeight: 700, '&:hover': { backgroundColor: '#075B43' } }}>
-            {submitting ? <CircularProgress size={22} color="inherit" /> : selectedProduct ? 'Update Product' : 'Create Product'}
+        <DialogActions sx={{ p: 1.5, justifyContent: 'space-between' }}>
+          <Button onClick={handleCloseProductForm} disabled={submitting} sx={{ textTransform: 'none', color: BRAND.muted }}>Cancel</Button>
+          <Button variant="contained" onClick={handleProductSubmit} disabled={submitting} sx={{ backgroundColor: BRAND.green, textTransform: 'none', borderRadius: '8px', fontWeight: 700, '&:hover': { backgroundColor: BRAND.darkGreen } }}>
+            {submitting ? <CircularProgress size={20} color="inherit" /> : selectedProduct ? 'Save Product' : 'Create Product'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Product Delete Confirmation Dialog */}
-      <Dialog open={productDeleteDialog} onClose={() => setProductDeleteDialog(false)}>
-        <DialogTitle>Delete Product?</DialogTitle>
+      <Dialog open={productDeleteDialog} onClose={() => setProductDeleteDialog(false)} PaperProps={{ sx: { borderRadius: '12px' } }}>
+        <DialogTitle sx={{ fontWeight: 800, fontSize: '1rem' }}>Delete Product?</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to delete <strong>{selectedProduct?.name}</strong>? This action cannot be undone.
+          <Typography sx={{ fontSize: '13px', color: BRAND.muted }}>
+            Are you sure you want to delete <strong>{selectedProduct?.name}</strong>?
           </Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setProductDeleteDialog(false)} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleProductDeleteConfirm}
-            disabled={submitting}
-          >
-            {submitting ? <CircularProgress size={24} color="inherit" /> : 'Delete'}
+        <DialogActions sx={{ p: 1.5 }}>
+          <Button onClick={() => setProductDeleteDialog(false)} disabled={submitting} sx={{ textTransform: 'none', color: BRAND.muted }}>Cancel</Button>
+          <Button variant="contained" onClick={handleProductDeleteConfirm} disabled={submitting} sx={{ bgcolor: BRAND.red, color: '#FFFFFF', fontWeight: 700, textTransform: 'none', borderRadius: '8px', '&:hover': { bgcolor: '#B91C1C' } }}>
+            {submitting ? <CircularProgress size={20} color="inherit" /> : 'Delete Product'}
           </Button>
         </DialogActions>
       </Dialog>

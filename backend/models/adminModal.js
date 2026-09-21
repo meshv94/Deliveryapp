@@ -129,6 +129,11 @@ adminSchema.virtual('statusText').get(function() {
   return 'Active';
 });
 
+// Virtual to map vendor_ids to assignedVendors
+adminSchema.virtual('assignedVendors').get(function() {
+  return this.vendor_ids;
+});
+
 // Ensure virtuals are included in JSON
 adminSchema.set('toJSON', { virtuals: true });
 adminSchema.set('toObject', { virtuals: true });

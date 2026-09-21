@@ -24,47 +24,51 @@ import {
   Avatar,
   MenuItem,
   Tooltip,
-  Select,
-  FormControl,
-  InputLabel,
-  Switch,
   Stack,
   Divider,
   Menu,
   ListItemIcon,
-  ListItemText,
-  InputAdornment,
-  Card,
-  CardContent,
+  Skeleton,
+  InputBase,
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Close as CloseIcon,
-  CloudUpload as UploadIcon,
-  Search as SearchIcon,
-  Inventory2 as ProductIcon,
-  Storefront as StoreIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  FilterList as FilterListIcon,
-  Clear as ClearIcon,
-  Refresh as RefreshIcon,
-  Visibility as ViewIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  MoreVert as MoreVertIcon,
-  LocalOffer as SaleIcon,
-  AccessTime as TimeIcon,
-  LocalShipping as DeliveryIcon,
-  Category as CategoryIcon,
+  AddRounded as AddIcon,
+  EditRounded as EditIcon,
+  DeleteOutlineRounded as DeleteIcon,
+  CloseRounded as CloseIcon,
+  CloudUploadRounded as UploadIcon,
+  SearchRounded as SearchIcon,
+  Inventory2Outlined as ProductIcon,
+  StorefrontRounded as StoreIcon,
+  ChevronLeftRounded as ChevronLeftIcon,
+  ChevronRightRounded as ChevronRightIcon,
+  FilterListRounded as FilterListIcon,
+  RefreshRounded as RefreshIcon,
+  VisibilityOutlined as ViewIcon,
+  LocalOfferOutlined as SaleIcon,
+  AccessTimeRounded as TimeIcon,
+  CategoryOutlined as CategoryIcon,
+  CheckCircleRounded as CheckCircleIcon,
+  CancelRounded as CancelIcon,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import vendorService from '../services/vendorService';
 import moduleService from '../services/moduleService';
-import { brandColors } from '../theme/tokens';
+import { useColorMode } from '../theme/ThemeContext';
+
+const formatCurrency = (val) => {
+  const num = Number(val) || 0;
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(num);
+};
 
 const Products = () => {
+  const { BRAND, isDark } = useColorMode();
+  const navigate = useNavigate();
+
   // Core Data State
   const [products, setProducts] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -79,8 +83,8 @@ const Products = () => {
   const [selectedVendorFilter, setSelectedVendorFilter] = useState('all');
   const [selectedModuleFilter, setSelectedModuleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 10;
 
   // Dialog & Drawer States
   const [openFormDialog, setOpenFormDialog] = useState(false);
@@ -152,77 +156,16 @@ const Products = () => {
         setModules(modulesRes.value?.data || []);
       }
     } catch (err) {
-      console.error('Error fetching marketplace products:', err);
-      setError(err.message || 'Failed to load products');
+      console.error('Error loading products data:', err);
+      setError(err.message || 'Failed to load products.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  // KPI Calculations
-  const totalProductsCount = products.length;
-  const activeProductsCount = products.filter((p) => p.isActive).length;
-  const inactiveProductsCount = products.filter((p) => !p.isActive).length;
-  const onSaleProductsCount = products.filter(
-    (p) => p.special_price && Number(p.special_price) < Number(p.main_price)
-  ).length;
-
-  // Filter Logic
-  const filteredProducts = useMemo(() => {
-    if (!Array.isArray(products)) return [];
-
-    return products.filter((p) => {
-      const q = search.trim().toLowerCase();
-      const matchesSearch =
-        !q ||
-        (p.name && p.name.toLowerCase().includes(q)) ||
-        (p.description && p.description.toLowerCase().includes(q)) ||
-        (p.vendor_id?.name && p.vendor_id.name.toLowerCase().includes(q));
-
-      const matchesVendor =
-        selectedVendorFilter === 'all' ||
-        (p.vendor_id?._id || p.vendor_id || p.vendor?._id || p.vendor) === selectedVendorFilter;
-
-      const matchesModule =
-        selectedModuleFilter === 'all' ||
-        (p.module_id?._id || p.module_id || p.module?._id || p.module) === selectedModuleFilter;
-
-      let matchesStatus = true;
-      if (statusFilter === 'active') {
-        matchesStatus = Boolean(p.isActive);
-      } else if (statusFilter === 'inactive') {
-        matchesStatus = !p.isActive;
-      }
-
-      return matchesSearch && matchesVendor && matchesModule && matchesStatus;
-    });
-  }, [products, search, selectedVendorFilter, selectedModuleFilter, statusFilter]);
-
-  const paginatedProducts = useMemo(() => {
-    const start = page * rowsPerPage;
-    return filteredProducts.slice(start, start + rowsPerPage);
-  }, [filteredProducts, page, rowsPerPage]);
-
-  const totalPages = Math.ceil(filteredProducts.length / rowsPerPage) || 1;
-
-  useEffect(() => {
-    setPage(0);
-  }, [search, selectedVendorFilter, selectedModuleFilter, statusFilter, rowsPerPage]);
-
-  // Action Menu Handlers
-  const handleOpenActionMenu = (event, product) => {
-    setActionMenuAnchor(event.currentTarget);
-    setActiveMenuProduct(product);
-  };
-
-  const handleCloseActionMenu = () => {
-    setActionMenuAnchor(null);
-    setActiveMenuProduct(null);
-  };
-
-  // Form Dialog
-  const handleOpenForm = (product = null) => {
+  // Open Form for Add or Edit
+  const handleOpenFormDialog = (product = null) => {
     if (product) {
       setSelectedProduct(product);
       setProductFormData({
@@ -255,1666 +198,1280 @@ const Products = () => {
       setImagePreview(null);
     }
     setOpenFormDialog(true);
-    handleCloseActionMenu();
   };
 
-  const handleCloseForm = () => {
+  const handleCloseFormDialog = () => {
     setOpenFormDialog(false);
     setSelectedProduct(null);
     setImagePreview(null);
   };
 
+  const handleOpenViewDrawer = (product) => {
+    setSelectedProduct(product);
+    setViewDrawerOpen(true);
+  };
+
+  const handleCloseViewDrawer = () => {
+    setViewDrawerOpen(false);
+    setSelectedProduct(null);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setProductFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setProductFormData((prev) => ({ ...prev, image: file }));
+      setProductFormData((prev) => ({
+        ...prev,
+        image: file,
+      }));
       setImagePreview(URL.createObjectURL(file));
     }
   };
 
-  const handleSaveProduct = async (e) => {
-    if (e) e.preventDefault();
-    if (!formData.name.trim() || !formData.main_price) {
-      setError('Product name and main price are required');
-      return;
-    }
-    if (!formData.vendor_id) {
-      setError('Please assign this product to a vendor store');
-      return;
-    }
-
+  const handleSubmit = async () => {
     try {
       setSubmitting(true);
       setError(null);
 
-      const form = new FormData();
-      form.append('name', formData.name.trim());
-      form.append('description', formData.description.trim());
-      form.append('main_price', formData.main_price);
-      if (formData.special_price) {
-        form.append('special_price', formData.special_price);
+      if (!formData.name.trim()) {
+        throw new Error('Product name is required.');
       }
-      form.append('preparation_time_minute', formData.preparation_time_minute || 0);
-      form.append('packaging_charge', formData.packaging_charge || 0);
-      form.append('vendor_id', formData.vendor_id);
-      if (formData.module_id) {
-        form.append('module_id', formData.module_id);
+      if (!formData.main_price || Number(formData.main_price) <= 0) {
+        throw new Error('Please specify a valid main price.');
       }
-      form.append('isActive', formData.isActive);
+      if (!formData.vendor_id) {
+        throw new Error('Please select an associated store/vendor.');
+      }
 
-      if (formData.image instanceof File) {
-        form.append('image', formData.image);
+      const data = new FormData();
+      data.append('name', formData.name.trim());
+      data.append('description', formData.description || '');
+      data.append('main_price', formData.main_price);
+      data.append('special_price', formData.special_price || '');
+      data.append('preparation_time_minute', formData.preparation_time_minute || 0);
+      data.append('packaging_charge', formData.packaging_charge || 0);
+      data.append('vendor_id', formData.vendor_id);
+      data.append('module_id', formData.module_id || '');
+      data.append('isActive', formData.isActive);
+
+      if (formData.image) {
+        data.append('image', formData.image);
       }
 
       if (selectedProduct) {
-        await vendorService.updateProduct(selectedProduct._id, form);
-        setSuccess(`Product "${formData.name.trim()}" updated successfully!`);
+        await vendorService.updateProduct(selectedProduct._id, data);
+        setSuccess('Product updated successfully!');
       } else {
-        await vendorService.createProduct(form);
-        setSuccess(`Product "${formData.name.trim()}" created successfully!`);
+        await vendorService.createProduct(data);
+        setSuccess('Product created successfully!');
       }
 
-      handleCloseForm();
-      await fetchInitialData(true);
+      handleCloseFormDialog();
+      fetchInitialData(true);
     } catch (err) {
       console.error('Error saving product:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to save product');
+      setError(err.message || 'Failed to save product.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Toggle Active Status
-  const handleToggleActiveProduct = async (product) => {
-    try {
-      const form = new FormData();
-      form.append('name', product.name);
-      form.append('main_price', product.main_price);
-      form.append('vendor_id', product.vendor_id?._id || product.vendor_id);
-      form.append('isActive', !product.isActive);
-
-      await vendorService.updateProduct(product._id, form);
-      setSuccess(`Product "${product.name}" ${!product.isActive ? 'activated' : 'deactivated'} successfully!`);
-      await fetchInitialData(true);
-    } catch (err) {
-      console.error('Error toggling product status:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to update product status');
-    }
-  };
-
-  // Delete Product
   const handleDeleteClick = (product) => {
     setSelectedProduct(product);
     setDeleteDialogOpen(true);
-    handleCloseActionMenu();
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedProduct) return;
     try {
       setSubmitting(true);
-      setError(null);
       await vendorService.deleteProduct(selectedProduct._id);
-      setSuccess(`Product "${selectedProduct.name}" deleted successfully!`);
+      setSuccess('Product deleted successfully!');
       setDeleteDialogOpen(false);
-      if (viewDrawerOpen && selectedProduct._id === selectedProduct?._id) {
-        setViewDrawerOpen(false);
-      }
       setSelectedProduct(null);
-      await fetchInitialData(true);
+      fetchInitialData(true);
     } catch (err) {
       console.error('Error deleting product:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to delete product');
+      setError(err.message || 'Failed to delete product.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // View Product Drawer
-  const handleViewProduct = (product) => {
-    setSelectedProduct(product);
-    setViewDrawerOpen(true);
-    handleCloseActionMenu();
-  };
+  // Filtered Products
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const q = search.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        p.name?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q) ||
+        (p.vendor_id?.name || p.vendor?.name)?.toLowerCase().includes(q);
 
-  const handleClearFilters = () => {
-    setSearch('');
-    setSelectedVendorFilter('all');
-    setSelectedModuleFilter('all');
-    setStatusFilter('all');
-    setPage(0);
-  };
+      const vendorId = p.vendor_id?._id || p.vendor_id || p.vendor?._id || p.vendor;
+      const matchesVendor = selectedVendorFilter === 'all' || vendorId === selectedVendorFilter;
 
-  const hasActiveFilters =
-    search.trim() !== '' ||
-    selectedVendorFilter !== 'all' ||
-    selectedModuleFilter !== 'all' ||
-    statusFilter !== 'all';
+      const moduleId = p.module_id?._id || p.module_id || p.module?._id || p.module;
+      const matchesModule = selectedModuleFilter === 'all' || moduleId === selectedModuleFilter;
 
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '65vh',
-          gap: 2,
-        }}
-      >
-        <CircularProgress size={48} thickness={4} sx={{ color: brandColors.primaryGreen }} />
-        <Typography sx={{ color: brandColors.secondaryText, fontWeight: 600, fontSize: '0.95rem' }}>
-          Loading marketplace catalog...
-        </Typography>
-      </Box>
-    );
-  }
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && p.isActive) ||
+        (statusFilter === 'inactive' && !p.isActive);
+
+      return matchesSearch && matchesVendor && matchesModule && matchesStatus;
+    });
+  }, [products, search, selectedVendorFilter, selectedModuleFilter, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / rowsPerPage));
+  const paginatedProducts = filteredProducts.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  const activeCount = products.filter((p) => p.isActive).length;
+  const inactiveCount = products.filter((p) => !p.isActive).length;
 
   return (
-    <Box sx={{ width: '100%', maxWidth: '100%', pb: 6 }}>
-      {/* Alert Notifications */}
+    <Box sx={{ width: '100%', maxWidth: '100%', pb: 4 }}>
+      {/* Alerts */}
       {success && (
-        <Alert
-          severity="success"
-          onClose={() => setSuccess(null)}
-          sx={{
-            mb: 3,
-            borderRadius: '14px',
-            backgroundColor: brandColors.successLight,
-            color: brandColors.success,
-            fontWeight: 600,
-            border: `1px solid ${brandColors.borderGreen}`,
-          }}
-        >
+        <Alert severity="success" sx={{ mb: 2.5, borderRadius: '12px' }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
       )}
-
       {error && (
-        <Alert
-          severity="error"
-          onClose={() => setError(null)}
-          sx={{
-            mb: 3,
-            borderRadius: '14px',
-            backgroundColor: brandColors.errorLight,
-            color: brandColors.error,
-            fontWeight: 600,
-            border: `1px solid #FECACA`,
-          }}
-        >
+        <Alert severity="error" sx={{ mb: 2.5, borderRadius: '12px' }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      {/* Page Header */}
+      {/* ======================================================== */}
+      {/* 1. PAGE HEADER */}
+      {/* ======================================================== */}
       <Box
         sx={{
           display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
           alignItems: { xs: 'flex-start', sm: 'center' },
           justifyContent: 'space-between',
+          flexDirection: { xs: 'column', sm: 'row' },
           gap: 2,
-          mb: 3.5,
+          mb: 3,
         }}
       >
         <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: 800,
-                fontSize: { xs: '1.6rem', md: '2.1rem' },
-                color: brandColors.primaryText,
-                letterSpacing: '-0.02em',
-              }}
-            >
-              Products
-            </Typography>
-            <Chip
-              icon={<ProductIcon sx={{ fontSize: '16px !important', color: `${brandColors.primaryGreen} !important` }} />}
-              label="Store Catalog"
-              size="small"
-              sx={{
-                backgroundColor: brandColors.lightGreen,
-                color: brandColors.primaryGreen,
-                fontWeight: 700,
-                fontSize: '12px',
-                borderRadius: '8px',
-                border: `1px solid ${brandColors.borderGreen}`,
-              }}
-            />
-          </Box>
           <Typography
-            variant="body2"
             sx={{
-              color: brandColors.secondaryText,
-              fontWeight: 500,
-              mt: 0.5,
-              fontSize: '0.92rem',
+              fontWeight: 800,
+              fontSize: { xs: '1.25rem', sm: '1.45rem', md: '1.6rem' },
+              color: BRAND.text,
+              letterSpacing: '-0.025em',
+              lineHeight: 1.2,
             }}
           >
-            Manage inventory items, pricing, preparation time, and packaging fees across all merchant stores.
+            Products Catalog
+          </Typography>
+          <Typography
+            sx={{
+              color: BRAND.muted,
+              fontSize: { xs: '0.8rem', sm: '0.85rem' },
+              fontWeight: 500,
+              mt: 0.2,
+            }}
+          >
+            Manage marketplace catalog items, pricing, inventory and categories
           </Typography>
         </Box>
-
-        {/* Header Action Buttons */}
-        <Stack direction="row" spacing={1.5} alignItems="center">
+        {canManageProducts && (
           <Button
-            variant="outlined"
-            startIcon={
-              refreshing ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                <RefreshIcon sx={{ fontSize: 18 }} />
-              )
-            }
-            onClick={() => fetchInitialData(true)}
-            disabled={refreshing}
+            variant="contained"
+            startIcon={<AddIcon sx={{ fontSize: '18px !important' }} />}
+            onClick={() => handleOpenFormDialog()}
             sx={{
-              borderRadius: '12px',
-              textTransform: 'none',
+              backgroundColor: BRAND.green,
+              color: '#FFFFFF',
+              borderRadius: '10px',
+              fontSize: '13px',
               fontWeight: 700,
-              fontSize: '0.85rem',
-              borderColor: brandColors.border,
-              color: brandColors.primaryText,
-              backgroundColor: brandColors.white,
-              px: 2,
+              px: 2.2,
               py: 0.9,
+              minHeight: 40,
+              boxShadow: '0 4px 12px rgba(8, 127, 91, 0.24)',
+              textTransform: 'none',
+              whiteSpace: 'nowrap',
               '&:hover': {
-                borderColor: brandColors.primaryGreen,
-                backgroundColor: '#F8FAFC',
+                backgroundColor: BRAND.darkGreen,
+                boxShadow: '0 6px 16px rgba(8, 127, 91, 0.32)',
               },
             }}
           >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+            + Add Product
           </Button>
-
-          {canManageProducts && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon sx={{ fontSize: '18px !important' }} />}
-              onClick={() => handleOpenForm()}
-              sx={{
-                backgroundColor: brandColors.primaryGreen,
-                color: '#FFFFFF',
-                borderRadius: '12px',
-                fontSize: '0.875rem',
-                fontWeight: 700,
-                px: 2.5,
-                py: 1.1,
-                boxShadow: '0 4px 14px rgba(8, 127, 91, 0.28)',
-                textTransform: 'none',
-                '&:hover': {
-                  backgroundColor: brandColors.darkGreen,
-                  boxShadow: '0 6px 18px rgba(8, 127, 91, 0.38)',
-                },
-              }}
-            >
-              Add Product
-            </Button>
-          )}
-        </Stack>
+        )}
       </Box>
 
-      {/* KPI Bento Cards */}
-      <Grid container spacing={2.5} sx={{ mb: 3.5 }}>
-        {/* Total Products */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
+      {/* ======================================================== */}
+      {/* 2. SUMMARY FILTER TABS */}
+      {/* ======================================================== */}
+      <Box sx={{ display: 'flex', gap: 1.2, flexWrap: 'wrap', mb: 2.5 }}>
+        {[
+          { label: 'All Products', value: products.length, filter: 'all', bg: BRAND.lightGreen, color: BRAND.green, active: statusFilter === 'all' },
+          { label: 'Active', value: activeCount, filter: 'active', bg: isDark ? 'rgba(52,211,153,0.15)' : '#DCFCE7', color: BRAND.success || '#16A34A', active: statusFilter === 'active' },
+          { label: 'Inactive', value: inactiveCount, filter: 'inactive', bg: BRAND.redLight, color: BRAND.red, active: statusFilter === 'inactive' },
+        ].map((tab) => (
+          <Box
+            key={tab.filter}
+            onClick={() => {
+              setStatusFilter(tab.filter);
+              setPage(1);
+            }}
             sx={{
-              borderRadius: '20px',
-              backgroundColor: brandColors.white,
-              border: `1px solid ${brandColors.border}`,
-              boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 1.8,
+              py: 0.7,
+              borderRadius: '50px',
+              backgroundColor: tab.active ? tab.bg : BRAND.white,
+              color: tab.active ? tab.color : BRAND.muted,
+              border: `1px solid ${tab.active ? tab.color + '40' : BRAND.border}`,
+              fontWeight: 700,
+              fontSize: '12px',
+              cursor: 'pointer',
+              userSelect: 'none',
+              transition: 'all 0.15s ease',
+              boxShadow: tab.active ? '0 2px 6px rgba(0,0,0,0.03)' : 'none',
+              '&:hover': {
+                backgroundColor: tab.bg,
+                color: tab.color,
+              },
             }}
           >
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: brandColors.secondaryText, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Total Products
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 800, color: brandColors.primaryText, fontSize: '1.85rem' }}>
-                    {totalProductsCount}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: brandColors.primaryGreen, fontWeight: 700, mt: 0.5 }}>
-                    Across All Vendors
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{
-                    bgcolor: brandColors.lightGreen,
-                    color: brandColors.primaryGreen,
-                    width: 52,
-                    height: 52,
-                    borderRadius: '16px',
-                    border: `1px solid ${brandColors.borderGreen}`,
-                  }}
-                >
-                  <ProductIcon sx={{ fontSize: 28 }} />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+            <Box
+              sx={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                backgroundColor: tab.active ? tab.color : (isDark ? '#475569' : '#CBD5E1'),
+              }}
+            />
+            {tab.label}
+            <Box
+              sx={{
+                px: 0.8,
+                py: 0.1,
+                borderRadius: '6px',
+                backgroundColor: tab.active ? `${tab.color}18` : BRAND.innerCard,
+                color: tab.active ? tab.color : BRAND.muted,
+                fontSize: '11px',
+                fontWeight: 800,
+              }}
+            >
+              {tab.value}
+            </Box>
+          </Box>
+        ))}
+      </Box>
 
-        {/* Active Products */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              borderRadius: '20px',
-              backgroundColor: brandColors.white,
-              border: `1px solid ${brandColors.border}`,
-              boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: brandColors.secondaryText, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Active in Store
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 800, color: '#16A34A', fontSize: '1.85rem' }}>
-                    {activeProductsCount}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 700, mt: 0.5 }}>
-                    Available to Shoppers
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{
-                    bgcolor: '#DCFCE7',
-                    color: '#16A34A',
-                    width: 52,
-                    height: 52,
-                    borderRadius: '16px',
-                    border: '1px solid #BBF7D0',
-                  }}
-                >
-                  <CheckCircleIcon sx={{ fontSize: 28 }} />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Inactive Products */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              borderRadius: '20px',
-              backgroundColor: brandColors.white,
-              border: `1px solid ${brandColors.border}`,
-              boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: brandColors.secondaryText, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Inactive / Draft
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 800, color: brandColors.secondaryText, fontSize: '1.85rem' }}>
-                    {inactiveProductsCount}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: brandColors.secondaryText, fontWeight: 700, mt: 0.5 }}>
-                    Hidden from Storefront
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{
-                    bgcolor: '#F1F5F9',
-                    color: brandColors.secondaryText,
-                    width: 52,
-                    height: 52,
-                    borderRadius: '16px',
-                    border: `1px solid ${brandColors.border}`,
-                  }}
-                >
-                  <CancelIcon sx={{ fontSize: 28 }} />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* On Sale / Special Price */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              borderRadius: '20px',
-              backgroundColor: brandColors.white,
-              border: `1px solid ${brandColors.border}`,
-              boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: brandColors.secondaryText, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Discounted Deals
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 800, color: brandColors.orange, fontSize: '1.85rem' }}>
-                    {onSaleProductsCount}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: brandColors.orange, fontWeight: 700, mt: 0.5 }}>
-                    Active Sale Prices
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{
-                    bgcolor: brandColors.lightOrange,
-                    color: brandColors.orange,
-                    width: 52,
-                    height: 52,
-                    borderRadius: '16px',
-                    border: `1px solid ${brandColors.borderOrange}`,
-                  }}
-                >
-                  <SaleIcon sx={{ fontSize: 28 }} />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Search & Filter Bar */}
+      {/* ======================================================== */}
+      {/* 3. MAIN TABLE & TOOLBAR CARD */}
+      {/* ======================================================== */}
       <Paper
         elevation={0}
         sx={{
-          p: 2.5,
-          mb: 3.5,
-          borderRadius: '20px',
-          backgroundColor: brandColors.white,
-          border: `1px solid ${brandColors.border}`,
-          boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
+          borderRadius: '16px',
+          backgroundColor: BRAND.white,
+          border: `1px solid ${BRAND.border}`,
+          boxShadow: '0 2px 10px rgba(20, 33, 61, 0.02)',
+          p: { xs: 2, sm: 2.5 },
+          overflow: 'hidden',
         }}
       >
-        <Grid container spacing={2} alignItems="center">
-          {/* Search Input */}
-          <Grid item xs={12} md={3.5}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Search products by name or store..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: brandColors.secondaryText, fontSize: 20 }} />
-                  </InputAdornment>
-                ),
-                endAdornment: search ? (
-                  <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearch('')}>
-                      <CloseIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </InputAdornment>
-                ) : null,
-              }}
+        {/* Toolbar */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            mb: 2.5,
+          }}
+        >
+          <Box>
+            <Typography sx={{ fontWeight: 800, fontSize: '14px', color: BRAND.text }}>
+              Products List
+            </Typography>
+            <Typography sx={{ fontSize: '11.5px', color: BRAND.muted, mt: 0.2 }}>
+              {filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'} available
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexWrap: 'wrap' }}>
+            {/* Search Input */}
+            <Box
               sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '12px',
-                  backgroundColor: '#F8FAFC',
-                  fontSize: '0.88rem',
-                  '& fieldset': {
-                    borderColor: brandColors.border,
-                  },
-                  '&:hover fieldset': {
-                    borderColor: brandColors.primaryGreen,
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: brandColors.primaryGreen,
-                  },
-                },
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: BRAND.innerCard,
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: '10px',
+                px: 1.5,
+                py: 0.55,
+                width: { xs: '100%', sm: 220 },
+                transition: 'border-color 0.15s ease',
+                '&:focus-within': { borderColor: BRAND.green },
               }}
-            />
-          </Grid>
+            >
+              <SearchIcon sx={{ color: BRAND.muted, fontSize: 17, mr: 1 }} />
+              <InputBase
+                placeholder="Search products..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                sx={{
+                  fontSize: '12.5px',
+                  fontWeight: 500,
+                  color: BRAND.text,
+                  width: '100%',
+                  '& input::placeholder': { color: BRAND.muted, opacity: 1 },
+                }}
+              />
+            </Box>
 
-          {/* Vendor Filter */}
-          <Grid item xs={12} sm={4} md={3}>
-            <FormControl fullWidth size="small">
-              <InputLabel sx={{ fontSize: '0.88rem', color: brandColors.secondaryText }}>Store / Vendor</InputLabel>
-              <Select
+            {/* Vendor Filter */}
+            {vendors.length > 0 && (
+              <Box
+                component="select"
                 value={selectedVendorFilter}
-                label="Store / Vendor"
-                onChange={(e) => setSelectedVendorFilter(e.target.value)}
+                onChange={(e) => {
+                  setSelectedVendorFilter(e.target.value);
+                  setPage(1);
+                }}
                 sx={{
-                  borderRadius: '12px',
-                  backgroundColor: '#F8FAFC',
-                  fontSize: '0.88rem',
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: brandColors.border,
-                  },
+                  border: `1px solid ${BRAND.border}`,
+                  borderRadius: '10px',
+                  px: 1.2,
+                  py: 0.65,
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  color: BRAND.text,
+                  backgroundColor: BRAND.innerCard,
+                  cursor: 'pointer',
+                  outline: 'none',
+                  minWidth: 130,
+                  '&:hover': { borderColor: BRAND.green },
                 }}
               >
-                <MenuItem value="all">All Store Vendors</MenuItem>
+                <option value="all" style={{ background: BRAND.white, color: BRAND.text }}>All Stores</option>
                 {vendors.map((v) => (
-                  <MenuItem key={v._id} value={v._id}>
+                  <option key={v._id} value={v._id} style={{ background: BRAND.white, color: BRAND.text }}>
                     {v.name}
-                  </MenuItem>
+                  </option>
                 ))}
-              </Select>
-            </FormControl>
-          </Grid>
+              </Box>
+            )}
 
-          {/* Category Filter */}
-          <Grid item xs={12} sm={4} md={3}>
-            <FormControl fullWidth size="small">
-              <InputLabel sx={{ fontSize: '0.88rem', color: brandColors.secondaryText }}>Category</InputLabel>
-              <Select
+            {/* Category Filter */}
+            {modules.length > 0 && (
+              <Box
+                component="select"
                 value={selectedModuleFilter}
-                label="Category"
-                onChange={(e) => setSelectedModuleFilter(e.target.value)}
+                onChange={(e) => {
+                  setSelectedModuleFilter(e.target.value);
+                  setPage(1);
+                }}
                 sx={{
-                  borderRadius: '12px',
-                  backgroundColor: '#F8FAFC',
-                  fontSize: '0.88rem',
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: brandColors.border,
-                  },
+                  border: `1px solid ${BRAND.border}`,
+                  borderRadius: '10px',
+                  px: 1.2,
+                  py: 0.65,
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  color: BRAND.text,
+                  backgroundColor: BRAND.innerCard,
+                  cursor: 'pointer',
+                  outline: 'none',
+                  minWidth: 130,
+                  '&:hover': { borderColor: BRAND.green },
                 }}
               >
-                <MenuItem value="all">All Categories</MenuItem>
+                <option value="all" style={{ background: BRAND.white, color: BRAND.text }}>All Categories</option>
                 {modules.map((m) => (
-                  <MenuItem key={m._id} value={m._id}>
+                  <option key={m._id} value={m._id} style={{ background: BRAND.white, color: BRAND.text }}>
                     {m.name}
-                  </MenuItem>
+                  </option>
                 ))}
-              </Select>
-            </FormControl>
-          </Grid>
+              </Box>
+            )}
 
-          {/* Status Filter & Clear */}
-          <Grid item xs={12} sm={4} md={2.5}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <FormControl fullWidth size="small">
-                <InputLabel sx={{ fontSize: '0.88rem', color: brandColors.secondaryText }}>Status</InputLabel>
-                <Select
-                  value={statusFilter}
-                  label="Status"
-                  onChange={(e) => setStatusFilter(e.target.value)}
+            {/* Refresh Button */}
+            <Tooltip title="Refresh catalog">
+              <IconButton
+                size="small"
+                onClick={() => fetchInitialData(true)}
+                sx={{
+                  backgroundColor: BRAND.white,
+                  border: `1px solid ${BRAND.border}`,
+                  borderRadius: '8px',
+                  width: 34,
+                  height: 34,
+                  '&:hover': { backgroundColor: BRAND.innerCard, borderColor: BRAND.green },
+                }}
+              >
+                <RefreshIcon
                   sx={{
-                    borderRadius: '12px',
-                    backgroundColor: '#F8FAFC',
-                    fontSize: '0.88rem',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: brandColors.border,
+                    fontSize: 17,
+                    color: BRAND.muted,
+                    animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                    '@keyframes spin': { '100%': { transform: 'rotate(360deg)' } },
+                  }}
+                />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+
+        {/* ======================================================== */}
+        {/* DESKTOP DATA TABLE */}
+        {/* ======================================================== */}
+        <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+          <TableContainer>
+            <Table size="small" sx={{ minWidth: 920 }}>
+              <TableHead>
+                <TableRow
+                  sx={{
+                    '& th': {
+                      borderBottom: `1.5px solid ${BRAND.border}`,
+                      color: BRAND.muted,
+                      fontWeight: 700,
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      py: 1.3,
+                      backgroundColor: BRAND.innerCard,
+                      whiteSpace: 'nowrap',
                     },
                   }}
                 >
-                  <MenuItem value="all">All Status</MenuItem>
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="inactive">Inactive</MenuItem>
-                </Select>
-              </FormControl>
-
-              {hasActiveFilters && (
-                <Tooltip title="Reset filters">
-                  <IconButton
-                    onClick={handleClearFilters}
-                    size="small"
-                    sx={{
-                      backgroundColor: brandColors.lightOrange,
-                      color: brandColors.orange,
-                      borderRadius: '10px',
-                      p: 1,
-                      '&:hover': {
-                        backgroundColor: brandColors.borderOrange,
-                      },
-                    }}
-                  >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-            </Stack>
-          </Grid>
-        </Grid>
-
-        {/* Filter Summary & Rows Per Page */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            mt: 2,
-            pt: 2,
-            borderTop: `1px solid ${brandColors.divider}`,
-          }}
-        >
-          <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, fontWeight: 600 }}>
-            Showing <strong>{filteredProducts.length}</strong> of <strong>{products.length}</strong> products
-            {hasActiveFilters && ' (filtered)'}
-          </Typography>
-
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, fontWeight: 500 }}>
-              Rows per page:
-            </Typography>
-            <Select
-              size="small"
-              value={rowsPerPage}
-              onChange={(e) => setRowsPerPage(Number(e.target.value))}
-              sx={{
-                height: 32,
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                borderRadius: '8px',
-                '& .MuiSelect-select': { py: 0.5, px: 1.5 },
-              }}
-            >
-              <MenuItem value={10}>10</MenuItem>
-              <MenuItem value={25}>25</MenuItem>
-              <MenuItem value={50}>50</MenuItem>
-            </Select>
-          </Stack>
-        </Box>
-      </Paper>
-
-      {/* Main Products Table Paper */}
-      <Paper
-        elevation={0}
-        sx={{
-          borderRadius: '24px',
-          border: `1px solid ${brandColors.border}`,
-          boxShadow: '0 4px 20px rgba(20, 33, 61, 0.04)',
-          backgroundColor: brandColors.white,
-          overflow: 'hidden',
-          width: '100%',
-        }}
-      >
-        <TableContainer>
-          <Table sx={{ minWidth: 920 }}>
-            <TableHead>
-              <TableRow
-                sx={{
-                  backgroundColor: '#F8FAFC',
-                  '& th': {
-                    borderBottom: `1px solid ${brandColors.border}`,
-                    color: brandColors.secondaryText,
-                    fontWeight: 700,
-                    fontSize: '0.8rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    py: 2,
-                    px: 2.5,
-                  },
-                }}
-              >
-                <TableCell>Product Item</TableCell>
-                <TableCell>Store / Vendor</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell align="right">Pricing</TableCell>
-                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Prep / Packaging</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Active Toggle</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {paginatedProducts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
-                      <Avatar
-                        sx={{
-                          width: 56,
-                          height: 56,
-                          bgcolor: brandColors.adminBg,
-                          color: brandColors.secondaryText,
-                        }}
-                      >
-                        <ProductIcon sx={{ fontSize: 32 }} />
-                      </Avatar>
-                      <Typography sx={{ fontWeight: 700, color: brandColors.primaryText, fontSize: '1rem' }}>
-                        No products match your filters
-                      </Typography>
-                      <Typography sx={{ color: brandColors.secondaryText, fontSize: '0.85rem' }}>
-                        Add your first product or try adjusting search criteria.
-                      </Typography>
-                    </Box>
-                  </TableCell>
+                  <TableCell>Product</TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell>Store / Vendor</TableCell>
+                  <TableCell>Price</TableCell>
+                  <TableCell>Special Price</TableCell>
+                  <TableCell>Prep Time</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ) : (
-                paginatedProducts.map((product) => {
-                  const isActive = Boolean(product.isActive);
-                  const hasSpecialPrice =
-                    product.special_price && Number(product.special_price) < Number(product.main_price);
-
-                  return (
-                    <TableRow
-                      key={product._id}
-                      hover
-                      sx={{
-                        transition: 'all 0.15s ease',
-                        '&:hover': {
-                          backgroundColor: '#F8FAFC',
-                        },
-                        '& td': {
-                          borderBottom: `1px solid ${brandColors.divider}`,
-                          py: 2,
-                          px: 2.5,
-                        },
-                      }}
-                    >
-                      {/* Product Avatar + Name */}
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75 }}>
-                          <Avatar
-                            src={product.image || ''}
-                            alt={product.name}
-                            variant="rounded"
-                            sx={{
-                              width: 48,
-                              height: 48,
-                              borderRadius: '14px',
-                              bgcolor: '#F8FAFC',
-                              border: `1px solid ${brandColors.border}`,
-                              objectFit: 'cover',
-                            }}
-                          >
-                            <ProductIcon sx={{ color: brandColors.secondaryText, fontSize: 22 }} />
-                          </Avatar>
-                          <Box>
-                            <Typography
-                              onClick={() => handleViewProduct(product)}
-                              sx={{
-                                fontWeight: 700,
-                                fontSize: '0.92rem',
-                                color: brandColors.primaryText,
-                                cursor: 'pointer',
-                                '&:hover': {
-                                  color: brandColors.primaryGreen,
-                                  textDecoration: 'underline',
-                                },
-                              }}
-                            >
-                              {product.name}
-                            </Typography>
-                            {product.description ? (
-                              <Typography
-                                sx={{
-                                  fontSize: '0.75rem',
-                                  color: brandColors.secondaryText,
-                                  maxWidth: 220,
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                }}
-                              >
-                                {product.description}
-                              </Typography>
-                            ) : (
-                              <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                                ID: {product._id?.slice(0, 8)}...
-                              </Typography>
-                            )}
-                          </Box>
-                        </Box>
-                      </TableCell>
-
-                      {/* Store / Vendor */}
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <StoreIcon sx={{ color: brandColors.secondaryText, fontSize: 16 }} />
-                          <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: brandColors.primaryText }}>
-                            {product.vendor_id?.name || product.vendor?.name || 'Unassigned'}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-
-                      {/* Category */}
-                      <TableCell>
-                        {product.module_id?.name || product.module?.name ? (
-                          <Chip
-                            label={product.module_id?.name || product.module?.name}
-                            size="small"
-                            sx={{
-                              height: 22,
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              backgroundColor: brandColors.lightGreen,
-                              color: brandColors.primaryGreen,
-                              borderRadius: '6px',
-                              border: `1px solid ${brandColors.borderGreen}`,
-                            }}
-                          />
-                        ) : (
-                          <Typography sx={{ color: '#94A3B8', fontSize: '12px' }}>—</Typography>
-                        )}
-                      </TableCell>
-
-                      {/* Pricing */}
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.8 }}>
-                            <Typography
-                              sx={{
-                                fontSize: '0.95rem',
-                                fontWeight: 800,
-                                color: hasSpecialPrice ? brandColors.orange : brandColors.primaryText,
-                              }}
-                            >
-                              ₹{Number(hasSpecialPrice ? product.special_price : product.main_price).toLocaleString('en-IN')}
-                            </Typography>
-                            {hasSpecialPrice && (
-                              <Typography sx={{ fontSize: '0.78rem', color: '#94A3B8', textDecoration: 'line-through' }}>
-                                ₹{Number(product.main_price).toLocaleString('en-IN')}
-                              </Typography>
-                            )}
-                          </Box>
-                          {hasSpecialPrice && (
-                            <Chip
-                              label="SALE"
-                              size="small"
-                              sx={{
-                                height: 16,
-                                fontSize: '9px',
-                                fontWeight: 800,
-                                backgroundColor: brandColors.lightOrange,
-                                color: brandColors.orange,
-                                mt: 0.2,
-                              }}
-                            />
-                          )}
-                        </Box>
-                      </TableCell>
-
-                      {/* Prep / Packaging */}
-                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                        <Typography sx={{ fontSize: '0.82rem', color: brandColors.primaryText, fontWeight: 600 }}>
-                          {product.preparation_time_minute ? `${product.preparation_time_minute} mins` : 'Immediate'}
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.75rem', color: brandColors.secondaryText }}>
-                          Pack fee: ₹{product.packaging_charge || 0}
-                        </Typography>
-                      </TableCell>
-
-                      {/* Status */}
-                      <TableCell>
-                        <Box
-                          sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 0.6,
-                            px: 1.2,
-                            py: 0.35,
-                            borderRadius: '50px',
-                            backgroundColor: isActive ? '#DCFCE7' : '#F1F5F9',
-                            color: isActive ? '#16A34A' : '#64748B',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: '50%',
-                              backgroundColor: isActive ? '#22C55E' : '#94A3B8',
-                            }}
-                          />
-                          {isActive ? 'Active' : 'Inactive'}
-                        </Box>
-                      </TableCell>
-
-                      {/* Active Toggle Switch */}
-                      <TableCell>
-                        <Switch
-                          checked={isActive}
-                          onChange={() => handleToggleActiveProduct(product)}
-                          sx={{
-                            '& .MuiSwitch-switchBase.Mui-checked': {
-                              color: brandColors.primaryGreen,
-                            },
-                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                              backgroundColor: brandColors.primaryGreen,
-                            },
-                          }}
-                        />
-                      </TableCell>
-
-                      {/* Actions */}
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.75 }}>
-                          {/* Quick View */}
-                          <Tooltip title="View Overview">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleViewProduct(product)}
-                              sx={{
-                                color: brandColors.blueAccent,
-                                backgroundColor: brandColors.lightBlue,
-                                borderRadius: '10px',
-                                p: 0.85,
-                                '&:hover': {
-                                  backgroundColor: '#DBEAFE',
-                                },
-                              }}
-                            >
-                              <ViewIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
-
-                          {/* Quick Edit */}
-                          {canManageProducts && (
-                            <Tooltip title="Edit Product">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleOpenForm(product)}
-                                sx={{
-                                  color: brandColors.primaryGreen,
-                                  backgroundColor: brandColors.lightGreen,
-                                  borderRadius: '10px',
-                                  p: 0.85,
-                                  '&:hover': {
-                                    backgroundColor: brandColors.borderGreen,
-                                  },
-                                }}
-                              >
-                                <EditIcon sx={{ fontSize: 18 }} />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-
-                          {/* More Options Dropdown */}
-                          <IconButton
-                            size="small"
-                            onClick={(e) => handleOpenActionMenu(e, product)}
-                            sx={{
-                              color: brandColors.secondaryText,
-                              backgroundColor: '#F8FAFC',
-                              borderRadius: '10px',
-                              p: 0.85,
-                              '&:hover': {
-                                backgroundColor: '#E2E8F0',
-                                color: brandColors.primaryText,
-                              },
-                            }}
-                          >
-                            <MoreVertIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Box>
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  [1, 2, 3, 4, 5].map((i) => (
+                    <TableRow key={i}>
+                      <TableCell colSpan={8} sx={{ py: 1.6 }}>
+                        <Skeleton variant="text" width="100%" height={32} />
                       </TableCell>
                     </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                  ))
+                ) : paginatedProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                      <ProductIcon sx={{ fontSize: 44, color: BRAND.muted, mb: 1, display: 'block', mx: 'auto' }} />
+                      <Typography sx={{ color: BRAND.text, fontWeight: 700, fontSize: '14px' }}>
+                        No products found
+                      </Typography>
+                      <Typography sx={{ color: BRAND.muted, fontSize: '12px', mt: 0.3, mb: 1.5 }}>
+                        {search || selectedVendorFilter !== 'all' || selectedModuleFilter !== 'all' || statusFilter !== 'all'
+                          ? 'No products match your current search or filters.'
+                          : 'Add your first product to get started.'}
+                      </Typography>
+                      {(search || selectedVendorFilter !== 'all' || selectedModuleFilter !== 'all' || statusFilter !== 'all') && (
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setSearch('');
+                            setSelectedVendorFilter('all');
+                            setSelectedModuleFilter('all');
+                            setStatusFilter('all');
+                          }}
+                          sx={{ textTransform: 'none', fontWeight: 700, fontSize: '12px', color: BRAND.green }}
+                        >
+                          Clear Filters
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedProducts.map((product) => {
+                    const vendorName = product.vendor_id?.name || product.vendor?.name || 'Store';
+                    const categoryName = product.module_id?.name || product.module?.name || 'General';
 
-        {/* Table Pagination Footer */}
+                    return (
+                      <TableRow
+                        key={product._id}
+                        hover
+                        sx={{
+                          '& td': { borderBottom: `1px solid ${BRAND.divider}`, py: 1.3 },
+                          cursor: 'pointer',
+                          '&:hover': { backgroundColor: BRAND.innerCard },
+                          transition: 'background-color 0.12s ease',
+                        }}
+                      >
+                        {/* Product info */}
+                        <TableCell onClick={() => handleOpenViewDrawer(product)}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Avatar
+                              src={product.image}
+                              alt={product.name}
+                              variant="rounded"
+                              sx={{
+                                width: 38,
+                                height: 38,
+                                borderRadius: '8px',
+                                backgroundColor: BRAND.innerCard,
+                                border: `1px solid ${BRAND.border}`,
+                              }}
+                            >
+                              <ProductIcon sx={{ color: BRAND.muted, fontSize: 20 }} />
+                            </Avatar>
+                            <Box>
+                              <Typography sx={{ fontWeight: 700, fontSize: '13px', color: BRAND.text, lineHeight: 1.2 }}>
+                                {product.name}
+                              </Typography>
+                              {product.description && (
+                                <Typography
+                                  sx={{
+                                    fontSize: '11px',
+                                    color: BRAND.muted,
+                                    maxWidth: 220,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    mt: 0.2,
+                                  }}
+                                >
+                                  {product.description}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                        </TableCell>
+
+                        {/* Category */}
+                        <TableCell onClick={() => handleOpenViewDrawer(product)}>
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              px: 1.2,
+                              py: 0.3,
+                              borderRadius: '6px',
+                              backgroundColor: BRAND.lightGreen,
+                              color: BRAND.green,
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {categoryName}
+                          </Box>
+                        </TableCell>
+
+                        {/* Store / Vendor */}
+                        <TableCell onClick={() => handleOpenViewDrawer(product)}>
+                          <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: BRAND.text }}>
+                            {vendorName}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Main Price */}
+                        <TableCell onClick={() => handleOpenViewDrawer(product)}>
+                          <Typography sx={{ fontWeight: 800, color: BRAND.text, fontSize: '13px' }}>
+                            {formatCurrency(product.main_price)}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Special Price */}
+                        <TableCell onClick={() => handleOpenViewDrawer(product)}>
+                          <Typography sx={{ fontWeight: 700, color: BRAND.orange, fontSize: '12.5px' }}>
+                            {product.special_price ? formatCurrency(product.special_price) : '—'}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Prep time */}
+                        <TableCell onClick={() => handleOpenViewDrawer(product)}>
+                          <Typography sx={{ color: BRAND.muted, fontSize: '12px' }}>
+                            {product.preparation_time_minute || 0} min
+                          </Typography>
+                        </TableCell>
+
+                        {/* Status */}
+                        <TableCell onClick={() => handleOpenViewDrawer(product)}>
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 0.6,
+                              px: 1.2,
+                              py: 0.3,
+                              borderRadius: '50px',
+                              backgroundColor: product.isActive ? (isDark ? 'rgba(52,211,153,0.15)' : '#DCFCE7') : BRAND.redLight,
+                              color: product.isActive ? (BRAND.success || '#16A34A') : BRAND.red,
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                            }}
+                          >
+                            <Box sx={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: product.isActive ? (BRAND.success || '#16A34A') : BRAND.red }} />
+                            {product.isActive ? 'Active' : 'Inactive'}
+                          </Box>
+                        </TableCell>
+
+                        {/* Actions */}
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
+                            <Tooltip title="View Details">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenViewDrawer(product)}
+                                sx={{
+                                  color: BRAND.blue,
+                                  backgroundColor: BRAND.lightBlue,
+                                  borderRadius: '8px',
+                                  width: 28,
+                                  height: 28,
+                                  '&:hover': { backgroundColor: isDark ? 'rgba(96,165,250,0.25)' : '#DBEAFE' },
+                                }}
+                              >
+                                <ViewIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+
+                            {canManageProducts && (
+                              <>
+                                <Tooltip title="Edit Product">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleOpenFormDialog(product)}
+                                    sx={{
+                                      color: BRAND.muted,
+                                      backgroundColor: BRAND.innerCard,
+                                      borderRadius: '8px',
+                                      width: 28,
+                                      height: 28,
+                                      '&:hover': { backgroundColor: BRAND.border, color: BRAND.text },
+                                    }}
+                                  >
+                                    <EditIcon sx={{ fontSize: 16 }} />
+                                  </IconButton>
+                                </Tooltip>
+
+                                <Tooltip title="Delete Product">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleDeleteClick(product)}
+                                    sx={{
+                                      color: BRAND.red,
+                                      backgroundColor: BRAND.redLight,
+                                      borderRadius: '8px',
+                                      width: 28,
+                                      height: 28,
+                                      '&:hover': { backgroundColor: isDark ? 'rgba(248,113,113,0.25)' : '#FECACA' },
+                                    }}
+                                  >
+                                    <DeleteIcon sx={{ fontSize: 16 }} />
+                                  </IconButton>
+                                </Tooltip>
+                              </>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+
+        {/* ======================================================== */}
+        {/* MOBILE RESPONSIVE CARDS */}
+        {/* ======================================================== */}
+        <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 1.5 }}>
+          {loading ? (
+            [1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={110} sx={{ borderRadius: '12px' }} />)
+          ) : paginatedProducts.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <ProductIcon sx={{ fontSize: 36, color: BRAND.muted, display: 'block', mx: 'auto', mb: 1 }} />
+              <Typography sx={{ color: BRAND.muted, fontSize: '13px' }}>No products found</Typography>
+            </Box>
+          ) : (
+            paginatedProducts.map((product) => (
+              <Paper
+                key={product._id}
+                elevation={0}
+                onClick={() => handleOpenViewDrawer(product)}
+                sx={{
+                  p: 1.8,
+                  borderRadius: '12px',
+                  backgroundColor: BRAND.innerCard,
+                  border: `1px solid ${BRAND.border}`,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1.2,
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                    <Avatar
+                      src={product.image}
+                      alt={product.name}
+                      variant="rounded"
+                      sx={{ width: 40, height: 40, borderRadius: '8px', border: `1px solid ${BRAND.border}` }}
+                    >
+                      <ProductIcon sx={{ fontSize: 20 }} />
+                    </Avatar>
+                    <Box>
+                      <Typography sx={{ fontWeight: 700, fontSize: '13.5px', color: BRAND.text }}>
+                        {product.name}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 0.8, alignItems: 'center', mt: 0.2 }}>
+                        <Box sx={{ fontSize: '11px', fontWeight: 700, color: BRAND.green }}>
+                          {product.module_id?.name || product.module?.name || 'General'}
+                        </Box>
+                        <Typography sx={{ fontSize: '11px', color: BRAND.muted }}>&bull;</Typography>
+                        <Typography sx={{ fontSize: '11px', color: product.isActive ? (BRAND.success || '#16A34A') : BRAND.red, fontWeight: 700 }}>
+                          {product.isActive ? 'Active' : 'Inactive'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: BRAND.muted, pt: 0.5, borderTop: `1px solid ${BRAND.divider}` }}>
+                  <Box>
+                    <Typography sx={{ fontSize: '11.5px', color: BRAND.text, fontWeight: 600 }}>
+                      {product.vendor_id?.name || product.vendor?.name || 'Store'}
+                    </Typography>
+                    <Typography sx={{ fontSize: '11px', color: BRAND.muted }}>
+                      Prep: {product.preparation_time_minute || 0} min
+                    </Typography>
+                  </Box>
+                  <Box sx={{ textAlign: 'right' }}>
+                    <Typography sx={{ fontSize: '13px', fontWeight: 800, color: BRAND.text }}>
+                      {formatCurrency(product.main_price)}
+                    </Typography>
+                    {product.special_price && (
+                      <Typography sx={{ fontSize: '11px', color: BRAND.orange, fontWeight: 700 }}>
+                        {formatCurrency(product.special_price)}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 1, borderTop: `1px solid ${BRAND.divider}` }} onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    size="small"
+                    onClick={() => handleOpenViewDrawer(product)}
+                    sx={{ textTransform: 'none', fontSize: '11px', fontWeight: 700, color: BRAND.blue, borderRadius: '6px', px: 1, py: 0.3, border: `1px solid ${BRAND.border}` }}
+                  >
+                    View
+                  </Button>
+                  {canManageProducts && (
+                    <Button
+                      size="small"
+                      onClick={() => handleOpenFormDialog(product)}
+                      sx={{ textTransform: 'none', fontSize: '11px', fontWeight: 700, color: BRAND.text, borderRadius: '6px', px: 1, py: 0.3, border: `1px solid ${BRAND.border}` }}
+                    >
+                      Edit
+                    </Button>
+                  )}
+                </Box>
+              </Paper>
+            ))
+          )}
+        </Box>
+
+        {/* ======================================================== */}
+        {/* PAGINATION */}
+        {/* ======================================================== */}
         <Box
           sx={{
             display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            alignItems: 'center',
             justifyContent: 'space-between',
-            p: 2.5,
-            borderTop: `1px solid ${brandColors.divider}`,
-            gap: 2,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            mt: 2.5,
+            pt: 2,
+            borderTop: `1px solid ${BRAND.divider}`,
           }}
         >
-          <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, fontWeight: 500 }}>
-            Showing <strong>{filteredProducts.length === 0 ? 0 : page * rowsPerPage + 1}</strong> to{' '}
-            <strong>{Math.min((page + 1) * rowsPerPage, filteredProducts.length)}</strong> of{' '}
-            <strong>{filteredProducts.length}</strong> products
+          <Typography sx={{ fontSize: '12px', color: BRAND.muted, fontWeight: 600 }}>
+            Showing {(page - 1) * rowsPerPage + 1}–{Math.min(page * rowsPerPage, filteredProducts.length)} of {filteredProducts.length} items
           </Typography>
-
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Button
-              variant="outlined"
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+            <IconButton
               size="small"
-              disabled={page === 0}
-              onClick={() => setPage((prev) => Math.max(0, prev - 1))}
-              startIcon={<ChevronLeftIcon />}
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
               sx={{
-                borderRadius: '10px',
-                textTransform: 'none',
-                fontWeight: 700,
-                fontSize: '0.82rem',
-                borderColor: brandColors.border,
-                color: brandColors.primaryText,
-                '&:hover': {
-                  borderColor: brandColors.primaryGreen,
-                  backgroundColor: '#F8FAFC',
-                },
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: '8px',
+                width: 32,
+                height: 32,
+                color: BRAND.muted,
+                '&:disabled': { opacity: 0.35 },
               }}
             >
-              Previous
-            </Button>
-
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: brandColors.primaryText, px: 1 }}>
-              Page {page + 1} of {totalPages}
-            </Typography>
-
-            <Button
-              variant="outlined"
+              <ChevronLeftIcon fontSize="small" />
+            </IconButton>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+              const n = start + i;
+              if (n > totalPages) return null;
+              return (
+                <IconButton
+                  key={n}
+                  size="small"
+                  onClick={() => setPage(n)}
+                  sx={{
+                    border: `1px solid ${n === page ? BRAND.green : BRAND.border}`,
+                    borderRadius: '8px',
+                    width: 32,
+                    height: 32,
+                    backgroundColor: n === page ? BRAND.green : BRAND.white,
+                    color: n === page ? '#FFFFFF' : BRAND.muted,
+                    fontWeight: 700,
+                    fontSize: '12px',
+                    '&:hover': { backgroundColor: n === page ? BRAND.darkGreen : BRAND.innerCard },
+                  }}
+                >
+                  {n}
+                </IconButton>
+              );
+            })}
+            <IconButton
               size="small"
-              disabled={page >= totalPages - 1}
-              onClick={() => setPage((prev) => Math.min(totalPages - 1, prev + 1))}
-              endIcon={<ChevronRightIcon />}
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               sx={{
-                borderRadius: '10px',
-                textTransform: 'none',
-                fontWeight: 700,
-                fontSize: '0.82rem',
-                borderColor: brandColors.border,
-                color: brandColors.primaryText,
-                '&:hover': {
-                  borderColor: brandColors.primaryGreen,
-                  backgroundColor: '#F8FAFC',
-                },
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: '8px',
+                width: 32,
+                height: 32,
+                backgroundColor: BRAND.green,
+                color: '#FFFFFF',
+                '&:hover': { backgroundColor: BRAND.darkGreen },
+                '&:disabled': { backgroundColor: isDark ? '#1E293B' : '#E2E8F0', color: '#94A3B8' },
               }}
             >
-              Next
-            </Button>
-          </Stack>
+              <ChevronRightIcon fontSize="small" />
+            </IconButton>
+          </Box>
         </Box>
       </Paper>
 
-      {/* Row Action Menu */}
-      <Menu
-        anchorEl={actionMenuAnchor}
-        open={Boolean(actionMenuAnchor)}
-        onClose={handleCloseActionMenu}
-        PaperProps={{
-          sx: {
-            borderRadius: '14px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-            minWidth: 190,
-            py: 0.5,
-            border: `1px solid ${brandColors.border}`,
-          },
-        }}
-      >
-        <MenuItem onClick={() => handleViewProduct(activeMenuProduct)}>
-          <ListItemIcon sx={{ color: brandColors.blueAccent }}>
-            <ViewIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Product Details" primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }} />
-        </MenuItem>
-
-        {canManageProducts && (
-          <MenuItem onClick={() => handleOpenForm(activeMenuProduct)}>
-            <ListItemIcon sx={{ color: brandColors.primaryGreen }}>
-              <EditIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText primary="Edit Product" primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }} />
-          </MenuItem>
-        )}
-
-        <MenuItem onClick={() => { const p = activeMenuProduct; handleCloseActionMenu(); if (p) handleToggleActiveProduct(p); }}>
-          <ListItemIcon sx={{ color: activeMenuProduct?.isActive ? '#D97706' : '#16A34A' }}>
-            {activeMenuProduct?.isActive ? <CancelIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
-          </ListItemIcon>
-          <ListItemText
-            primary={activeMenuProduct?.isActive ? 'Deactivate Product' : 'Activate Product'}
-            primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }}
-          />
-        </MenuItem>
-
-        <Divider sx={{ my: 0.5 }} />
-
-        {canManageProducts && (
-          <MenuItem onClick={() => handleDeleteClick(activeMenuProduct)} sx={{ color: '#EF4444' }}>
-            <ListItemIcon sx={{ color: '#EF4444' }}>
-              <DeleteIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText primary="Delete Product" primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }} />
-          </MenuItem>
-        )}
-      </Menu>
-
       {/* ======================================================== */}
-      {/* PRODUCT DETAILS OVERVIEW DRAWER */}
+      {/* 4. VIEW PRODUCT DETAILS DRAWER */}
       {/* ======================================================== */}
       <Drawer
         anchor="right"
         open={viewDrawerOpen}
-        onClose={() => setViewDrawerOpen(false)}
+        onClose={handleCloseViewDrawer}
         PaperProps={{
           sx: {
-            width: { xs: '100%', sm: 500, md: 540 },
-            p: 3.5,
-            backgroundColor: '#FFFFFF',
+            width: { xs: '100%', sm: 420 },
+            p: 3,
+            boxSizing: 'border-box',
+            backgroundColor: BRAND.white,
           },
         }}
       >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.1rem', color: BRAND.text }}>
+            Product Details
+          </Typography>
+          <IconButton onClick={handleCloseViewDrawer} size="small" sx={{ color: BRAND.muted }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+
         {selectedProduct && (
-          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 800, color: brandColors.primaryText }}>
-                Product Overview
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Avatar
+                src={selectedProduct.image}
+                alt={selectedProduct.name}
+                variant="rounded"
+                sx={{
+                  width: 120,
+                  height: 120,
+                  mx: 'auto',
+                  borderRadius: '12px',
+                  border: `1px solid ${BRAND.border}`,
+                }}
+              />
+              <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: BRAND.text, mt: 1.5 }}>
+                {selectedProduct.name}
               </Typography>
-              <IconButton onClick={() => setViewDrawerOpen(false)} sx={{ color: brandColors.secondaryText }}>
-                <CloseIcon />
-              </IconButton>
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 0.5 }}>
+                <Chip label={selectedProduct.module_id?.name || selectedProduct.module?.name || 'General'} size="small" sx={{ bgcolor: BRAND.lightGreen, color: BRAND.green, fontWeight: 700, height: 20 }} />
+                <Chip label={selectedProduct.isActive ? 'Active' : 'Inactive'} size="small" sx={{ bgcolor: selectedProduct.isActive ? (isDark ? 'rgba(52,211,153,0.15)' : '#DCFCE7') : BRAND.redLight, color: selectedProduct.isActive ? (BRAND.success || '#16A34A') : BRAND.red, fontWeight: 700, height: 20 }} />
+              </Box>
             </Box>
 
-            <Divider sx={{ mb: 3 }} />
-
-            <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
-              {/* Product Card */}
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 3,
-                  mb: 3,
-                  borderRadius: '20px',
-                  backgroundColor: '#F8FAFC',
-                  border: `1px solid ${brandColors.border}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2.5,
-                }}
-              >
-                <Avatar
-                  src={selectedProduct.image || ''}
-                  alt={selectedProduct.name}
-                  variant="rounded"
-                  sx={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: '18px',
-                    bgcolor: '#FFFFFF',
-                    border: `1px solid ${brandColors.border}`,
-                    objectFit: 'cover',
-                  }}
-                >
-                  <ProductIcon sx={{ fontSize: 32, color: brandColors.secondaryText }} />
-                </Avatar>
-
-                <Box sx={{ flex: 1 }}>
-                  <Typography sx={{ fontWeight: 800, fontSize: '1.15rem', color: brandColors.primaryText }}>
-                    {selectedProduct.name}
+            <Paper elevation={0} sx={{ p: 2, borderRadius: '12px', bgcolor: BRAND.innerCard, border: `1px solid ${BRAND.border}` }}>
+              <Typography sx={{ fontSize: '12px', fontWeight: 800, color: BRAND.muted, textTransform: 'uppercase', mb: 1.5 }}>
+                Pricing & Preparation
+              </Typography>
+              <Stack spacing={1.2}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography sx={{ fontSize: '12.5px', color: BRAND.muted }}>Main Price:</Typography>
+                  <Typography sx={{ fontSize: '13px', fontWeight: 800, color: BRAND.text }}>
+                    {formatCurrency(selectedProduct.main_price)}
                   </Typography>
-                  <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, mt: 0.2 }}>
-                    Store: <strong>{selectedProduct.vendor_id?.name || 'Local Store'}</strong>
-                  </Typography>
-
-                  <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
-                    <Chip
-                      label={selectedProduct.isActive ? 'Active' : 'Inactive'}
-                      size="small"
-                      sx={{
-                        height: 22,
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        backgroundColor: selectedProduct.isActive ? '#DCFCE7' : '#F1F5F9',
-                        color: selectedProduct.isActive ? '#16A34A' : '#64748B',
-                        borderRadius: '50px',
-                      }}
-                    />
-                    {selectedProduct.special_price && Number(selectedProduct.special_price) < Number(selectedProduct.main_price) && (
-                      <Chip
-                        label="Special Sale"
-                        size="small"
-                        sx={{
-                          height: 22,
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          backgroundColor: brandColors.lightOrange,
-                          color: brandColors.orange,
-                          borderRadius: '50px',
-                        }}
-                      />
-                    )}
-                  </Stack>
                 </Box>
-              </Paper>
-
-              {/* Pricing Cards */}
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: '16px',
-                      border: `1px solid ${brandColors.border}`,
-                      backgroundColor: brandColors.white,
-                    }}
-                  >
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: brandColors.secondaryText, textTransform: 'uppercase' }}>
-                      Regular Price
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 800, color: brandColors.primaryText, mt: 0.5 }}>
-                      ₹{Number(selectedProduct.main_price || 0).toLocaleString('en-IN')}
-                    </Typography>
-                  </Paper>
-                </Grid>
-
-                <Grid item xs={6}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: '16px',
-                      border: `1px solid ${brandColors.border}`,
-                      backgroundColor: brandColors.white,
-                    }}
-                  >
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: brandColors.secondaryText, textTransform: 'uppercase' }}>
-                      Sale Price
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 800, color: brandColors.orange, mt: 0.5 }}>
-                      {selectedProduct.special_price
-                        ? `₹${Number(selectedProduct.special_price).toLocaleString('en-IN')}`
-                        : 'No Discount'}
-                    </Typography>
-                  </Paper>
-                </Grid>
-              </Grid>
-
-              {/* Details List */}
-              <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: brandColors.primaryText, mb: 1.5 }}>
-                Item Specifications
-              </Typography>
-
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2.5,
-                  mb: 3,
-                  borderRadius: '16px',
-                  border: `1px solid ${brandColors.border}`,
-                  backgroundColor: brandColors.white,
-                }}
-              >
-                <Stack spacing={2}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, fontWeight: 500 }}>
-                      Category:
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: brandColors.primaryText }}>
-                      {selectedProduct.module_id?.name || selectedProduct.module?.name || 'Unassigned'}
+                {selectedProduct.special_price && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography sx={{ fontSize: '12.5px', color: BRAND.muted }}>Special Discount Price:</Typography>
+                    <Typography sx={{ fontSize: '13px', fontWeight: 800, color: BRAND.orange }}>
+                      {formatCurrency(selectedProduct.special_price)}
                     </Typography>
                   </Box>
-
-                  <Divider />
-
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, fontWeight: 500 }}>
-                      Preparation Time:
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: brandColors.primaryText }}>
-                      {selectedProduct.preparation_time_minute ? `${selectedProduct.preparation_time_minute} minutes` : 'Immediate pickup'}
-                    </Typography>
-                  </Box>
-
-                  <Divider />
-
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, fontWeight: 500 }}>
-                      Packaging Charge:
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: brandColors.primaryText }}>
-                      ₹{selectedProduct.packaging_charge || 0}
-                    </Typography>
-                  </Box>
-
-                  <Divider />
-
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, fontWeight: 500 }}>
-                      Product Description:
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.85rem', color: brandColors.primaryText, fontWeight: 500, maxWidth: 260, textAlign: 'right' }}>
-                      {selectedProduct.description || 'No description provided.'}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Paper>
-            </Box>
-
-            <Box sx={{ pt: 2, borderTop: `1px solid ${brandColors.divider}` }}>
-              <Grid container spacing={1.5}>
-                {canManageProducts && (
-                  <Grid item xs={6}>
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      startIcon={<EditIcon />}
-                      onClick={() => {
-                        setViewDrawerOpen(false);
-                        handleOpenForm(selectedProduct);
-                      }}
-                      sx={{
-                        borderRadius: '12px',
-                        textTransform: 'none',
-                        fontWeight: 700,
-                        borderColor: brandColors.border,
-                        color: brandColors.primaryText,
-                        py: 1,
-                      }}
-                    >
-                      Edit Product
-                    </Button>
-                  </Grid>
                 )}
-                <Grid item xs={canManageProducts ? 6 : 12}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={() => {
-                      setViewDrawerOpen(false);
-                      handleToggleActiveProduct(selectedProduct);
-                    }}
-                    sx={{
-                      borderRadius: '12px',
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      backgroundColor: selectedProduct.isActive ? '#D97706' : '#16A34A',
-                      color: '#FFFFFF',
-                      py: 1,
-                      '&:hover': {
-                        backgroundColor: selectedProduct.isActive ? '#B45309' : '#15803D',
-                      },
-                    }}
-                  >
-                    {selectedProduct.isActive ? 'Deactivate' : 'Activate'}
-                  </Button>
-                </Grid>
-              </Grid>
-            </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography sx={{ fontSize: '12.5px', color: BRAND.muted }}>Prep Time:</Typography>
+                  <Typography sx={{ fontSize: '12.5px', fontWeight: 700, color: BRAND.text }}>
+                    {selectedProduct.preparation_time_minute || 0} minutes
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography sx={{ fontSize: '12.5px', color: BRAND.muted }}>Packaging Fee:</Typography>
+                  <Typography sx={{ fontSize: '12.5px', fontWeight: 700, color: BRAND.text }}>
+                    ₹{selectedProduct.packaging_charge || 0}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography sx={{ fontSize: '12.5px', color: BRAND.muted }}>Store / Vendor:</Typography>
+                  <Typography sx={{ fontSize: '12.5px', fontWeight: 700, color: BRAND.green }}>
+                    {selectedProduct.vendor_id?.name || selectedProduct.vendor?.name || 'N/A'}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+
+            {selectedProduct.description && (
+              <Box>
+                <Typography sx={{ fontSize: '12px', fontWeight: 800, color: BRAND.muted, textTransform: 'uppercase', mb: 0.5 }}>
+                  Description
+                </Typography>
+                <Typography sx={{ fontSize: '13px', color: BRAND.text, lineHeight: 1.4 }}>
+                  {selectedProduct.description}
+                </Typography>
+              </Box>
+            )}
+
+            {canManageProducts && (
+              <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    const p = selectedProduct;
+                    handleCloseViewDrawer();
+                    handleOpenFormDialog(p);
+                  }}
+                  sx={{ flex: 1, textTransform: 'none', fontWeight: 700, borderRadius: '8px', borderColor: BRAND.border, color: BRAND.text }}
+                >
+                  Edit Product
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    const p = selectedProduct;
+                    handleCloseViewDrawer();
+                    handleDeleteClick(p);
+                  }}
+                  sx={{ flex: 1, textTransform: 'none', fontWeight: 700, borderRadius: '8px', bgcolor: BRAND.red, '&:hover': { bgcolor: '#B91C1C' } }}
+                >
+                  Delete
+                </Button>
+              </Box>
+            )}
           </Box>
         )}
       </Drawer>
 
       {/* ======================================================== */}
-      {/* ADD / EDIT PRODUCT DIALOG */}
+      {/* 5. ADD / EDIT PRODUCT FORM MODAL */}
       {/* ======================================================== */}
       <Dialog
         open={openFormDialog}
-        onClose={handleCloseForm}
-        maxWidth="md"
+        onClose={handleCloseFormDialog}
+        maxWidth="sm"
         fullWidth
-        PaperProps={{ sx: { borderRadius: '24px', p: 1 } }}
+        sx={{
+          '& .MuiDialog-paper': {
+            borderRadius: '16px',
+            margin: { xs: 1.5, sm: 3 },
+            backgroundColor: BRAND.white,
+          },
+        }}
       >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1.5 }}>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, color: brandColors.primaryText }}>
-              {selectedProduct ? 'Edit Product Item' : 'Add New Product'}
+            <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.2rem', color: BRAND.text }}>
+              {selectedProduct ? 'Edit Product' : 'Add New Product'}
             </Typography>
-            <Typography sx={{ fontSize: '0.8rem', color: brandColors.secondaryText, mt: 0.3 }}>
-              {selectedProduct ? `Editing: ${selectedProduct.name}` : 'Configure pricing, store assignment, and packaging fees'}
+            <Typography sx={{ fontSize: '11.5px', color: BRAND.muted }}>
+              {selectedProduct ? 'Update product pricing, images and inventory parameters' : 'Create a new marketplace item in your catalog'}
             </Typography>
           </Box>
-          <IconButton onClick={handleCloseForm} size="small" sx={{ color: brandColors.secondaryText }}>
+          <IconButton onClick={handleCloseFormDialog} size="small" sx={{ color: BRAND.muted }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent dividers sx={{ borderColor: brandColors.divider }}>
-          <Grid container spacing={2.5}>
-            {/* Image Upload Box */}
-            <Grid item xs={12} sm={4}>
-              <Box
-                sx={{
-                  border: `2px dashed ${brandColors.border}`,
-                  borderRadius: '16px',
-                  p: 2,
-                  textAlign: 'center',
-                  backgroundColor: '#F8FAFC',
-                  height: '100%',
-                  minHeight: 200,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  transition: 'border-color 0.2s ease',
-                  '&:hover': { borderColor: brandColors.primaryGreen },
-                }}
-              >
-                {imagePreview ? (
-                  <Box sx={{ width: '100%', textAlign: 'center' }}>
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      style={{ width: '100%', maxHeight: 140, objectFit: 'contain', borderRadius: '12px' }}
-                    />
-                  </Box>
-                ) : (
-                  <>
-                    <ProductIcon sx={{ fontSize: 48, color: '#CBD5E1', mb: 1 }} />
-                    <Typography sx={{ fontSize: '12px', color: '#94A3B8', mb: 1 }}>
-                      Upload product photo
-                    </Typography>
-                  </>
-                )}
-                <Button
-                  variant="outlined"
-                  component="label"
-                  startIcon={<UploadIcon />}
-                  size="small"
+        <DialogContent dividers sx={{ p: { xs: 2, sm: 2.5 } }}>
+          <Grid container spacing={2}>
+            {/* Image upload */}
+            <Grid item xs={12} sx={{ textAlign: 'center' }}>
+              {imagePreview ? (
+                <Avatar
+                  src={imagePreview}
+                  variant="rounded"
+                  sx={{ width: 80, height: 80, mx: 'auto', mb: 1, borderRadius: '10px', border: `1px solid ${BRAND.border}` }}
+                />
+              ) : (
+                <Box
                   sx={{
-                    mt: 1.5,
+                    width: 80,
+                    height: 80,
+                    mx: 'auto',
+                    mb: 1,
                     borderRadius: '10px',
-                    borderColor: brandColors.border,
-                    color: brandColors.primaryGreen,
-                    textTransform: 'none',
-                    fontWeight: 700,
-                    '&:hover': { borderColor: brandColors.primaryGreen, backgroundColor: brandColors.lightGreen },
+                    border: `1.5px dashed ${BRAND.border}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: BRAND.innerCard,
                   }}
                 >
-                  {imagePreview ? 'Change Image' : 'Upload Image'}
-                  <input type="file" hidden accept="image/*" onChange={handleImageChange} />
-                </Button>
-              </Box>
+                  <ProductIcon sx={{ color: BRAND.muted, fontSize: 28 }} />
+                </Box>
+              )}
+              <Button
+                variant="outlined"
+                component="label"
+                size="small"
+                startIcon={<UploadIcon />}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontSize: '11.5px',
+                  borderRadius: '8px',
+                  borderColor: BRAND.border,
+                  color: BRAND.text,
+                }}
+              >
+                {imagePreview ? 'Replace Image' : 'Upload Image'}
+                <input type="file" hidden accept="image/*" onChange={handleImageChange} />
+              </Button>
             </Grid>
 
-            {/* Form Fields */}
-            <Grid item xs={12} sm={8}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Product Name *"
-                    size="small"
-                    value={formData.name}
-                    onChange={(e) => setProductFormData({ ...formData, name: e.target.value })}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  />
-                </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Product Name *"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+                InputProps={{ sx: { borderRadius: '8px', fontSize: '13px' } }}
+              />
+            </Grid>
 
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Store / Vendor *</InputLabel>
-                    <Select
-                      value={formData.vendor_id}
-                      label="Store / Vendor *"
-                      onChange={(e) => setProductFormData({ ...formData, vendor_id: e.target.value })}
-                      sx={{ borderRadius: '12px' }}
-                    >
-                      {vendors.map((v) => (
-                        <MenuItem key={v._id} value={v._id}>
-                          {v.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                select
+                label="Store / Vendor *"
+                name="vendor_id"
+                value={formData.vendor_id}
+                onChange={handleInputChange}
+                required
+                InputProps={{ sx: { borderRadius: '8px', fontSize: '13px' } }}
+              >
+                {vendors.map((v) => (
+                  <MenuItem key={v._id} value={v._id}>
+                    {v.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
 
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Category</InputLabel>
-                    <Select
-                      value={formData.module_id}
-                      label="Category"
-                      onChange={(e) => setProductFormData({ ...formData, module_id: e.target.value })}
-                      sx={{ borderRadius: '12px' }}
-                    >
-                      {modules.map((m) => (
-                        <MenuItem key={m._id} value={m._id}>
-                          {m.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                select
+                label="Category / Module"
+                name="module_id"
+                value={formData.module_id}
+                onChange={handleInputChange}
+                InputProps={{ sx: { borderRadius: '8px', fontSize: '13px' } }}
+              >
+                {modules.map((m) => (
+                  <MenuItem key={m._id} value={m._id}>
+                    {m.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
 
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Main Price (₹) *"
-                    type="number"
-                    size="small"
-                    value={formData.main_price}
-                    onChange={(e) => setProductFormData({ ...formData, main_price: e.target.value })}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  />
-                </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Main Price (₹) *"
+                name="main_price"
+                type="number"
+                value={formData.main_price}
+                onChange={handleInputChange}
+                required
+                InputProps={{ sx: { borderRadius: '8px', fontSize: '13px' } }}
+              />
+            </Grid>
 
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Special / Sale Price (₹)"
-                    type="number"
-                    size="small"
-                    value={formData.special_price}
-                    onChange={(e) => setProductFormData({ ...formData, special_price: e.target.value })}
-                    helperText="Leave empty if regular price applies"
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  />
-                </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Special Discount Price (₹)"
+                name="special_price"
+                type="number"
+                value={formData.special_price}
+                onChange={handleInputChange}
+                InputProps={{ sx: { borderRadius: '8px', fontSize: '13px' } }}
+                helperText="Leave empty if no promotional price"
+              />
+            </Grid>
 
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Preparation Time (minutes)"
-                    type="number"
-                    size="small"
-                    value={formData.preparation_time_minute}
-                    onChange={(e) =>
-                      setProductFormData({ ...formData, preparation_time_minute: Number(e.target.value) })
-                    }
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  />
-                </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Prep Time (mins)"
+                name="preparation_time_minute"
+                type="number"
+                value={formData.preparation_time_minute}
+                onChange={handleInputChange}
+                InputProps={{ sx: { borderRadius: '8px', fontSize: '13px' } }}
+              />
+            </Grid>
 
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Packaging Charge (₹)"
-                    type="number"
-                    size="small"
-                    value={formData.packaging_charge}
-                    onChange={(e) => setProductFormData({ ...formData, packaging_charge: Number(e.target.value) })}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  />
-                </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Packaging Fee (₹)"
+                name="packaging_charge"
+                type="number"
+                value={formData.packaging_charge}
+                onChange={handleInputChange}
+                InputProps={{ sx: { borderRadius: '8px', fontSize: '13px' } }}
+              />
+            </Grid>
 
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Product Description"
-                    multiline
-                    rows={2}
-                    size="small"
-                    value={formData.description}
-                    onChange={(e) => setProductFormData({ ...formData, description: e.target.value })}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  />
-                </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                size="small"
+                select
+                label="Status"
+                name="isActive"
+                value={formData.isActive.toString()}
+                onChange={(e) => setProductFormData((prev) => ({ ...prev, isActive: e.target.value === 'true' }))}
+                InputProps={{ sx: { borderRadius: '8px', fontSize: '13px' } }}
+              >
+                <MenuItem value="true">Active</MenuItem>
+                <MenuItem value="false">Inactive</MenuItem>
+              </TextField>
+            </Grid>
 
-                <Grid item xs={12}>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.5,
-                      borderRadius: '12px',
-                      border: `1px solid ${brandColors.border}`,
-                      backgroundColor: '#FAFBFC',
-                    }}
-                  >
-                    <Box>
-                      <Typography sx={{ fontWeight: 700, fontSize: '13.5px', color: brandColors.primaryText }}>
-                        Active in Store
-                      </Typography>
-                      <Typography sx={{ fontSize: '11.5px', color: brandColors.secondaryText }}>
-                        Product will be visible to customer search and ordering
-                      </Typography>
-                    </Box>
-                    <Switch
-                      checked={formData.isActive}
-                      onChange={(e) => setProductFormData({ ...formData, isActive: e.target.checked })}
-                      sx={{
-                        '& .MuiSwitch-switchBase.Mui-checked': { color: brandColors.primaryGreen },
-                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: brandColors.primaryGreen },
-                      }}
-                    />
-                  </Box>
-                </Grid>
-              </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                multiline
+                rows={2}
+                InputProps={{ sx: { borderRadius: '8px', fontSize: '13px' } }}
+              />
             </Grid>
           </Grid>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2.5, gap: 1 }}>
-          <Button
-            onClick={handleCloseForm}
-            sx={{ borderRadius: '10px', color: brandColors.secondaryText, fontWeight: 600, textTransform: 'none' }}
-          >
+        <DialogActions sx={{ p: 2, borderTop: '1px solid #F1F5F9', justifyContent: 'space-between' }}>
+          <Button onClick={handleCloseFormDialog} disabled={submitting} sx={{ textTransform: 'none', color: BRAND.muted, fontWeight: 600 }}>
             Cancel
           </Button>
           <Button
             variant="contained"
-            onClick={handleSaveProduct}
-            disabled={submitting || !formData.name.trim() || !formData.main_price}
+            onClick={handleSubmit}
+            disabled={submitting}
             sx={{
-              borderRadius: '12px',
-              backgroundColor: brandColors.primaryGreen,
+              backgroundColor: BRAND.green,
+              textTransform: 'none',
+              borderRadius: '8px',
               fontWeight: 700,
               px: 3,
-              textTransform: 'none',
-              '&:hover': { backgroundColor: brandColors.darkGreen },
+              py: 0.8,
+              '&:hover': { backgroundColor: BRAND.darkGreen },
             }}
           >
-            {submitting ? <CircularProgress size={20} color="inherit" /> : selectedProduct ? 'Update Product' : 'Create Product'}
+            {submitting ? <CircularProgress size={20} color="inherit" /> : selectedProduct ? 'Save Product' : 'Create Product'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* ======================================================== */}
-      {/* DELETE CONFIRMATION MODAL */}
+      {/* 6. DELETE PRODUCT CONFIRMATION DIALOG */}
       {/* ======================================================== */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        PaperProps={{ sx: { borderRadius: '20px', p: 1 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 800, color: '#DC2626' }}>
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} PaperProps={{ sx: { borderRadius: '14px', p: 1 } }}>
+        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.1rem', color: BRAND.text }}>
           Delete Product?
         </DialogTitle>
         <DialogContent>
-          <Typography sx={{ color: brandColors.secondaryText, fontSize: '14px' }}>
-            Are you sure you want to delete <strong>{selectedProduct?.name}</strong>? This item will be permanently removed from its vendor store.
+          <Typography sx={{ fontSize: '13px', color: BRAND.muted }}>
+            Are you sure you want to delete <strong>{selectedProduct?.name}</strong>? This action cannot be undone.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
-          <Button
-            onClick={() => setDeleteDialogOpen(false)}
-            sx={{ borderRadius: '10px', color: brandColors.secondaryText, fontWeight: 600, textTransform: 'none' }}
-          >
+        <DialogActions sx={{ p: 1.5 }}>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={submitting} sx={{ textTransform: 'none', color: BRAND.muted }}>
             Cancel
           </Button>
           <Button
             variant="contained"
-            color="error"
             onClick={handleDeleteConfirm}
             disabled={submitting}
-            sx={{ borderRadius: '10px', fontWeight: 700, textTransform: 'none' }}
+            sx={{
+              bgcolor: BRAND.red,
+              color: '#FFFFFF',
+              fontWeight: 700,
+              textTransform: 'none',
+              borderRadius: '8px',
+              '&:hover': { bgcolor: '#B91C1C' },
+            }}
           >
             {submitting ? <CircularProgress size={20} color="inherit" /> : 'Delete Product'}
           </Button>

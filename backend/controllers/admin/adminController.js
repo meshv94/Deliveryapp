@@ -25,6 +25,10 @@ const addAdminSchema = Joi.object({
     'string.hex': 'Invalid vendor ID format',
     'string.length': 'Vendor ID must be 24 characters'
   }),
+  assignedVendors: Joi.array().items(Joi.string().hex().length(24)).optional().messages({
+    'string.hex': 'Invalid vendor ID format',
+    'string.length': 'Vendor ID must be 24 characters'
+  }),
   permissions: Joi.object({
     canManageOrders: Joi.boolean().optional().default(false),
     canManageProducts: Joi.boolean().optional().default(false),
@@ -49,6 +53,14 @@ const updateAdminSchema = Joi.object({
   }),
   role: Joi.string().valid('super_admin', 'admin').optional().messages({
     'any.only': 'Role must be either super_admin or admin'
+  }),
+  vendor_ids: Joi.array().items(Joi.string().hex().length(24)).optional().messages({
+    'string.hex': 'Invalid vendor ID format',
+    'string.length': 'Vendor ID must be 24 characters'
+  }),
+  assignedVendors: Joi.array().items(Joi.string().hex().length(24)).optional().messages({
+    'string.hex': 'Invalid vendor ID format',
+    'string.length': 'Vendor ID must be 24 characters'
   }),
   isActive: Joi.boolean().optional(),
   isBlocked: Joi.boolean().optional(),
@@ -100,6 +112,11 @@ exports.addAdmin = async (req, res) => {
       });
     }
 
+    // Normalize vendor IDs if provided
+    const vendorIds = value.vendor_ids !== undefined ? value.vendor_ids : (value.assignedVendors || []);
+    delete value.assignedVendors;
+    value.vendor_ids = vendorIds;
+
     // Validate vendor IDs if provided
     if (value.vendor_ids && value.vendor_ids.length > 0) {
       const vendors = await Vendor.find({ _id: { $in: value.vendor_ids } });
@@ -114,6 +131,7 @@ exports.addAdmin = async (req, res) => {
     // Create new admin
     const admin = new Admin(value);
     await admin.save();
+    await admin.populate('vendor_ids', 'name email status');
 
     // Remove password from response
     const adminData = admin.toObject();
@@ -173,7 +191,25 @@ exports.updateAdmin = async (req, res) => {
       }
     }
 
-    // Update admin
+    // Handle vendor IDs update (supports adding, updating, or clearing assigned vendors)
+    const vendorIds = value.vendor_ids !== undefined ? value.vendor_ids : value.assignedVendors;
+    if (vendorIds !== undefined) {
+      // Validate vendor IDs if not empty
+      if (vendorIds.length > 0) {
+        const vendors = await Vendor.find({ _id: { $in: vendorIds } });
+        if (vendors.length !== vendorIds.length) {
+          return res.status(404).json({
+            success: false,
+            message: 'One or more vendor IDs are invalid'
+          });
+        }
+      }
+      admin.vendor_ids = vendorIds;
+      delete value.vendor_ids;
+      delete value.assignedVendors;
+    }
+
+    // Update admin fields
     Object.keys(value).forEach(key => {
       if (key === 'permissions') {
         admin.permissions = { ...admin.permissions, ...value.permissions };
@@ -183,6 +219,7 @@ exports.updateAdmin = async (req, res) => {
     });
 
     await admin.save();
+    await admin.populate('vendor_ids', 'name email status');
 
     // Remove password from response
     const adminData = admin.toObject();

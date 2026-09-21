@@ -22,53 +22,58 @@ import {
   Alert,
   Avatar,
   Button,
-  Card,
-  CardContent,
   MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
+  FormControlLabel,
   Switch,
   Autocomplete,
   Stack,
   Divider,
   Menu,
   ListItemIcon,
-  ListItemText,
-  InputAdornment,
   Tooltip,
+  Skeleton,
+  InputBase,
 } from '@mui/material';
 import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Add as AddIcon,
-  Close as CloseIcon,
-  AdminPanelSettings as AdminIcon,
-  SupervisorAccount as SuperAdminIcon,
-  VerifiedUser as VerifiedIcon,
-  Block as BlockIcon,
-  CheckCircle as CheckCircleIcon,
-  Search as SearchIcon,
-  Refresh as RefreshIcon,
-  Storefront as StoreIcon,
-  ShoppingBag as OrderIcon,
-  Inventory2 as ProductIcon,
-  Email as EmailIcon,
-  CalendarToday as CalendarIcon,
-  MoreVert as MoreVertIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  Clear as ClearIcon,
-  Visibility as ViewIcon,
-  Lock as LockIcon,
-  Security as SecurityIcon,
-  Person as PersonIcon,
+  EditRounded as EditIcon,
+  DeleteOutlineRounded as DeleteIcon,
+  AddRounded as AddIcon,
+  CloseRounded as CloseIcon,
+  AdminPanelSettingsOutlined as AdminIcon,
+  SupervisorAccountOutlined as SuperAdminIcon,
+  VerifiedUserOutlined as VerifiedIcon,
+  BlockRounded as BlockIcon,
+  SearchRounded as SearchIcon,
+  RefreshRounded as RefreshIcon,
+  StorefrontRounded as StoreIcon,
+  ShoppingBagOutlined as OrderIcon,
+  Inventory2Outlined as ProductIcon,
+  EmailOutlined as EmailIcon,
+  CalendarTodayOutlined as CalendarIcon,
+  ChevronLeftRounded as ChevronLeftIcon,
+  ChevronRightRounded as ChevronRightIcon,
+  VisibilityOutlined as ViewIcon,
+  LockOutlined as LockIcon,
+  SecurityOutlined as SecurityIcon,
+  PersonOutlineRounded as PersonIcon,
 } from '@mui/icons-material';
 import adminService from '../services/adminService';
 import vendorService from '../services/vendorService';
-import { brandColors } from '../theme/tokens';
+import { useColorMode } from '../theme/ThemeContext';
+
+const formatDate = (dateString) => {
+  if (!dateString) return '—';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};
 
 const AdminManagement = () => {
+  const { BRAND, isDark } = useColorMode();
   // Core Data State
   const [admins, setAdmins] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -80,11 +85,8 @@ const AdminManagement = () => {
   // Search & Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-
-  // Pagination State
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 10;
 
   // Dialog & Drawer States
   const [formDialogOpen, setFormDialogOpen] = useState(false);
@@ -93,10 +95,6 @@ const AdminManagement = () => {
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-
-  // Action Menu State
-  const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
-  const [activeMenuAdmin, setActiveMenuAdmin] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -148,109 +146,41 @@ const AdminManagement = () => {
     }
   };
 
-  // KPI Calculations
-  const totalAdminsCount = admins.length;
-  const superAdminsCount = admins.filter((a) => a.role === 'super_admin').length;
-  const standardAdminsCount = admins.filter((a) => a.role === 'admin').length;
-  const activeAdminsCount = admins.filter((a) => a.isActive !== false && !a.isBlocked).length;
+  // Open Form
+  const handleOpenFormDialog = (admin = null) => {
+    if (admin) {
+      setSelectedAdmin(admin);
+      setFormData({
+        name: admin.name || '',
+        email: admin.email || '',
+        password: '',
+        role: admin.role || 'admin',
+        isActive: admin.isActive !== undefined ? admin.isActive : true,
+        canManageOrders: admin.permissions?.canManageOrders || false,
+        canManageProducts: admin.permissions?.canManageProducts || false,
+        canUpdateVendor: admin.permissions?.canUpdateVendor || false,
+      });
 
-  // Filter and Search Admins
-  const filteredAdmins = useMemo(() => {
-    if (!Array.isArray(admins)) return [];
-
-    return admins.filter((adm) => {
-      const q = searchQuery.trim().toLowerCase();
-      const matchesSearch =
-        !q ||
-        (adm.name && adm.name.toLowerCase().includes(q)) ||
-        (adm.email && adm.email.toLowerCase().includes(q)) ||
-        (adm._id && adm._id.toLowerCase().includes(q));
-
-      let matchesRole = true;
-      if (roleFilter === 'SUPER_ADMIN') {
-        matchesRole = adm.role === 'super_admin';
-      } else if (roleFilter === 'ADMIN') {
-        matchesRole = adm.role === 'admin';
-      }
-
-      let matchesStatus = true;
-      if (statusFilter === 'ACTIVE') {
-        matchesStatus = adm.isActive !== false && !adm.isBlocked;
-      } else if (statusFilter === 'INACTIVE') {
-        matchesStatus = adm.isActive === false || adm.isBlocked;
-      }
-
-      return matchesSearch && matchesRole && matchesStatus;
-    });
-  }, [admins, searchQuery, roleFilter, statusFilter]);
-
-  // Paginated records
-  const paginatedAdmins = useMemo(() => {
-    const start = page * rowsPerPage;
-    return filteredAdmins.slice(start, start + rowsPerPage);
-  }, [filteredAdmins, page, rowsPerPage]);
-
-  const totalPages = Math.ceil(filteredAdmins.length / rowsPerPage) || 1;
-
-  // Reset page when filters change
-  useEffect(() => {
-    setPage(0);
-  }, [searchQuery, roleFilter, statusFilter, rowsPerPage]);
-
-  // Action Menu Handlers
-  const handleOpenActionMenu = (event, admin) => {
-    setActionMenuAnchor(event.currentTarget);
-    setActiveMenuAdmin(admin);
-  };
-
-  const handleCloseActionMenu = () => {
-    setActionMenuAnchor(null);
-    setActiveMenuAdmin(null);
-  };
-
-  // Open Form Dialog (Add / Edit)
-  const handleOpenAddDialog = () => {
-    setSelectedAdmin(null);
-    setFormData({
-      name: '',
-      email: '',
-      password: '',
-      role: 'admin',
-      isActive: true,
-      canManageOrders: true,
-      canManageProducts: true,
-      canUpdateVendor: false,
-    });
-    setSelectedVendors([]);
-    setFormDialogOpen(true);
-    handleCloseActionMenu();
-  };
-
-  const handleOpenEditDialog = (admin) => {
-    setSelectedAdmin(admin);
-    setFormData({
-      name: admin.name || '',
-      email: admin.email || '',
-      password: '', // Leave blank unless updating
-      role: admin.role || 'admin',
-      isActive: admin.isActive !== false && !admin.isBlocked,
-      canManageOrders: admin.permissions?.canManageOrders || false,
-      canManageProducts: admin.permissions?.canManageProducts || false,
-      canUpdateVendor: admin.permissions?.canUpdateVendor || false,
-    });
-
-    // Populate selected vendors
-    if (Array.isArray(admin.vendor_ids)) {
-      const matchedVendors = vendors.filter((v) =>
-        admin.vendor_ids.some((av) => (av._id || av) === v._id)
+      const currentVendors = admin.assignedVendors || admin.vendor_ids || [];
+      const matched = vendors.filter((v) =>
+        currentVendors.some((cv) => (cv?._id || cv) === v._id)
       );
-      setSelectedVendors(matchedVendors);
+      setSelectedVendors(matched);
     } else {
+      setSelectedAdmin(null);
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        role: 'admin',
+        isActive: true,
+        canManageOrders: true,
+        canManageProducts: true,
+        canUpdateVendor: false,
+      });
       setSelectedVendors([]);
     }
-
     setFormDialogOpen(true);
-    handleCloseActionMenu();
   };
 
   const handleCloseFormDialog = () => {
@@ -258,1662 +188,1002 @@ const AdminManagement = () => {
     setSelectedAdmin(null);
   };
 
-  // Submit Add / Edit
-  const handleSubmitForm = async (e) => {
-    if (e) e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim()) return;
+  const handleOpenViewDrawer = (admin) => {
+    setSelectedAdmin(admin);
+    setViewDrawerOpen(true);
+  };
 
+  const handleCloseViewDrawer = () => {
+    setViewDrawerOpen(false);
+    setSelectedAdmin(null);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, checked, type } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleSubmit = async () => {
     try {
       setSubmitting(true);
       setError(null);
 
+      if (!formData.name.trim()) throw new Error('Staff name is required.');
+      if (!formData.email.trim()) throw new Error('Email address is required.');
+
+      const assignedIds = selectedVendors.map((v) => v._id);
+      const payload = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        role: formData.role,
+        isActive: formData.isActive,
+        permissions: {
+          canManageOrders: formData.role === 'super_admin' ? true : formData.canManageOrders,
+          canManageProducts: formData.role === 'super_admin' ? true : formData.canManageProducts,
+          canUpdateVendor: formData.role === 'super_admin' ? true : formData.canUpdateVendor,
+        },
+        vendor_ids: assignedIds,
+        assignedVendors: assignedIds,
+      };
+
+      if (formData.password) {
+        if (formData.password.length < 6) {
+          throw new Error('Password must be at least 6 characters long.');
+        }
+        payload.password = formData.password;
+      }
+
       if (selectedAdmin) {
-        // Update Admin
-        const updatePayload = {
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          role: formData.role,
-          isActive: formData.isActive,
-          permissions: {
-            canManageOrders: formData.canManageOrders,
-            canManageProducts: formData.canManageProducts,
-            canUpdateVendor: formData.canUpdateVendor,
-          },
-        };
-
-        if (formData.password.trim()) {
-          updatePayload.password = formData.password.trim();
-        }
-
-        await adminService.updateAdmin(selectedAdmin._id, updatePayload);
-
-        // Update assigned vendors if role is admin
-        if (formData.role === 'admin') {
-          const vendorIds = selectedVendors.map((v) => v._id);
-          await adminService.assignVendors(selectedAdmin._id, vendorIds);
-        }
-
-        setSuccess(`Administrator "${formData.name.trim()}" updated successfully!`);
+        await adminService.updateAdmin(selectedAdmin._id, payload);
+        setSuccess('Administrator profile updated successfully!');
       } else {
-        // Create Admin
-        if (!formData.password.trim()) {
-          throw new Error('Password is required for new administrators.');
+        if (!formData.password) {
+          throw new Error('Password is required for new administrator accounts.');
         }
-
-        const createPayload = {
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          password: formData.password.trim(),
-          role: formData.role,
-          vendor_ids: selectedVendors.map((v) => v._id),
-          permissions: {
-            canManageOrders: formData.canManageOrders,
-            canManageProducts: formData.canManageProducts,
-            canUpdateVendor: formData.canUpdateVendor,
-          },
-        };
-
-        await adminService.addAdmin(createPayload);
-        setSuccess(`Administrator "${formData.name.trim()}" created successfully!`);
+        await adminService.createAdmin(payload);
+        setSuccess('Administrator created successfully!');
       }
 
       handleCloseFormDialog();
-      await loadAllData(true);
+      loadAllData(true);
     } catch (err) {
-      console.error('Error saving administrator:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to save administrator.');
+      console.error('Error saving admin:', err);
+      setError(err.message || 'Failed to save administrator.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Assign Vendors Dialog Handlers
-  const handleOpenAssignVendors = (admin) => {
-    setSelectedAdmin(admin);
-    if (Array.isArray(admin.vendor_ids)) {
-      const matchedVendors = vendors.filter((v) =>
-        admin.vendor_ids.some((av) => (av._id || av) === v._id)
-      );
-      setSelectedVendors(matchedVendors);
-    } else {
-      setSelectedVendors([]);
-    }
-    setAssignVendorsDialogOpen(true);
-    handleCloseActionMenu();
-  };
-
-  const handleSaveAssignVendors = async () => {
-    if (!selectedAdmin) return;
-    try {
-      setSubmitting(true);
-      setError(null);
-
-      const vendorIds = selectedVendors.map((v) => v._id);
-      await adminService.assignVendors(selectedAdmin._id, vendorIds);
-
-      setSuccess(`Vendor access updated for "${selectedAdmin.name}".`);
-      setAssignVendorsDialogOpen(false);
-      setSelectedAdmin(null);
-      await loadAllData(true);
-    } catch (err) {
-      console.error('Error assigning vendors:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to assign vendors.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Toggle Block / Active
-  const handleToggleActiveAdmin = async (admin) => {
-    try {
-      const updateData = {
-        name: admin.name,
-        isActive: admin.isActive === false ? true : false,
-      };
-      await adminService.updateAdmin(admin._id, updateData);
-      setSuccess(`Administrator "${admin.name}" ${updateData.isActive ? 'activated' : 'deactivated'} successfully!`);
-      await loadAllData(true);
-    } catch (err) {
-      console.error('Error toggling admin status:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to update admin status.');
-    }
-  };
-
-  // Delete Admin
-  const handleOpenDeleteDialog = (admin) => {
+  const handleDeleteClick = (admin) => {
     setSelectedAdmin(admin);
     setDeleteDialogOpen(true);
-    handleCloseActionMenu();
   };
 
-  const handleConfirmDelete = async () => {
-    if (!selectedAdmin) return;
+  const handleDeleteConfirm = async () => {
     try {
       setSubmitting(true);
-      setError(null);
-
       await adminService.deleteAdmin(selectedAdmin._id);
-      setSuccess(`Administrator "${selectedAdmin.name}" deleted successfully!`);
+      setSuccess('Administrator deleted successfully!');
       setDeleteDialogOpen(false);
-      if (viewDrawerOpen && selectedAdmin._id === selectedAdmin?._id) {
-        setViewDrawerOpen(false);
-      }
       setSelectedAdmin(null);
-      await loadAllData(true);
+      loadAllData(true);
     } catch (err) {
       console.error('Error deleting admin:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to delete admin.');
+      setError(err.message || 'Failed to delete administrator.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // View Admin Overview Drawer
-  const handleViewAdmin = (admin) => {
-    setSelectedAdmin(admin);
-    setViewDrawerOpen(true);
-    handleCloseActionMenu();
-  };
+  // Filter logic
+  const filteredAdmins = useMemo(() => {
+    return admins.filter((a) => {
+      const q = searchQuery.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        a.name?.toLowerCase().includes(q) ||
+        a.email?.toLowerCase().includes(q);
 
-  const handleClearFilters = () => {
-    setSearchQuery('');
-    setRoleFilter('ALL');
-    setStatusFilter('ALL');
-    setPage(0);
-  };
+      const matchesRole =
+        roleFilter === 'ALL' ||
+        (roleFilter === 'SUPER_ADMIN' && a.role === 'super_admin') ||
+        (roleFilter === 'ADMIN' && a.role !== 'super_admin');
 
-  const hasActiveFilters = searchQuery.trim() !== '' || roleFilter !== 'ALL' || statusFilter !== 'ALL';
+      return matchesSearch && matchesRole;
+    });
+  }, [admins, searchQuery, roleFilter]);
 
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '65vh',
-          gap: 2,
-        }}
-      >
-        <CircularProgress size={48} thickness={4} sx={{ color: brandColors.primaryGreen }} />
-        <Typography sx={{ color: brandColors.secondaryText, fontWeight: 600, fontSize: '0.95rem' }}>
-          Loading administrator accounts...
-        </Typography>
-      </Box>
-    );
-  }
+  const totalPages = Math.max(1, Math.ceil(filteredAdmins.length / rowsPerPage));
+  const paginatedAdmins = filteredAdmins.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  const superAdminCount = admins.filter((a) => a.role === 'super_admin').length;
+  const storeAdminCount = admins.filter((a) => a.role !== 'super_admin').length;
 
   return (
-    <Box sx={{ width: '100%', maxWidth: '100%', pb: 6 }}>
-      {/* Notifications */}
+    <Box sx={{ width: '100%', maxWidth: '100%', pb: 4 }}>
+      {/* Alerts */}
       {success && (
-        <Alert
-          severity="success"
-          onClose={() => setSuccess(null)}
-          sx={{
-            mb: 3,
-            borderRadius: '14px',
-            backgroundColor: brandColors.successLight,
-            color: brandColors.success,
-            fontWeight: 600,
-            border: `1px solid ${brandColors.borderGreen}`,
-          }}
-        >
+        <Alert severity="success" sx={{ mb: 2.5, borderRadius: '12px' }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
       )}
-
       {error && (
-        <Alert
-          severity="error"
-          onClose={() => setError(null)}
-          sx={{
-            mb: 3,
-            borderRadius: '14px',
-            backgroundColor: brandColors.errorLight,
-            color: brandColors.error,
-            fontWeight: 600,
-            border: `1px solid #FECACA`,
-          }}
-        >
+        <Alert severity="error" sx={{ mb: 2.5, borderRadius: '12px' }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      {/* Page Header */}
+      {/* ======================================================== */}
+      {/* 1. PAGE HEADER */}
+      {/* ======================================================== */}
       <Box
         sx={{
           display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
           alignItems: { xs: 'flex-start', sm: 'center' },
           justifyContent: 'space-between',
+          flexDirection: { xs: 'column', sm: 'row' },
           gap: 2,
-          mb: 3.5,
+          mb: 3,
         }}
       >
         <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: 800,
-                fontSize: { xs: '1.6rem', md: '2.1rem' },
-                color: brandColors.primaryText,
-                letterSpacing: '-0.02em',
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: '1.25rem', sm: '1.45rem', md: '1.6rem' },
+              color: BRAND.text,
+              letterSpacing: '-0.025em',
+              lineHeight: 1.2,
+            }}
+          >
+            Staff Administration
+          </Typography>
+          <Typography
+            sx={{
+              color: BRAND.muted,
+              fontSize: { xs: '0.8rem', sm: '0.85rem' },
+              fontWeight: 500,
+              mt: 0.2,
+            }}
+          >
+            Manage team members, administrator roles, granular permissions and store assignments
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon sx={{ fontSize: '18px !important' }} />}
+          onClick={() => handleOpenFormDialog()}
+          sx={{
+            backgroundColor: BRAND.green,
+            color: '#FFFFFF',
+            borderRadius: '10px',
+            fontSize: '13px',
+            fontWeight: 700,
+            px: 2.2,
+            py: 0.9,
+            minHeight: 40,
+            boxShadow: '0 4px 12px rgba(8, 127, 91, 0.24)',
+            textTransform: 'none',
+            whiteSpace: 'nowrap',
+            '&:hover': {
+              backgroundColor: BRAND.darkGreen,
+              boxShadow: '0 6px 16px rgba(8, 127, 91, 0.32)',
+            },
+          }}
+        >
+          + Add Administrator
+        </Button>
+      </Box>
+
+      {/* ======================================================== */}
+      {/* 2. SUMMARY FILTER TABS */}
+      {/* ======================================================== */}
+      <Box sx={{ display: 'flex', gap: 1.2, flexWrap: 'wrap', mb: 2.5 }}>
+        {[
+          { label: 'All Staff', value: admins.length, filter: 'ALL', bg: BRAND.lightGreen, color: BRAND.green },
+          { label: 'Super Admins', value: superAdminCount, filter: 'SUPER_ADMIN', bg: isDark ? 'rgba(124,58,237,0.18)' : '#EDE9FE', color: isDark ? '#A78BFA' : '#7C3AED' },
+          { label: 'Store Admins', value: storeAdminCount, filter: 'ADMIN', bg: BRAND.lightBlue, color: BRAND.blue },
+        ].map((tab) => {
+          const isSelected = roleFilter === tab.filter;
+          return (
+            <Box
+              key={tab.filter}
+              onClick={() => {
+                setRoleFilter(tab.filter);
+                setPage(1);
               }}
-            >
-              Admin Management
-            </Typography>
-            <Chip
-              icon={<SecurityIcon sx={{ fontSize: '16px !important', color: `${brandColors.primaryGreen} !important` }} />}
-              label="Staff & Permissions"
-              size="small"
               sx={{
-                backgroundColor: brandColors.lightGreen,
-                color: brandColors.primaryGreen,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+                px: 1.8,
+                py: 0.7,
+                borderRadius: '50px',
+                backgroundColor: isSelected ? (isDark ? 'rgba(16,185,129,0.18)' : tab.bg) : BRAND.white,
+                color: isSelected ? tab.color : BRAND.muted,
+                border: `1px solid ${isSelected ? tab.color + '40' : BRAND.border}`,
                 fontWeight: 700,
                 fontSize: '12px',
-                borderRadius: '8px',
-                border: `1px solid ${brandColors.borderGreen}`,
+                cursor: 'pointer',
+                userSelect: 'none',
+                transition: 'all 0.15s ease',
+                boxShadow: isSelected ? '0 2px 6px rgba(0,0,0,0.03)' : 'none',
+                '&:hover': {
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : tab.bg,
+                  color: tab.color,
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  backgroundColor: isSelected ? tab.color : (isDark ? '#475569' : '#CBD5E1'),
+                }}
+              />
+              {tab.label}
+              <Box
+                sx={{
+                  px: 0.8,
+                  py: 0.1,
+                  borderRadius: '6px',
+                  backgroundColor: isSelected ? `${tab.color}25` : BRAND.innerCard,
+                  color: isSelected ? tab.color : BRAND.muted,
+                  fontSize: '11px',
+                  fontWeight: 800,
+                }}
+              >
+                {tab.value}
+              </Box>
+            </Box>
+          );
+        })}
+      </Box>
+
+      {/* ======================================================== */}
+      {/* 3. MAIN TABLE & TOOLBAR CARD */}
+      {/* ======================================================== */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: '16px',
+          backgroundColor: BRAND.white,
+          border: `1px solid ${BRAND.border}`,
+          boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+          p: { xs: 2, sm: 2.5 },
+          overflow: 'hidden',
+        }}
+      >
+        {/* Toolbar */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            mb: 2.5,
+          }}
+        >
+          <Box>
+            <Typography sx={{ fontWeight: 800, fontSize: '14px', color: BRAND.text }}>
+              Staff Directory
+            </Typography>
+            <Typography sx={{ fontSize: '11.5px', color: BRAND.muted, mt: 0.2 }}>
+              {filteredAdmins.length} {filteredAdmins.length === 1 ? 'account' : 'accounts'} registered
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: BRAND.innerCard,
+              border: `1px solid ${BRAND.border}`,
+              borderRadius: '10px',
+              px: 1.5,
+              py: 0.55,
+              width: { xs: '100%', sm: 240 },
+              transition: 'border-color 0.15s ease',
+              '&:focus-within': { borderColor: BRAND.green },
+            }}
+          >
+            <SearchIcon sx={{ color: BRAND.muted, fontSize: 17, mr: 1 }} />
+            <InputBase
+              placeholder="Search staff members..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+              sx={{
+                fontSize: '12.5px',
+                fontWeight: 500,
+                color: BRAND.text,
+                width: '100%',
+                '& input::placeholder': { color: BRAND.muted, opacity: 1 },
               }}
             />
           </Box>
-          <Typography
-            variant="body2"
-            sx={{
-              color: brandColors.secondaryText,
-              fontWeight: 500,
-              mt: 0.5,
-              fontSize: '0.92rem',
-            }}
-          >
-            Manage platform administrators, roles, granular permissions, and assigned vendor stores.
-          </Typography>
         </Box>
 
-        {/* Header Action Buttons */}
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <Button
-            variant="outlined"
-            startIcon={
-              refreshing ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                <RefreshIcon sx={{ fontSize: 18 }} />
-              )
-            }
-            onClick={() => loadAllData(true)}
-            disabled={refreshing}
-            sx={{
-              borderRadius: '12px',
-              textTransform: 'none',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              borderColor: brandColors.border,
-              color: brandColors.primaryText,
-              backgroundColor: brandColors.white,
-              px: 2,
-              py: 0.9,
-              '&:hover': {
-                borderColor: brandColors.primaryGreen,
-                backgroundColor: '#F8FAFC',
-              },
-            }}
-          >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
-
-          <Button
-            variant="contained"
-            startIcon={<AddIcon sx={{ fontSize: '18px !important' }} />}
-            onClick={handleOpenAddDialog}
-            sx={{
-              backgroundColor: brandColors.primaryGreen,
-              color: '#FFFFFF',
-              borderRadius: '12px',
-              fontSize: '0.875rem',
-              fontWeight: 700,
-              px: 2.5,
-              py: 1.1,
-              boxShadow: '0 4px 14px rgba(8, 127, 91, 0.28)',
-              textTransform: 'none',
-              '&:hover': {
-                backgroundColor: brandColors.darkGreen,
-                boxShadow: '0 6px 18px rgba(8, 127, 91, 0.38)',
-              },
-            }}
-          >
-            Add Administrator
-          </Button>
-        </Stack>
-      </Box>
-
-      {/* KPI Bento Cards */}
-      <Grid container spacing={2.5} sx={{ mb: 3.5 }}>
-        {/* Total Administrators */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              borderRadius: '20px',
-              backgroundColor: brandColors.white,
-              border: `1px solid ${brandColors.border}`,
-              boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: brandColors.secondaryText, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Total Staff
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 800, color: brandColors.primaryText, fontSize: '1.85rem' }}>
-                    {totalAdminsCount}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: brandColors.primaryGreen, fontWeight: 700, mt: 0.5 }}>
-                    Platform Administrators
-                  </Typography>
-                </Box>
-                <Avatar
+        {/* ======================================================== */}
+        {/* DESKTOP DATA TABLE */}
+        {/* ======================================================== */}
+        <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+          <TableContainer>
+            <Table size="small" sx={{ minWidth: 880 }}>
+              <TableHead>
+                <TableRow
                   sx={{
-                    bgcolor: brandColors.lightGreen,
-                    color: brandColors.primaryGreen,
-                    width: 52,
-                    height: 52,
-                    borderRadius: '16px',
-                    border: `1px solid ${brandColors.borderGreen}`,
-                  }}
-                >
-                  <SecurityIcon sx={{ fontSize: 28 }} />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Super Admins */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              borderRadius: '20px',
-              backgroundColor: brandColors.white,
-              border: `1px solid ${brandColors.border}`,
-              boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: brandColors.secondaryText, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Super Admins
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 800, color: brandColors.orange, fontSize: '1.85rem' }}>
-                    {superAdminsCount}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: brandColors.orange, fontWeight: 700, mt: 0.5 }}>
-                    Full System Access
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{
-                    bgcolor: brandColors.lightOrange,
-                    color: brandColors.orange,
-                    width: 52,
-                    height: 52,
-                    borderRadius: '16px',
-                    border: `1px solid ${brandColors.borderOrange}`,
-                  }}
-                >
-                  <SuperAdminIcon sx={{ fontSize: 28 }} />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Standard Admins */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              borderRadius: '20px',
-              backgroundColor: brandColors.white,
-              border: `1px solid ${brandColors.border}`,
-              boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: brandColors.secondaryText, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Store Managers
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 800, color: brandColors.blueAccent, fontSize: '1.85rem' }}>
-                    {standardAdminsCount}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: brandColors.blueAccent, fontWeight: 700, mt: 0.5 }}>
-                    Assigned Store Access
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{
-                    bgcolor: brandColors.lightBlue,
-                    color: brandColors.blueAccent,
-                    width: 52,
-                    height: 52,
-                    borderRadius: '16px',
-                    border: `1px solid ${brandColors.borderBlue}`,
-                  }}
-                >
-                  <AdminIcon sx={{ fontSize: 28 }} />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Active Accounts */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              borderRadius: '20px',
-              backgroundColor: brandColors.white,
-              border: `1px solid ${brandColors.border}`,
-              boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: brandColors.secondaryText, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Active Status
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 800, color: '#16A34A', fontSize: '1.85rem' }}>
-                    {activeAdminsCount}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 700, mt: 0.5 }}>
-                    Can Authenticate
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{
-                    bgcolor: '#DCFCE7',
-                    color: '#16A34A',
-                    width: 52,
-                    height: 52,
-                    borderRadius: '16px',
-                    border: '1px solid #BBF7D0',
-                  }}
-                >
-                  <CheckCircleIcon sx={{ fontSize: 28 }} />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Search & Filter Bar */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2.5,
-          mb: 3.5,
-          borderRadius: '20px',
-          backgroundColor: brandColors.white,
-          border: `1px solid ${brandColors.border}`,
-          boxShadow: '0 4px 20px rgba(20, 33, 61, 0.03)',
-        }}
-      >
-        <Grid container spacing={2} alignItems="center">
-          {/* Search Input */}
-          <Grid item xs={12} md={5}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Search by admin name or email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: brandColors.secondaryText, fontSize: 20 }} />
-                  </InputAdornment>
-                ),
-                endAdornment: searchQuery ? (
-                  <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearchQuery('')}>
-                      <CloseIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </InputAdornment>
-                ) : null,
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '12px',
-                  backgroundColor: '#F8FAFC',
-                  fontSize: '0.88rem',
-                  '& fieldset': {
-                    borderColor: brandColors.border,
-                  },
-                  '&:hover fieldset': {
-                    borderColor: brandColors.primaryGreen,
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: brandColors.primaryGreen,
-                  },
-                },
-              }}
-            />
-          </Grid>
-
-          {/* Role Filter */}
-          <Grid item xs={12} sm={6} md={3.5}>
-            <FormControl fullWidth size="small">
-              <InputLabel sx={{ fontSize: '0.88rem', color: brandColors.secondaryText }}>Role Filter</InputLabel>
-              <Select
-                value={roleFilter}
-                label="Role Filter"
-                onChange={(e) => setRoleFilter(e.target.value)}
-                sx={{
-                  borderRadius: '12px',
-                  backgroundColor: '#F8FAFC',
-                  fontSize: '0.88rem',
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: brandColors.border,
-                  },
-                }}
-              >
-                <MenuItem value="ALL">All Roles</MenuItem>
-                <MenuItem value="SUPER_ADMIN">Super Admin Only</MenuItem>
-                <MenuItem value="ADMIN">Store Manager (Admin) Only</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-
-          {/* Status Filter & Reset */}
-          <Grid item xs={12} sm={6} md={3.5}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <FormControl fullWidth size="small">
-                <InputLabel sx={{ fontSize: '0.88rem', color: brandColors.secondaryText }}>Status</InputLabel>
-                <Select
-                  value={statusFilter}
-                  label="Status"
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  sx={{
-                    borderRadius: '12px',
-                    backgroundColor: '#F8FAFC',
-                    fontSize: '0.88rem',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: brandColors.border,
+                    '& th': {
+                      borderBottom: `1.5px solid ${BRAND.border}`,
+                      color: BRAND.muted,
+                      fontWeight: 700,
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      py: 1.3,
+                      backgroundColor: BRAND.innerCard,
+                      whiteSpace: 'nowrap',
                     },
                   }}
                 >
-                  <MenuItem value="ALL">All Statuses</MenuItem>
-                  <MenuItem value="ACTIVE">Active Only</MenuItem>
-                  <MenuItem value="INACTIVE">Inactive Only</MenuItem>
-                </Select>
-              </FormControl>
-
-              {hasActiveFilters && (
-                <Tooltip title="Reset filters">
-                  <IconButton
-                    onClick={handleClearFilters}
-                    size="small"
-                    sx={{
-                      backgroundColor: brandColors.lightOrange,
-                      color: brandColors.orange,
-                      borderRadius: '10px',
-                      p: 1,
-                      '&:hover': {
-                        backgroundColor: brandColors.borderOrange,
-                      },
-                    }}
-                  >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-            </Stack>
-          </Grid>
-        </Grid>
-
-        {/* Filter Summary & Rows Per Page */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            mt: 2,
-            pt: 2,
-            borderTop: `1px solid ${brandColors.divider}`,
-          }}
-        >
-          <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, fontWeight: 600 }}>
-            Showing <strong>{filteredAdmins.length}</strong> of <strong>{admins.length}</strong> administrators
-            {hasActiveFilters && ' (filtered)'}
-          </Typography>
-
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, fontWeight: 500 }}>
-              Rows per page:
-            </Typography>
-            <Select
-              size="small"
-              value={rowsPerPage}
-              onChange={(e) => setRowsPerPage(Number(e.target.value))}
-              sx={{
-                height: 32,
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                borderRadius: '8px',
-                '& .MuiSelect-select': { py: 0.5, px: 1.5 },
-              }}
-            >
-              <MenuItem value={10}>10</MenuItem>
-              <MenuItem value={25}>25</MenuItem>
-              <MenuItem value={50}>50</MenuItem>
-            </Select>
-          </Stack>
-        </Box>
-      </Paper>
-
-      {/* Main Admins Table Paper */}
-      <Paper
-        elevation={0}
-        sx={{
-          borderRadius: '24px',
-          border: `1px solid ${brandColors.border}`,
-          boxShadow: '0 4px 20px rgba(20, 33, 61, 0.04)',
-          backgroundColor: brandColors.white,
-          overflow: 'hidden',
-          width: '100%',
-        }}
-      >
-        <TableContainer>
-          <Table sx={{ minWidth: 880 }}>
-            <TableHead>
-              <TableRow
-                sx={{
-                  backgroundColor: '#F8FAFC',
-                  '& th': {
-                    borderBottom: `1px solid ${brandColors.border}`,
-                    color: brandColors.secondaryText,
-                    fontWeight: 700,
-                    fontSize: '0.8rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    py: 2,
-                    px: 2.5,
-                  },
-                }}
-              >
-                <TableCell>Administrator</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell>Permissions / Access</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Created</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {paginatedAdmins.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
-                      <Avatar
-                        sx={{
-                          width: 56,
-                          height: 56,
-                          bgcolor: brandColors.adminBg,
-                          color: brandColors.secondaryText,
-                        }}
-                      >
-                        <SecurityIcon sx={{ fontSize: 32 }} />
-                      </Avatar>
-                      <Typography sx={{ fontWeight: 700, color: brandColors.primaryText, fontSize: '1rem' }}>
-                        No administrators found
-                      </Typography>
-                      <Typography sx={{ color: brandColors.secondaryText, fontSize: '0.85rem' }}>
-                        Create a new administrator or adjust search filters.
-                      </Typography>
-                    </Box>
-                  </TableCell>
+                  <TableCell>Staff Member</TableCell>
+                  <TableCell>Role</TableCell>
+                  <TableCell>Permissions</TableCell>
+                  <TableCell align="center">Assigned Stores</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ) : (
-                paginatedAdmins.map((admin) => {
-                  const isSuper = admin.role === 'super_admin';
-                  const isActive = admin.isActive !== false && !admin.isBlocked;
-                  const assignedCount = Array.isArray(admin.vendor_ids) ? admin.vendor_ids.length : 0;
-
-                  return (
-                    <TableRow
-                      key={admin._id}
-                      hover
-                      sx={{
-                        transition: 'all 0.15s ease',
-                        '&:hover': {
-                          backgroundColor: '#F8FAFC',
-                        },
-                        '& td': {
-                          borderBottom: `1px solid ${brandColors.divider}`,
-                          py: 2,
-                          px: 2.5,
-                        },
-                      }}
-                    >
-                      {/* Name & Avatar */}
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75 }}>
-                          <Avatar
-                            sx={{
-                              width: 42,
-                              height: 42,
-                              borderRadius: '14px',
-                              fontWeight: 800,
-                              fontSize: '0.95rem',
-                              background: isSuper
-                                ? 'linear-gradient(135deg, #FF6B00 0%, #D97706 100%)'
-                                : `linear-gradient(135deg, ${brandColors.blueAccent} 0%, #1D4ED8 100%)`,
-                              color: '#FFFFFF',
-                              boxShadow: isSuper
-                                ? '0 4px 10px rgba(255, 107, 0, 0.2)'
-                                : '0 4px 10px rgba(37, 99, 235, 0.2)',
-                            }}
-                          >
-                            {admin.name ? admin.name[0].toUpperCase() : 'A'}
-                          </Avatar>
-                          <Box>
-                            <Typography
-                              onClick={() => handleViewAdmin(admin)}
-                              sx={{
-                                fontWeight: 700,
-                                color: brandColors.primaryText,
-                                fontSize: '0.92rem',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                  color: brandColors.primaryGreen,
-                                  textDecoration: 'underline',
-                                },
-                              }}
-                            >
-                              {admin.name}
-                            </Typography>
-                            <Typography sx={{ fontSize: '0.75rem', color: brandColors.secondaryText, mt: 0.2 }}>
-                              ID: {admin._id ? `${admin._id.slice(0, 8)}...` : '-'}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-
-                      {/* Email */}
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                          <EmailIcon sx={{ fontSize: 15, color: brandColors.secondaryText }} />
-                          <Typography sx={{ fontSize: '0.85rem', color: brandColors.primaryText, fontWeight: 500 }}>
-                            {admin.email}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-
-                      {/* Role Badge */}
-                      <TableCell>
-                        <Chip
-                          icon={
-                            isSuper ? (
-                              <SuperAdminIcon sx={{ fontSize: '15px !important', color: `${brandColors.orange} !important` }} />
-                            ) : (
-                              <AdminIcon sx={{ fontSize: '15px !important', color: `${brandColors.blueAccent} !important` }} />
-                            )
-                          }
-                          label={isSuper ? 'Super Admin' : 'Store Admin'}
-                          size="small"
-                          sx={{
-                            fontWeight: 700,
-                            fontSize: '11.5px',
-                            backgroundColor: isSuper ? brandColors.lightOrange : brandColors.lightBlue,
-                            color: isSuper ? brandColors.orange : brandColors.blueAccent,
-                            borderRadius: '8px',
-                            border: isSuper ? `1px solid ${brandColors.borderOrange}` : `1px solid ${brandColors.borderBlue}`,
-                          }}
-                        />
-                      </TableCell>
-
-                      {/* Permissions / Assigned Stores */}
-                      <TableCell>
-                        {isSuper ? (
-                          <Chip
-                            label="All Platform Access"
-                            size="small"
-                            sx={{
-                              height: 22,
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              backgroundColor: brandColors.lightGreen,
-                              color: brandColors.primaryGreen,
-                              borderRadius: '6px',
-                              border: `1px solid ${brandColors.borderGreen}`,
-                            }}
-                          />
-                        ) : (
-                          <Stack direction="row" spacing={0.6} flexWrap="wrap" useFlexGap>
-                            {admin.permissions?.canManageOrders && (
-                              <Chip label="Orders" size="small" sx={{ height: 20, fontSize: '10px', fontWeight: 600, bgcolor: '#F1F5F9' }} />
-                            )}
-                            {admin.permissions?.canManageProducts && (
-                              <Chip label="Products" size="small" sx={{ height: 20, fontSize: '10px', fontWeight: 600, bgcolor: '#F1F5F9' }} />
-                            )}
-                            {admin.permissions?.canUpdateVendor && (
-                              <Chip label="Vendors" size="small" sx={{ height: 20, fontSize: '10px', fontWeight: 600, bgcolor: '#F1F5F9' }} />
-                            )}
-                            <Chip
-                              label={`${assignedCount} store${assignedCount !== 1 ? 's' : ''}`}
-                              size="small"
-                              onClick={() => handleOpenAssignVendors(admin)}
-                              clickable
-                              sx={{
-                                height: 20,
-                                fontSize: '10px',
-                                fontWeight: 700,
-                                bgcolor: brandColors.lightBlue,
-                                color: brandColors.blueAccent,
-                              }}
-                            />
-                          </Stack>
-                        )}
-                      </TableCell>
-
-                      {/* Status */}
-                      <TableCell>
-                        <Box
-                          sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 0.6,
-                            px: 1.2,
-                            py: 0.35,
-                            borderRadius: '50px',
-                            backgroundColor: isActive ? '#DCFCE7' : '#FEE2E2',
-                            color: isActive ? '#16A34A' : '#DC2626',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: '50%',
-                              backgroundColor: isActive ? '#22C55E' : '#EF4444',
-                            }}
-                          />
-                          {isActive ? 'Active' : 'Inactive'}
-                        </Box>
-                      </TableCell>
-
-                      {/* Created Date */}
-                      <TableCell>
-                        <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, fontWeight: 600 }}>
-                          {admin.createdAt
-                            ? new Date(admin.createdAt).toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })
-                            : '-'}
-                        </Typography>
-                      </TableCell>
-
-                      {/* Actions */}
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.75 }}>
-                          {/* Quick View */}
-                          <Tooltip title="View Overview">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleViewAdmin(admin)}
-                              sx={{
-                                color: brandColors.blueAccent,
-                                backgroundColor: brandColors.lightBlue,
-                                borderRadius: '10px',
-                                p: 0.85,
-                                '&:hover': {
-                                  backgroundColor: '#DBEAFE',
-                                },
-                              }}
-                            >
-                              <ViewIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
-
-                          {/* Quick Edit */}
-                          <Tooltip title="Edit Administrator">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenEditDialog(admin)}
-                              sx={{
-                                color: brandColors.primaryGreen,
-                                backgroundColor: brandColors.lightGreen,
-                                borderRadius: '10px',
-                                p: 0.85,
-                                '&:hover': {
-                                  backgroundColor: brandColors.borderGreen,
-                                },
-                              }}
-                            >
-                              <EditIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
-
-                          {/* More Options Dropdown */}
-                          <IconButton
-                            size="small"
-                            onClick={(e) => handleOpenActionMenu(e, admin)}
-                            sx={{
-                              color: brandColors.secondaryText,
-                              backgroundColor: '#F8FAFC',
-                              borderRadius: '10px',
-                              p: 0.85,
-                              '&:hover': {
-                                backgroundColor: '#E2E8F0',
-                                color: brandColors.primaryText,
-                              },
-                            }}
-                          >
-                            <MoreVertIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Box>
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  [1, 2, 3, 4].map((i) => (
+                    <TableRow key={i}>
+                      <TableCell colSpan={6} sx={{ py: 1.6 }}>
+                        <Skeleton variant="text" width="100%" height={32} />
                       </TableCell>
                     </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                  ))
+                ) : paginatedAdmins.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                      <AdminIcon sx={{ fontSize: 44, color: BRAND.muted, mb: 1, display: 'block', mx: 'auto' }} />
+                      <Typography sx={{ color: BRAND.text, fontWeight: 700, fontSize: '14px' }}>
+                        No administrators found
+                      </Typography>
+                      <Typography sx={{ color: BRAND.muted, fontSize: '12px', mt: 0.3 }}>
+                        {searchQuery ? `No results matching "${searchQuery}"` : 'Add team members to delegate access.'}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedAdmins.map((admin) => {
+                    const isSuper = admin.role === 'super_admin';
+                    const currentVendors = admin.assignedVendors || admin.vendor_ids || [];
+                    const assignedCount = currentVendors.length;
 
-        {/* Table Pagination Footer */}
+                    return (
+                      <TableRow
+                        key={admin._id}
+                        hover
+                        sx={{
+                          '& td': { borderBottom: `1px solid ${BRAND.border}`, py: 1.3 },
+                          cursor: 'pointer',
+                          '&:hover': { backgroundColor: BRAND.tableHover },
+                          transition: 'background-color 0.12s ease',
+                        }}
+                      >
+                        {/* Member */}
+                        <TableCell onClick={() => handleOpenViewDrawer(admin)}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Avatar
+                              sx={{
+                                width: 34,
+                                height: 34,
+                                bgcolor: isSuper ? (isDark ? 'rgba(124,58,237,0.2)' : '#EDE9FE') : BRAND.lightBlue,
+                                color: isSuper ? (isDark ? '#A78BFA' : '#7C3AED') : BRAND.blue,
+                                fontSize: '13px',
+                                fontWeight: 700,
+                              }}
+                            >
+                              {admin.name ? admin.name[0].toUpperCase() : 'A'}
+                            </Avatar>
+                            <Box>
+                              <Typography sx={{ fontWeight: 700, fontSize: '13px', color: BRAND.text }}>
+                                {admin.name}
+                              </Typography>
+                              <Typography sx={{ fontSize: '11px', color: BRAND.muted }}>
+                                {admin.email}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </TableCell>
+
+                        {/* Role */}
+                        <TableCell onClick={() => handleOpenViewDrawer(admin)}>
+                          <Chip
+                            icon={isSuper ? <SuperAdminIcon sx={{ fontSize: '14px !important', color: `${isDark ? '#A78BFA' : '#7C3AED'} !important` }} /> : <AdminIcon sx={{ fontSize: '14px !important', color: `${BRAND.blue} !important` }} />}
+                            label={isSuper ? 'Super Admin' : 'Store Admin'}
+                            size="small"
+                            sx={{
+                              bgcolor: isSuper ? (isDark ? 'rgba(124,58,237,0.2)' : '#EDE9FE') : BRAND.lightBlue,
+                              color: isSuper ? (isDark ? '#A78BFA' : '#7C3AED') : BRAND.blue,
+                              fontWeight: 700,
+                              fontSize: '11px',
+                              height: 24,
+                            }}
+                          />
+                        </TableCell>
+
+                        {/* Permissions */}
+                        <TableCell onClick={() => handleOpenViewDrawer(admin)}>
+                          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                            {isSuper ? (
+                              <Chip label="Full Access" size="small" sx={{ bgcolor: BRAND.lightGreen, color: BRAND.green, fontWeight: 700, fontSize: '10.5px', height: 20 }} />
+                            ) : (
+                              <>
+                                {admin.permissions?.canManageOrders && (
+                                  <Chip label="Orders" size="small" sx={{ bgcolor: BRAND.innerCard, color: BRAND.text, fontWeight: 600, fontSize: '10.5px', height: 20, border: `1px solid ${BRAND.border}` }} />
+                                )}
+                                {admin.permissions?.canManageProducts && (
+                                  <Chip label="Products" size="small" sx={{ bgcolor: BRAND.innerCard, color: BRAND.text, fontWeight: 600, fontSize: '10.5px', height: 20, border: `1px solid ${BRAND.border}` }} />
+                                )}
+                                {admin.permissions?.canUpdateVendor && (
+                                  <Chip label="Vendors" size="small" sx={{ bgcolor: BRAND.innerCard, color: BRAND.text, fontWeight: 600, fontSize: '10.5px', height: 20, border: `1px solid ${BRAND.border}` }} />
+                                )}
+                                {!admin.permissions?.canManageOrders && !admin.permissions?.canManageProducts && !admin.permissions?.canUpdateVendor && (
+                                  <Typography sx={{ fontSize: '11px', color: BRAND.muted }}>View Only</Typography>
+                                )}
+                              </>
+                            )}
+                          </Box>
+                        </TableCell>
+
+                        {/* Assigned stores */}
+                        <TableCell align="center" onClick={() => handleOpenViewDrawer(admin)}>
+                          <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: isSuper ? BRAND.green : BRAND.text }}>
+                            {isSuper ? 'All Stores' : `${assignedCount} store${assignedCount !== 1 ? 's' : ''}`}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Status */}
+                        <TableCell onClick={() => handleOpenViewDrawer(admin)}>
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 0.6,
+                              px: 1.2,
+                              py: 0.3,
+                              borderRadius: '50px',
+                              backgroundColor: admin.isActive ? BRAND.lightGreen : BRAND.redLight,
+                              color: admin.isActive ? BRAND.green : BRAND.red,
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                            }}
+                          >
+                            <Box sx={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: admin.isActive ? BRAND.green : BRAND.red }} />
+                            {admin.isActive ? 'Active' : 'Disabled'}
+                          </Box>
+                        </TableCell>
+
+                        {/* Actions */}
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
+                            <Tooltip title="View Details">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenViewDrawer(admin)}
+                                sx={{
+                                  color: BRAND.blue,
+                                  backgroundColor: BRAND.lightBlue,
+                                  borderRadius: '8px',
+                                  width: 28,
+                                  height: 28,
+                                  '&:hover': { opacity: 0.8 },
+                                }}
+                              >
+                                <ViewIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Edit Permissions">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenFormDialog(admin)}
+                                sx={{
+                                  color: BRAND.muted,
+                                  backgroundColor: BRAND.innerCard,
+                                  borderRadius: '8px',
+                                  width: 28,
+                                  height: 28,
+                                  '&:hover': { backgroundColor: BRAND.border, color: BRAND.text },
+                                }}
+                              >
+                                <EditIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Delete Administrator">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDeleteClick(admin)}
+                                sx={{
+                                  color: BRAND.red,
+                                  backgroundColor: BRAND.redLight,
+                                  borderRadius: '8px',
+                                  width: 28,
+                                  height: 28,
+                                  '&:hover': { opacity: 0.8 },
+                                }}
+                              >
+                                <DeleteIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+
+        {/* ======================================================== */}
+        {/* MOBILE RESPONSIVE CARDS */}
+        {/* ======================================================== */}
+        <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 1.5 }}>
+          {loading ? (
+            [1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={90} sx={{ borderRadius: '12px' }} />)
+          ) : paginatedAdmins.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <AdminIcon sx={{ fontSize: 36, color: BRAND.muted, display: 'block', mx: 'auto', mb: 1 }} />
+              <Typography sx={{ color: BRAND.muted, fontSize: '13px' }}>No staff members found</Typography>
+            </Box>
+          ) : (
+            paginatedAdmins.map((admin) => {
+              const isSuper = admin.role === 'super_admin';
+
+              return (
+                <Paper
+                  key={admin._id}
+                  elevation={0}
+                  onClick={() => handleOpenViewDrawer(admin)}
+                  sx={{
+                    p: 1.8,
+                    borderRadius: '12px',
+                    backgroundColor: BRAND.innerCard,
+                    border: `1px solid ${BRAND.border}`,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                      <Avatar sx={{ width: 34, height: 34, bgcolor: isSuper ? (isDark ? 'rgba(124,58,237,0.2)' : '#EDE9FE') : BRAND.lightBlue, color: isSuper ? (isDark ? '#A78BFA' : '#7C3AED') : BRAND.blue, fontSize: '13px', fontWeight: 700 }}>
+                        {admin.name ? admin.name[0].toUpperCase() : 'A'}
+                      </Avatar>
+                      <Box>
+                        <Typography sx={{ fontWeight: 700, fontSize: '13px', color: BRAND.text }}>
+                          {admin.name}
+                        </Typography>
+                        <Typography sx={{ fontSize: '11px', color: BRAND.muted }}>
+                          {admin.email}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Chip
+                      label={isSuper ? 'Super Admin' : 'Admin'}
+                      size="small"
+                      sx={{
+                        bgcolor: isSuper ? (isDark ? 'rgba(124,58,237,0.2)' : '#EDE9FE') : BRAND.lightBlue,
+                        color: isSuper ? (isDark ? '#A78BFA' : '#7C3AED') : BRAND.blue,
+                        fontWeight: 700,
+                        height: 20,
+                        fontSize: '10.5px',
+                      }}
+                    />
+                  </Box>
+                </Paper>
+              );
+            })
+          )}
+        </Box>
+
+        {/* ======================================================== */}
+        {/* PAGINATION */}
+        {/* ======================================================== */}
         <Box
           sx={{
             display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            alignItems: 'center',
             justifyContent: 'space-between',
-            p: 2.5,
-            borderTop: `1px solid ${brandColors.divider}`,
-            gap: 2,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            mt: 2.5,
+            pt: 2,
+            borderTop: `1px solid ${BRAND.border}`,
           }}
         >
-          <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, fontWeight: 500 }}>
-            Showing <strong>{filteredAdmins.length === 0 ? 0 : page * rowsPerPage + 1}</strong> to{' '}
-            <strong>{Math.min((page + 1) * rowsPerPage, filteredAdmins.length)}</strong> of{' '}
-            <strong>{filteredAdmins.length}</strong> administrators
+          <Typography sx={{ fontSize: '12px', color: BRAND.muted, fontWeight: 600 }}>
+            Showing {(page - 1) * rowsPerPage + 1}–{Math.min(page * rowsPerPage, filteredAdmins.length)} of {filteredAdmins.length} staff
           </Typography>
-
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Button
-              variant="outlined"
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+            <IconButton
               size="small"
-              disabled={page === 0}
-              onClick={() => setPage((prev) => Math.max(0, prev - 1))}
-              startIcon={<ChevronLeftIcon />}
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
               sx={{
-                borderRadius: '10px',
-                textTransform: 'none',
-                fontWeight: 700,
-                fontSize: '0.82rem',
-                borderColor: brandColors.border,
-                color: brandColors.primaryText,
-                '&:hover': {
-                  borderColor: brandColors.primaryGreen,
-                  backgroundColor: '#F8FAFC',
-                },
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: '8px',
+                width: 32,
+                height: 32,
+                color: BRAND.muted,
+                '&:disabled': { opacity: 0.35 },
               }}
             >
-              Previous
-            </Button>
-
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: brandColors.primaryText, px: 1 }}>
-              Page {page + 1} of {totalPages}
-            </Typography>
-
-            <Button
-              variant="outlined"
+              <ChevronLeftIcon fontSize="small" />
+            </IconButton>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+              const n = start + i;
+              if (n > totalPages) return null;
+              return (
+                <IconButton
+                  key={n}
+                  size="small"
+                  onClick={() => setPage(n)}
+                  sx={{
+                    border: `1px solid ${n === page ? BRAND.green : BRAND.border}`,
+                    borderRadius: '8px',
+                    width: 32,
+                    height: 32,
+                    backgroundColor: n === page ? BRAND.green : BRAND.white,
+                    color: n === page ? '#FFFFFF' : BRAND.muted,
+                    fontWeight: 700,
+                    fontSize: '12px',
+                    '&:hover': { backgroundColor: n === page ? BRAND.darkGreen : BRAND.tableHover },
+                  }}
+                >
+                  {n}
+                </IconButton>
+              );
+            })}
+            <IconButton
               size="small"
-              disabled={page >= totalPages - 1}
-              onClick={() => setPage((prev) => Math.min(totalPages - 1, prev + 1))}
-              endIcon={<ChevronRightIcon />}
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               sx={{
-                borderRadius: '10px',
-                textTransform: 'none',
-                fontWeight: 700,
-                fontSize: '0.82rem',
-                borderColor: brandColors.border,
-                color: brandColors.primaryText,
-                '&:hover': {
-                  borderColor: brandColors.primaryGreen,
-                  backgroundColor: '#F8FAFC',
-                },
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: '8px',
+                width: 32,
+                height: 32,
+                backgroundColor: BRAND.green,
+                color: '#FFFFFF',
+                '&:hover': { backgroundColor: BRAND.darkGreen },
+                '&:disabled': { backgroundColor: BRAND.innerCard, color: BRAND.muted },
               }}
             >
-              Next
-            </Button>
-          </Stack>
+              <ChevronRightIcon fontSize="small" />
+            </IconButton>
+          </Box>
         </Box>
       </Paper>
 
-      {/* Row Action Menu */}
-      <Menu
-        anchorEl={actionMenuAnchor}
-        open={Boolean(actionMenuAnchor)}
-        onClose={handleCloseActionMenu}
-        PaperProps={{
-          sx: {
-            borderRadius: '14px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-            minWidth: 190,
-            py: 0.5,
-            border: `1px solid ${brandColors.border}`,
-          },
-        }}
-      >
-        <MenuItem onClick={() => handleViewAdmin(activeMenuAdmin)}>
-          <ListItemIcon sx={{ color: brandColors.blueAccent }}>
-            <ViewIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Admin Overview" primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }} />
-        </MenuItem>
-
-        <MenuItem onClick={() => handleOpenEditDialog(activeMenuAdmin)}>
-          <ListItemIcon sx={{ color: brandColors.primaryGreen }}>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Edit Administrator" primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }} />
-        </MenuItem>
-
-        {activeMenuAdmin?.role !== 'super_admin' && (
-          <MenuItem onClick={() => handleOpenAssignVendors(activeMenuAdmin)}>
-            <ListItemIcon sx={{ color: brandColors.orange }}>
-              <StoreIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText primary="Assign Stores" primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }} />
-          </MenuItem>
-        )}
-
-        <MenuItem onClick={() => { const a = activeMenuAdmin; handleCloseActionMenu(); if (a) handleToggleActiveAdmin(a); }}>
-          <ListItemIcon sx={{ color: a => a?.isActive !== false ? '#D97706' : '#16A34A' }}>
-            <BlockIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText
-            primary={activeMenuAdmin?.isActive !== false ? 'Deactivate Account' : 'Activate Account'}
-            primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }}
-          />
-        </MenuItem>
-
-        <Divider sx={{ my: 0.5 }} />
-
-        <MenuItem onClick={() => handleOpenDeleteDialog(activeMenuAdmin)} sx={{ color: '#EF4444' }}>
-          <ListItemIcon sx={{ color: '#EF4444' }}>
-            <DeleteIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Delete Administrator" primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }} />
-        </MenuItem>
-      </Menu>
-
       {/* ======================================================== */}
-      {/* ADMIN DETAILS DRAWER */}
+      {/* 4. VIEW ADMIN DETAILS DRAWER */}
       {/* ======================================================== */}
       <Drawer
         anchor="right"
         open={viewDrawerOpen}
-        onClose={() => setViewDrawerOpen(false)}
+        onClose={handleCloseViewDrawer}
         PaperProps={{
           sx: {
-            width: { xs: '100%', sm: 500, md: 540 },
-            p: 3.5,
-            backgroundColor: '#FFFFFF',
+            width: { xs: '100%', sm: 420 },
+            p: 3,
+            boxSizing: 'border-box',
+            backgroundColor: BRAND.white,
+            color: BRAND.text,
+            borderLeft: `1px solid ${BRAND.border}`,
           },
         }}
       >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.1rem', color: BRAND.text }}>
+            Administrator Profile
+          </Typography>
+          <IconButton onClick={handleCloseViewDrawer} size="small" sx={{ color: BRAND.muted }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+
         {selectedAdmin && (
-          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {/* Drawer Header */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 800, color: brandColors.primaryText }}>
-                Administrator Overview
-              </Typography>
-              <IconButton
-                onClick={() => setViewDrawerOpen(false)}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Avatar
                 sx={{
-                  color: brandColors.secondaryText,
-                  borderRadius: '10px',
-                  '&:hover': { backgroundColor: '#F1F5F9' },
+                  width: 64,
+                  height: 64,
+                  mx: 'auto',
+                  bgcolor: selectedAdmin.role === 'super_admin' ? (isDark ? 'rgba(124,58,237,0.2)' : '#EDE9FE') : BRAND.lightBlue,
+                  color: selectedAdmin.role === 'super_admin' ? (isDark ? '#A78BFA' : '#7C3AED') : BRAND.blue,
+                  fontSize: '24px',
+                  fontWeight: 800,
+                  borderRadius: '16px',
                 }}
               >
-                <CloseIcon />
-              </IconButton>
+                {selectedAdmin.name ? selectedAdmin.name[0].toUpperCase() : 'A'}
+              </Avatar>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: BRAND.text, mt: 1.5 }}>
+                {selectedAdmin.name}
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 0.5 }}>
+                <Chip
+                  label={selectedAdmin.role === 'super_admin' ? 'Super Administrator' : 'Store Administrator'}
+                  size="small"
+                  sx={{
+                    bgcolor: selectedAdmin.role === 'super_admin' ? (isDark ? 'rgba(124,58,237,0.2)' : '#EDE9FE') : BRAND.lightBlue,
+                    color: selectedAdmin.role === 'super_admin' ? (isDark ? '#A78BFA' : '#7C3AED') : BRAND.blue,
+                    fontWeight: 700,
+                    height: 20,
+                  }}
+                />
+              </Box>
             </Box>
 
-            <Divider sx={{ mb: 3 }} />
-
-            {/* Scrollable Content */}
-            <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
-              {/* Profile Card */}
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 3,
-                  mb: 3,
-                  borderRadius: '20px',
-                  backgroundColor: '#F8FAFC',
-                  border: `1px solid ${brandColors.border}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2.5,
-                }}
-              >
-                <Avatar
-                  sx={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: '20px',
-                    fontWeight: 800,
-                    fontSize: '1.4rem',
-                    background:
-                      selectedAdmin.role === 'super_admin'
-                        ? 'linear-gradient(135deg, #FF6B00 0%, #D97706 100%)'
-                        : `linear-gradient(135deg, ${brandColors.blueAccent} 0%, #1D4ED8 100%)`,
-                    color: '#FFFFFF',
-                  }}
-                >
-                  {selectedAdmin.name ? selectedAdmin.name[0].toUpperCase() : 'A'}
-                </Avatar>
-
-                <Box sx={{ flex: 1 }}>
-                  <Typography sx={{ fontWeight: 800, fontSize: '1.15rem', color: brandColors.primaryText }}>
-                    {selectedAdmin.name}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, mt: 0.3 }}>
+            <Paper elevation={0} sx={{ p: 2, borderRadius: '12px', bgcolor: BRAND.innerCard, border: `1px solid ${BRAND.border}` }}>
+              <Typography sx={{ fontSize: '12px', fontWeight: 800, color: BRAND.muted, textTransform: 'uppercase', mb: 1.2 }}>
+                Account & Security
+              </Typography>
+              <Stack spacing={1}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <EmailIcon sx={{ fontSize: 16, color: BRAND.muted }} />
+                  <Typography sx={{ fontSize: '13px', color: BRAND.text, fontWeight: 600 }}>
                     {selectedAdmin.email}
                   </Typography>
-
-                  <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
-                    <Chip
-                      label={selectedAdmin.role === 'super_admin' ? 'Super Administrator' : 'Store Admin'}
-                      size="small"
-                      sx={{
-                        height: 22,
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        backgroundColor:
-                          selectedAdmin.role === 'super_admin' ? brandColors.lightOrange : brandColors.lightBlue,
-                        color:
-                          selectedAdmin.role === 'super_admin' ? brandColors.orange : brandColors.blueAccent,
-                        borderRadius: '6px',
-                      }}
-                    />
-                    <Chip
-                      label={selectedAdmin.isActive !== false && !selectedAdmin.isBlocked ? 'Active' : 'Inactive'}
-                      size="small"
-                      sx={{
-                        height: 22,
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        backgroundColor:
-                          selectedAdmin.isActive !== false && !selectedAdmin.isBlocked ? '#DCFCE7' : '#FEE2E2',
-                        color:
-                          selectedAdmin.isActive !== false && !selectedAdmin.isBlocked ? '#16A34A' : '#DC2626',
-                        borderRadius: '50px',
-                      }}
-                    />
-                  </Stack>
                 </Box>
-              </Paper>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CalendarIcon sx={{ fontSize: 16, color: BRAND.muted }} />
+                  <Typography sx={{ fontSize: '12.5px', color: BRAND.muted }}>
+                    Created: {formatDate(selectedAdmin.createdAt)}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
 
-              {/* Permissions Summary */}
-              <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: brandColors.primaryText, mb: 1.5 }}>
-                Granular Permissions
-              </Typography>
-
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2.5,
-                  mb: 3,
-                  borderRadius: '16px',
-                  border: `1px solid ${brandColors.border}`,
-                  backgroundColor: brandColors.white,
-                }}
-              >
-                {selectedAdmin.role === 'super_admin' ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <VerifiedIcon sx={{ color: brandColors.primaryGreen, fontSize: 24 }} />
-                    <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: brandColors.primaryText }}>
-                      Unrestricted Master Access: Can manage orders, products, categories, users, stores, and platform administrators.
+            <Paper elevation={0} sx={{ p: 2, borderRadius: '12px', bgcolor: BRAND.innerCard, border: `1px solid ${BRAND.border}` }}>
+              {(() => {
+                const assignedList = selectedAdmin.assignedVendors || selectedAdmin.vendor_ids || [];
+                return (
+                  <>
+                    <Typography sx={{ fontSize: '12px', fontWeight: 800, color: BRAND.muted, textTransform: 'uppercase', mb: 1.2 }}>
+                      Assigned Stores ({assignedList.length})
                     </Typography>
-                  </Box>
-                ) : (
-                  <Stack spacing={1.5}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography sx={{ fontSize: '0.85rem', color: brandColors.primaryText, fontWeight: 600 }}>
-                        Manage Orders
+                    {selectedAdmin.role === 'super_admin' ? (
+                      <Typography sx={{ fontSize: '13px', color: BRAND.green, fontWeight: 700 }}>
+                        Full Access across all marketplace stores
                       </Typography>
-                      <Chip
-                        label={selectedAdmin.permissions?.canManageOrders ? 'Granted' : 'Denied'}
-                        size="small"
-                        sx={{
-                          height: 20,
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          backgroundColor: selectedAdmin.permissions?.canManageOrders ? '#DCFCE7' : '#F1F5F9',
-                          color: selectedAdmin.permissions?.canManageOrders ? '#16A34A' : '#64748B',
-                        }}
-                      />
-                    </Box>
-
-                    <Divider />
-
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography sx={{ fontSize: '0.85rem', color: brandColors.primaryText, fontWeight: 600 }}>
-                        Manage Products & Catalog
-                      </Typography>
-                      <Chip
-                        label={selectedAdmin.permissions?.canManageProducts ? 'Granted' : 'Denied'}
-                        size="small"
-                        sx={{
-                          height: 20,
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          backgroundColor: selectedAdmin.permissions?.canManageProducts ? '#DCFCE7' : '#F1F5F9',
-                          color: selectedAdmin.permissions?.canManageProducts ? '#16A34A' : '#64748B',
-                        }}
-                      />
-                    </Box>
-
-                    <Divider />
-
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography sx={{ fontSize: '0.85rem', color: brandColors.primaryText, fontWeight: 600 }}>
-                        Update Store Settings
-                      </Typography>
-                      <Chip
-                        label={selectedAdmin.permissions?.canUpdateVendor ? 'Granted' : 'Denied'}
-                        size="small"
-                        sx={{
-                          height: 20,
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          backgroundColor: selectedAdmin.permissions?.canUpdateVendor ? '#DCFCE7' : '#F1F5F9',
-                          color: selectedAdmin.permissions?.canUpdateVendor ? '#16A34A' : '#64748B',
-                        }}
-                      />
-                    </Box>
-                  </Stack>
-                )}
-              </Paper>
-
-              {/* Assigned Stores */}
-              {selectedAdmin.role !== 'super_admin' && (
-                <>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-                    <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: brandColors.primaryText }}>
-                      Assigned Stores ({Array.isArray(selectedAdmin.vendor_ids) ? selectedAdmin.vendor_ids.length : 0})
-                    </Typography>
-                    <Button
-                      size="small"
-                      onClick={() => {
-                        setViewDrawerOpen(false);
-                        handleOpenAssignVendors(selectedAdmin);
-                      }}
-                      sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.8rem', color: brandColors.blueAccent }}
-                    >
-                      Modify Stores
-                    </Button>
-                  </Box>
-
-                  {Array.isArray(selectedAdmin.vendor_ids) && selectedAdmin.vendor_ids.length > 0 ? (
-                    <Stack spacing={1.5} sx={{ mb: 3 }}>
-                      {selectedAdmin.vendor_ids.map((v) => {
-                        const vObj = vendors.find((vend) => vend._id === (v._id || v)) || v;
-                        return (
-                          <Paper
-                            key={vObj._id || v}
-                            elevation={0}
-                            sx={{
-                              p: 1.8,
-                              borderRadius: '14px',
-                              border: `1px solid ${brandColors.border}`,
-                              backgroundColor: '#F8FAFC',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                            }}
-                          >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                              <Avatar
-                                src={vObj.vendor_image || ''}
-                                variant="rounded"
-                                sx={{ width: 36, height: 36, borderRadius: '10px', bgcolor: '#FFFFFF', border: `1px solid ${brandColors.border}` }}
-                              >
-                                <StoreIcon sx={{ fontSize: 18, color: brandColors.primaryGreen }} />
-                              </Avatar>
-                              <Box>
-                                <Typography sx={{ fontWeight: 700, fontSize: '0.88rem', color: brandColors.primaryText }}>
-                                  {vObj.name || 'Store Name'}
-                                </Typography>
-                                <Typography sx={{ fontSize: '0.75rem', color: brandColors.secondaryText }}>
-                                  {vObj.city || 'Local Marketplace Store'}
-                                </Typography>
-                              </Box>
+                    ) : assignedList.length > 0 ? (
+                      <Stack spacing={0.8}>
+                        {assignedList.map((v) => {
+                          const vName = v.name || (vendors.find((item) => item._id === (v._id || v))?.name) || 'Store Partner';
+                          return (
+                            <Box key={v._id || v} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <StoreIcon sx={{ fontSize: 15, color: BRAND.muted }} />
+                              <Typography sx={{ fontSize: '12.5px', color: BRAND.text, fontWeight: 600 }}>
+                                {vName}
+                              </Typography>
                             </Box>
-                          </Paper>
-                        );
-                      })}
-                    </Stack>
-                  ) : (
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        p: 3,
-                        mb: 3,
-                        textAlign: 'center',
-                        borderRadius: '14px',
-                        border: `1px dashed ${brandColors.border}`,
-                        backgroundColor: '#F8FAFC',
-                      }}
-                    >
-                      <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, fontWeight: 500 }}>
-                        No specific stores assigned yet. This admin cannot view orders until stores are linked.
+                          );
+                        })}
+                      </Stack>
+                    ) : (
+                      <Typography sx={{ fontSize: '12.5px', color: BRAND.muted }}>
+                        No specific stores assigned
                       </Typography>
-                    </Paper>
-                  )}
-                </>
-              )}
-            </Box>
+                    )}
+                  </>
+                );
+              })()}
+            </Paper>
 
-            {/* Drawer Bottom Actions */}
-            <Box sx={{ pt: 2, borderTop: `1px solid ${brandColors.divider}` }}>
-              <Grid container spacing={1.5}>
-                <Grid item xs={6}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<EditIcon />}
-                    onClick={() => {
-                      setViewDrawerOpen(false);
-                      handleOpenEditDialog(selectedAdmin);
-                    }}
-                    sx={{
-                      borderRadius: '12px',
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      borderColor: brandColors.border,
-                      color: brandColors.primaryText,
-                      py: 1,
-                    }}
-                  >
-                    Edit Admin
-                  </Button>
-                </Grid>
-                <Grid item xs={6}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={() => {
-                      setViewDrawerOpen(false);
-                      handleToggleActiveAdmin(selectedAdmin);
-                    }}
-                    sx={{
-                      borderRadius: '12px',
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      backgroundColor:
-                        selectedAdmin.isActive !== false && !selectedAdmin.isBlocked ? '#D97706' : '#16A34A',
-                      color: '#FFFFFF',
-                      py: 1,
-                      '&:hover': {
-                        backgroundColor:
-                          selectedAdmin.isActive !== false && !selectedAdmin.isBlocked ? '#B45309' : '#15803D',
-                      },
-                    }}
-                  >
-                    {selectedAdmin.isActive !== false && !selectedAdmin.isBlocked ? 'Deactivate' : 'Activate'}
-                  </Button>
-                </Grid>
-              </Grid>
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  const a = selectedAdmin;
+                  handleCloseViewDrawer();
+                  handleOpenFormDialog(a);
+                }}
+                sx={{ flex: 1, textTransform: 'none', fontWeight: 700, borderRadius: '8px', borderColor: BRAND.border, color: BRAND.text }}
+              >
+                Edit Admin
+              </Button>
             </Box>
           </Box>
         )}
       </Drawer>
 
       {/* ======================================================== */}
-      {/* ADD / EDIT ADMIN DIALOG */}
+      {/* 5. ADD / EDIT ADMIN MODAL */}
       {/* ======================================================== */}
       <Dialog
         open={formDialogOpen}
         onClose={handleCloseFormDialog}
-        maxWidth="md"
+        maxWidth="sm"
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: '20px',
-            p: 1,
+            borderRadius: '16px',
+            margin: { xs: 1.5, sm: 3 },
+            backgroundColor: BRAND.white,
+            color: BRAND.text,
+            border: `1px solid ${BRAND.border}`,
           },
         }}
       >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1.5 }}>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, color: brandColors.primaryText }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.2rem', color: BRAND.text }}>
               {selectedAdmin ? 'Edit Administrator' : 'Add New Administrator'}
             </Typography>
-            <Typography sx={{ fontSize: '0.82rem', color: brandColors.secondaryText, mt: 0.2 }}>
-              Configure administrator profile, platform role, and store-level permissions
+            <Typography sx={{ fontSize: '11.5px', color: BRAND.muted }}>
+              {selectedAdmin ? 'Update staff member access levels and store management' : 'Grant admin portal credentials to a team member'}
             </Typography>
           </Box>
-          <IconButton onClick={handleCloseFormDialog} size="small">
+          <IconButton onClick={handleCloseFormDialog} size="small" sx={{ color: BRAND.muted }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent dividers sx={{ borderColor: brandColors.divider, py: 3 }}>
-          <Grid container spacing={2.5}>
-            {/* Name */}
+        <DialogContent dividers sx={{ p: { xs: 2, sm: 2.5 }, borderColor: BRAND.border }}>
+          <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Administrator Full Name"
+                size="small"
+                label="Full Name *"
+                name="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={handleInputChange}
                 required
-                placeholder="e.g. Vikram Mehta"
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                InputProps={{
+                  sx: {
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    backgroundColor: BRAND.innerCard,
+                    color: BRAND.text,
+                  },
+                }}
               />
             </Grid>
 
-            {/* Email */}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Email Address (Login ID)"
+                size="small"
+                label="Email Address *"
+                name="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={handleInputChange}
                 required
-                placeholder="e.g. vikram@aapnubazaar.com"
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                InputProps={{
+                  sx: {
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    backgroundColor: BRAND.innerCard,
+                    color: BRAND.text,
+                  },
+                }}
               />
             </Grid>
 
-            {/* Password */}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label={selectedAdmin ? 'New Password (leave blank to keep current)' : 'Account Password'}
+                size="small"
+                label={selectedAdmin ? 'Change Password (Optional)' : 'Password *'}
+                name="password"
                 type="password"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={handleInputChange}
                 required={!selectedAdmin}
-                placeholder="Minimum 6 characters"
-                helperText={selectedAdmin ? 'Only enter a password if you want to reset it' : 'Used for portal login'}
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                InputProps={{
+                  sx: {
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    backgroundColor: BRAND.innerCard,
+                    color: BRAND.text,
+                  },
+                }}
+                helperText={selectedAdmin ? 'Leave blank to keep unchanged' : 'Minimum 6 characters'}
               />
             </Grid>
 
-            {/* Role */}
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Administrator Role</InputLabel>
-                <Select
-                  value={formData.role}
-                  label="Administrator Role"
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  sx={{ borderRadius: '12px' }}
-                >
-                  <MenuItem value="admin">Store Admin (Scoped Access)</MenuItem>
-                  <MenuItem value="super_admin">Super Administrator (Full System Access)</MenuItem>
-                </Select>
-              </FormControl>
+              <TextField
+                fullWidth
+                size="small"
+                select
+                label="Role *"
+                name="role"
+                value={formData.role}
+                onChange={handleInputChange}
+                InputProps={{
+                  sx: {
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    backgroundColor: BRAND.innerCard,
+                    color: BRAND.text,
+                  },
+                }}
+              >
+                <MenuItem value="admin">Store Admin</MenuItem>
+                <MenuItem value="super_admin">Super Admin</MenuItem>
+              </TextField>
             </Grid>
 
-            {/* Granular Permissions Section */}
-            {formData.role === 'admin' && (
+            {formData.role !== 'super_admin' && (
               <>
                 <Grid item xs={12}>
-                  <Divider sx={{ my: 1 }} />
-                  <Typography sx={{ fontWeight: 800, fontSize: '0.92rem', color: brandColors.primaryText, mb: 1.5 }}>
-                    Granular Access Permissions
+                  <Divider sx={{ my: 0.5, borderColor: BRAND.border }} />
+                  <Typography sx={{ fontSize: '12px', fontWeight: 800, color: BRAND.muted, textTransform: 'uppercase', mb: 1, mt: 1 }}>
+                    Module Permissions
                   </Typography>
+                  <Stack spacing={0.5}>
+                    <FormControlLabel
+                      control={<Switch checked={formData.canManageOrders} onChange={handleInputChange} name="canManageOrders" color="primary" />}
+                      label={<Typography sx={{ fontSize: '13px', color: BRAND.text }}>Can Manage Orders & Delivery</Typography>}
+                    />
+                    <FormControlLabel
+                      control={<Switch checked={formData.canManageProducts} onChange={handleInputChange} name="canManageProducts" color="primary" />}
+                      label={<Typography sx={{ fontSize: '13px', color: BRAND.text }}>Can Manage Products & Catalog</Typography>}
+                    />
+                    <FormControlLabel
+                      control={<Switch checked={formData.canUpdateVendor} onChange={handleInputChange} name="canUpdateVendor" color="primary" />}
+                      label={<Typography sx={{ fontSize: '13px', color: BRAND.text }}>Can Edit Store Settings</Typography>}
+                    />
+                  </Stack>
                 </Grid>
 
-                <Grid item xs={12} sm={4}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: '14px',
-                      backgroundColor: '#F8FAFC',
-                      border: `1px solid ${brandColors.border}`,
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Box>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: brandColors.primaryText }}>
-                          Manage Orders
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.75rem', color: brandColors.secondaryText }}>
-                          View & update status
-                        </Typography>
-                      </Box>
-                      <Switch
-                        checked={formData.canManageOrders}
-                        onChange={(e) => setFormData({ ...formData, canManageOrders: e.target.checked })}
-                        sx={{
-                          '& .MuiSwitch-switchBase.Mui-checked': { color: brandColors.primaryGreen },
-                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: brandColors.primaryGreen },
-                        }}
-                      />
-                    </Box>
-                  </Paper>
-                </Grid>
-
-                <Grid item xs={12} sm={4}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: '14px',
-                      backgroundColor: '#F8FAFC',
-                      border: `1px solid ${brandColors.border}`,
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Box>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: brandColors.primaryText }}>
-                          Manage Products
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.75rem', color: brandColors.secondaryText }}>
-                          Create & edit items
-                        </Typography>
-                      </Box>
-                      <Switch
-                        checked={formData.canManageProducts}
-                        onChange={(e) => setFormData({ ...formData, canManageProducts: e.target.checked })}
-                        sx={{
-                          '& .MuiSwitch-switchBase.Mui-checked': { color: brandColors.primaryGreen },
-                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: brandColors.primaryGreen },
-                        }}
-                      />
-                    </Box>
-                  </Paper>
-                </Grid>
-
-                <Grid item xs={12} sm={4}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: '14px',
-                      backgroundColor: '#F8FAFC',
-                      border: `1px solid ${brandColors.border}`,
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Box>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: brandColors.primaryText }}>
-                          Update Store Info
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.75rem', color: brandColors.secondaryText }}>
-                          Edit vendor profile
-                        </Typography>
-                      </Box>
-                      <Switch
-                        checked={formData.canUpdateVendor}
-                        onChange={(e) => setFormData({ ...formData, canUpdateVendor: e.target.checked })}
-                        sx={{
-                          '& .MuiSwitch-switchBase.Mui-checked': { color: brandColors.primaryGreen },
-                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: brandColors.primaryGreen },
-                        }}
-                      />
-                    </Box>
-                  </Paper>
-                </Grid>
-
-                {/* Assign Vendors Autocomplete */}
                 <Grid item xs={12}>
-                  <Typography sx={{ fontWeight: 700, fontSize: '0.88rem', color: brandColors.primaryText, mb: 1 }}>
-                    Assign Store Vendors
+                  <Divider sx={{ my: 0.5, borderColor: BRAND.border }} />
+                  <Typography sx={{ fontSize: '12px', fontWeight: 800, color: BRAND.muted, textTransform: 'uppercase', mb: 1, mt: 1 }}>
+                    Assigned Stores
                   </Typography>
                   <Autocomplete
                     multiple
+                    size="small"
                     options={vendors}
-                    getOptionLabel={(option) => option.name || option.email || ''}
+                    getOptionLabel={(option) => option.name || ''}
+                    isOptionEqualToValue={(option, value) => (option?._id || option) === (value?._id || value)}
                     value={selectedVendors}
-                    onChange={(_, newValue) => setSelectedVendors(newValue)}
-                    isOptionEqualToValue={(option, value) => option._id === value._id}
+                    onChange={(event, newValue) => setSelectedVendors(newValue)}
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        placeholder="Select vendor stores this admin can manage..."
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                        placeholder="Select stores to assign or remove..."
+                        InputProps={{
+                          ...params.InputProps,
+                          sx: {
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            backgroundColor: BRAND.innerCard,
+                            color: BRAND.text,
+                          },
+                        }}
                       />
                     )}
-                    renderTags={(value, getTagProps) =>
-                      value.map((option, index) => (
-                        <Chip
-                          key={option._id}
-                          label={option.name}
-                          size="small"
-                          {...getTagProps({ index })}
-                          sx={{
-                            backgroundColor: brandColors.lightGreen,
-                            color: brandColors.primaryGreen,
-                            fontWeight: 700,
-                            borderRadius: '8px',
-                          }}
-                        />
-                      ))
-                    }
                   />
                 </Grid>
               </>
@@ -1921,173 +1191,62 @@ const AdminManagement = () => {
           </Grid>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2.5, gap: 1 }}>
-          <Button
-            onClick={handleCloseFormDialog}
-            disabled={submitting}
-            sx={{
-              borderRadius: '10px',
-              textTransform: 'none',
-              fontWeight: 700,
-              color: brandColors.secondaryText,
-            }}
-          >
+        <DialogActions sx={{ p: 2, borderTop: `1px solid ${BRAND.border}`, justifyContent: 'space-between' }}>
+          <Button onClick={handleCloseFormDialog} disabled={submitting} sx={{ textTransform: 'none', color: BRAND.muted, fontWeight: 600 }}>
             Cancel
           </Button>
           <Button
             variant="contained"
-            onClick={handleSubmitForm}
-            disabled={submitting || !formData.name.trim() || !formData.email.trim()}
+            onClick={handleSubmit}
+            disabled={submitting}
             sx={{
-              borderRadius: '10px',
+              backgroundColor: BRAND.green,
               textTransform: 'none',
+              borderRadius: '8px',
               fontWeight: 700,
-              backgroundColor: brandColors.primaryGreen,
-              color: '#FFFFFF',
               px: 3,
-              '&:hover': {
-                backgroundColor: brandColors.darkGreen,
-              },
+              py: 0.8,
+              '&:hover': { backgroundColor: BRAND.darkGreen },
             }}
           >
-            {submitting ? (
-              <CircularProgress size={20} color="inherit" />
-            ) : selectedAdmin ? (
-              'Update Administrator'
-            ) : (
-              'Create Administrator'
-            )}
+            {submitting ? <CircularProgress size={20} color="inherit" /> : selectedAdmin ? 'Save Changes' : 'Create Admin'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* ======================================================== */}
-      {/* ASSIGN VENDORS DIALOG */}
-      {/* ======================================================== */}
-      <Dialog
-        open={assignVendorsDialogOpen}
-        onClose={() => setAssignVendorsDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: '20px', p: 1 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 800, color: brandColors.primaryText }}>
-          Assign Store Vendors to {selectedAdmin?.name}
-        </DialogTitle>
-        <DialogContent dividers sx={{ py: 3 }}>
-          <Typography sx={{ fontSize: '0.85rem', color: brandColors.secondaryText, mb: 2 }}>
-            Select which merchant vendor stores this administrator has permission to view and manage.
-          </Typography>
-
-          <Autocomplete
-            multiple
-            options={vendors}
-            getOptionLabel={(option) => option.name || ''}
-            value={selectedVendors}
-            onChange={(_, newValue) => setSelectedVendors(newValue)}
-            isOptionEqualToValue={(option, value) => option._id === value._id}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Assigned Vendors"
-                placeholder="Search and select vendor stores..."
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-              />
-            )}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip
-                  key={option._id}
-                  label={option.name}
-                  size="small"
-                  {...getTagProps({ index })}
-                  sx={{
-                    backgroundColor: brandColors.lightGreen,
-                    color: brandColors.primaryGreen,
-                    fontWeight: 700,
-                    borderRadius: '8px',
-                  }}
-                />
-              ))
-            }
-          />
-        </DialogContent>
-        <DialogActions sx={{ p: 2.5, gap: 1 }}>
-          <Button
-            onClick={() => setAssignVendorsDialogOpen(false)}
-            disabled={submitting}
-            sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700, color: brandColors.secondaryText }}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSaveAssignVendors}
-            disabled={submitting}
-            sx={{
-              borderRadius: '10px',
-              textTransform: 'none',
-              fontWeight: 700,
-              backgroundColor: brandColors.primaryGreen,
-              color: '#FFFFFF',
-              px: 3,
-              '&:hover': {
-                backgroundColor: brandColors.darkGreen,
-              },
-            }}
-          >
-            {submitting ? <CircularProgress size={20} color="inherit" /> : 'Save Store Assignments'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* ======================================================== */}
-      {/* DELETE CONFIRMATION DIALOG */}
-      {/* ======================================================== */}
+      {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: '20px', p: 1 } }}
+        PaperProps={{
+          sx: {
+            borderRadius: '14px',
+            p: 1,
+            backgroundColor: BRAND.white,
+            color: BRAND.text,
+            border: `1px solid ${BRAND.border}`,
+          },
+        }}
       >
-        <DialogTitle sx={{ fontWeight: 800, color: '#DC2626' }}>
+        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.1rem', color: BRAND.text }}>
           Delete Administrator?
         </DialogTitle>
         <DialogContent>
-          <Typography sx={{ fontSize: '0.9rem', color: brandColors.secondaryText, lineHeight: 1.5 }}>
-            Are you sure you want to permanently remove administrator{' '}
-            <strong>{selectedAdmin?.name}</strong> ({selectedAdmin?.email})?
+          <Typography sx={{ fontSize: '13px', color: BRAND.muted }}>
+            Are you sure you want to delete <strong style={{ color: BRAND.text }}>{selectedAdmin?.name}</strong>? This administrator will immediately lose access to the portal.
           </Typography>
-          <Alert severity="warning" sx={{ mt: 2, borderRadius: '10px', fontSize: '0.82rem' }}>
-            This action immediately revokes all administrative and portal access.
-          </Alert>
         </DialogContent>
-        <DialogActions sx={{ p: 2.5, gap: 1 }}>
-          <Button
-            onClick={() => setDeleteDialogOpen(false)}
-            disabled={submitting}
-            sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700, color: brandColors.secondaryText }}
-          >
+        <DialogActions sx={{ p: 1.5 }}>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={submitting} sx={{ textTransform: 'none', color: BRAND.muted }}>
             Cancel
           </Button>
           <Button
             variant="contained"
-            onClick={handleConfirmDelete}
+            onClick={handleDeleteConfirm}
             disabled={submitting}
-            sx={{
-              borderRadius: '10px',
-              textTransform: 'none',
-              fontWeight: 700,
-              backgroundColor: '#EF4444',
-              color: '#FFFFFF',
-              px: 2.5,
-              '&:hover': {
-                backgroundColor: '#DC2626',
-              },
-            }}
+            sx={{ bgcolor: BRAND.red, color: '#FFFFFF', fontWeight: 700, textTransform: 'none', borderRadius: '8px', '&:hover': { bgcolor: '#B91C1C' } }}
           >
-            {submitting ? <CircularProgress size={20} color="inherit" /> : 'Delete Administrator'}
+            {submitting ? <CircularProgress size={20} color="inherit" /> : 'Delete Admin'}
           </Button>
         </DialogActions>
       </Dialog>

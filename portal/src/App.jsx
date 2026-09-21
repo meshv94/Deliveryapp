@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import ThemeModeProvider from './theme/ThemeContext';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import SuperAdminRoute from './components/SuperAdminRoute';
@@ -13,12 +13,10 @@ import Modules from './pages/Modules';
 import Users from './pages/Users';
 import AdminManagement from './pages/AdminManagement';
 import Settings from './pages/Settings';
-import theme from './theme';
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <ThemeModeProvider>
       <Router>
         <Routes>
           {/* Public Route - Login */}
@@ -64,7 +62,7 @@ function App() {
           />
         </Routes>
       </Router>
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 
