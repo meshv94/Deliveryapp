@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import { Analytics } from '@vercel/analytics/react';
 import Layout from './components/Layout';
 import { CartProvider } from './context/CartContext';
 import VendorListPage from './pages/VendorListPage';
@@ -260,6 +261,7 @@ function App() {
           </Routes>
         </Router>
       </CartProvider>
+      <Analytics />
     </ThemeProvider>
   );
 }
