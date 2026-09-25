@@ -41,6 +41,11 @@ const userSchema = new mongoose.Schema(
     profileImage: {
       type: String,
       default: null
+    },
+    wallet_balance: {
+      type: Number,
+      default: 0,
+      min: [0, 'Wallet balance cannot be negative']
     }
   },
   { timestamps: true }

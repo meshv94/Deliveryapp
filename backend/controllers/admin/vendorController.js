@@ -120,18 +120,32 @@ const createProductSchema = Joi.object({
   preparation_time_minute: Joi.number().optional().min(0).default(0),
   packaging_charge: Joi.number().optional().min(0).default(0),
   image: Joi.string().optional().allow(''),
+  dietary_type: Joi.string().valid('veg', 'non_veg', 'vegan', 'egg', 'none').optional().default('none'),
+  description: Joi.string().trim().optional().allow(''),
+  category_name: Joi.string().trim().optional().allow(''),
+  tags: Joi.alternatives().try(
+    Joi.array().items(Joi.string().trim()),
+    Joi.string().trim()
+  ).optional(),
   isActive: Joi.boolean().optional()
 });
 
 const updateProductSchema = Joi.object({
   vendor_id: Joi.string().optional(),
-  module_id: Joi.string().optional(),
+  module_id: Joi.string().optional().allow('', null),
   name: Joi.string().trim().optional(),
   main_price: Joi.number().optional().min(0),
   special_price: Joi.number().optional().min(0).allow(null, ''),
   preparation_time_minute: Joi.number().optional().min(0),
   packaging_charge: Joi.number().optional().min(0),
   image: Joi.string().optional().allow(''),
+  dietary_type: Joi.string().valid('veg', 'non_veg', 'vegan', 'egg', 'none').optional(),
+  description: Joi.string().trim().optional().allow(''),
+  category_name: Joi.string().trim().optional().allow(''),
+  tags: Joi.alternatives().try(
+    Joi.array().items(Joi.string().trim()),
+    Joi.string().trim()
+  ).optional(),
   isActive: Joi.boolean().optional()
 }).min(1).messages({ 'object.min': 'At least one field is required to update' });
 

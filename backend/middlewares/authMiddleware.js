@@ -57,6 +57,24 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
+const optionalToken = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-env');
+      const userId = decoded?.userId;
+      if (userId) {
+        const user = await User.findById(userId).select('-otp -otpExpire');
+        if (user) req.user = user.toObject();
+      }
+    }
+  } catch (err) {
+    // Ignore invalid/expired token for optional auth
+  }
+  next();
+};
+
 module.exports = {
-  verifyToken
+  verifyToken,
+  optionalToken
 };

@@ -107,6 +107,8 @@ const Products = () => {
     packaging_charge: 0,
     vendor_id: '',
     module_id: '',
+    dietary_type: 'none',
+    tags: '',
     isActive: true,
     image: null,
   });
@@ -177,6 +179,8 @@ const Products = () => {
         packaging_charge: product.packaging_charge || 0,
         vendor_id: product.vendor_id?._id || product.vendor_id || product.vendor?._id || product.vendor || '',
         module_id: product.module_id?._id || product.module_id || product.module?._id || product.module || '',
+        dietary_type: product.dietary_type || 'none',
+        tags: Array.isArray(product.tags) ? product.tags.join(', ') : (product.tags || ''),
         isActive: product.isActive !== undefined ? product.isActive : true,
         image: null,
       });
@@ -192,6 +196,8 @@ const Products = () => {
         packaging_charge: 0,
         vendor_id: vendors[0]?._id || '',
         module_id: modules[0]?._id || '',
+        dietary_type: 'none',
+        tags: '',
         isActive: true,
         image: null,
       });
@@ -259,6 +265,11 @@ const Products = () => {
       data.append('packaging_charge', formData.packaging_charge || 0);
       data.append('vendor_id', formData.vendor_id);
       data.append('module_id', formData.module_id || '');
+      data.append('dietary_type', formData.dietary_type || 'none');
+      if (formData.tags) {
+        const tagList = formData.tags.split(',').map(t => t.trim()).filter(Boolean);
+        tagList.forEach(tag => data.append('tags[]', tag));
+      }
       data.append('isActive', formData.isActive);
 
       if (formData.image) {
@@ -301,6 +312,27 @@ const Products = () => {
       setError(err.message || 'Failed to delete product.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleQuickToggleStock = async (product, e) => {
+    e.stopPropagation();
+    const nextState = !product.isActive;
+    // Optimistic local state update
+    setProducts((prev) =>
+      prev.map((p) => (p._id === product._id ? { ...p, isActive: nextState } : p))
+    );
+    try {
+      const data = new FormData();
+      data.append('isActive', nextState);
+      await vendorService.updateProduct(product._id, data);
+      setSuccess(`"${product.name}" is now marked as ${nextState ? 'In Stock (Active)' : 'Out of Stock (Inactive)'}`);
+    } catch (err) {
+      // Revert on error
+      setProducts((prev) =>
+        prev.map((p) => (p._id === product._id ? { ...p, isActive: !nextState } : p))
+      );
+      setError('Failed to update stock availability');
     }
   };
 
@@ -808,25 +840,48 @@ const Products = () => {
                           </Typography>
                         </TableCell>
 
-                        {/* Status */}
-                        <TableCell onClick={() => handleOpenViewDrawer(product)}>
-                          <Box
-                            sx={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 0.6,
-                              px: 1.2,
-                              py: 0.3,
-                              borderRadius: '50px',
-                              backgroundColor: product.isActive ? (isDark ? 'rgba(52,211,153,0.15)' : '#DCFCE7') : BRAND.redLight,
-                              color: product.isActive ? (BRAND.success || '#16A34A') : BRAND.red,
-                              fontSize: '11.5px',
-                              fontWeight: 700,
-                            }}
-                          >
-                            <Box sx={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: product.isActive ? (BRAND.success || '#16A34A') : BRAND.red }} />
-                            {product.isActive ? 'Active' : 'Inactive'}
-                          </Box>
+                        {/* Status (1-Click Out-of-Stock Quick Toggle) */}
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Tooltip title={product.isActive ? 'Click to mark Out of Stock' : 'Click to mark In Stock'}>
+                            <Box
+                              onClick={(e) => handleQuickToggleStock(product, e)}
+                              sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 0.8,
+                                px: 1.3,
+                                py: 0.4,
+                                borderRadius: '50px',
+                                cursor: 'pointer',
+                                backgroundColor: product.isActive
+                                  ? isDark
+                                    ? 'rgba(52,211,153,0.15)'
+                                    : '#DCFCE7'
+                                  : isDark
+                                  ? 'rgba(239,68,68,0.15)'
+                                  : '#FEE2E2',
+                                color: product.isActive ? BRAND.success || '#16A34A' : BRAND.red,
+                                border: `1px solid ${
+                                  product.isActive ? 'rgba(22, 163, 74, 0.3)' : 'rgba(220, 38, 38, 0.3)'
+                                }`,
+                                fontSize: '11px',
+                                fontWeight: 800,
+                                userSelect: 'none',
+                                transition: 'all 0.15s ease',
+                                '&:hover': { transform: 'scale(1.04)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: '50%',
+                                  backgroundColor: product.isActive ? BRAND.success || '#16A34A' : BRAND.red,
+                                }}
+                              />
+                              {product.isActive ? 'IN STOCK' : 'OUT OF STOCK'}
+                            </Box>
+                          </Tooltip>
                         </TableCell>
 
                         {/* Actions */}
@@ -1403,6 +1458,39 @@ const Products = () => {
                 <MenuItem value="true">Active</MenuItem>
                 <MenuItem value="false">Inactive</MenuItem>
               </TextField>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                select
+                label="Dietary Classification"
+                name="dietary_type"
+                value={formData.dietary_type || 'none'}
+                onChange={handleInputChange}
+                InputProps={{ sx: { borderRadius: '8px', fontSize: '13px' } }}
+              >
+                <MenuItem value="none">Standard / None</MenuItem>
+                <MenuItem value="veg">🟢 Pure Veg</MenuItem>
+                <MenuItem value="non_veg">🔴 Non-Veg</MenuItem>
+                <MenuItem value="vegan">🌱 Vegan</MenuItem>
+                <MenuItem value="egg">🥚 Contains Egg</MenuItem>
+              </TextField>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Search Tags / Keywords"
+                name="tags"
+                value={formData.tags}
+                onChange={handleInputChange}
+                placeholder="e.g. spicy, cheesy, thin crust, gluten free"
+                helperText="Comma-separated keywords for smart discovery"
+                InputProps={{ sx: { borderRadius: '8px', fontSize: '13px' } }}
+              />
             </Grid>
 
             <Grid item xs={12}>

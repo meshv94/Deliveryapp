@@ -38,6 +38,7 @@ import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlin
 
 import apiClient from '../services/api';
 import { useCartContext } from '../context/CartContext';
+import OmniSearchModal from '../components/OmniSearchModal';
 
 // Fallback images
 const FALLBACK_SHOP_IMAGE =
@@ -52,6 +53,8 @@ const HomePage = () => {
 
   // State
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [pastOrders, setPastOrders] = useState([]);
   const [modules, setModules] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [popularProducts, setPopularProducts] = useState([]);
@@ -181,23 +184,35 @@ const HomePage = () => {
         } else {
           setPopularProducts([]);
         }
-      } catch (err) {
-        console.error('Error loading vendors/products:', err);
       } finally {
         setLoadingVendors(false);
       }
     };
 
+    // Fetch past orders if logged in
+    const fetchPastOrders = async () => {
+      if (!token) return;
+      try {
+        const res = await apiClient.get('/app/my-orders');
+        if (res?.success && Array.isArray(res.data)) {
+          setPastOrders(res.data.slice(0, 5));
+        }
+      } catch (err) {
+        // silent fail
+      }
+    };
+
+    fetchPastOrders();
     fetchVendorsAndProducts();
   }, [token]);
 
-  // Handle Search Submission
+  // Handle Search Submission (Navigates to dedicated Search Results page)
   const handleSearchSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/vendors?search=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     } else {
-      navigate('/vendors');
+      setIsSearchModalOpen(true);
     }
   };
 
@@ -327,6 +342,7 @@ const HomePage = () => {
             <Box
               component="form"
               onSubmit={handleSearchSubmit}
+              onClick={() => setIsSearchModalOpen(true)}
               sx={{
                 display: 'flex',
                 alignItems: 'center',
@@ -336,6 +352,7 @@ const HomePage = () => {
                 boxShadow: '0 4px 14px rgba(8, 127, 91, 0.08)',
                 p: 0.5,
                 width: '100%',
+                cursor: 'pointer',
               }}
             >
               <SearchIcon sx={{ color: '#087F5B', ml: 1, mr: 0.8, fontSize: 22 }} />
@@ -344,6 +361,7 @@ const HomePage = () => {
                 variant="standard"
                 placeholder="Search shops, groceries, food..."
                 value={searchQuery}
+                onFocus={() => setIsSearchModalOpen(true)}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 InputProps={{
                   disableUnderline: true,
@@ -353,6 +371,10 @@ const HomePage = () => {
               <Button
                 type="submit"
                 variant="contained"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSearchSubmit(e);
+                }}
                 sx={{
                   backgroundColor: '#087F5B',
                   color: '#FFFFFF',
@@ -483,6 +505,7 @@ const HomePage = () => {
                 <Box
                   component="form"
                   onSubmit={handleSearchSubmit}
+                  onClick={() => setIsSearchModalOpen(true)}
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
@@ -493,14 +516,16 @@ const HomePage = () => {
                     p: 0.6,
                     maxWidth: 540,
                     mb: 3,
+                    cursor: 'pointer',
                   }}
                 >
                   <SearchIcon sx={{ color: '#6B7280', ml: 1.5, mr: 1 }} />
                   <TextField
                     fullWidth
                     variant="standard"
-                    placeholder="Search for products, shops or food..."
+                    placeholder="Search for products, shops or food... (Press '/' to search)"
                     value={searchQuery}
+                    onFocus={() => setIsSearchModalOpen(true)}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{
                       disableUnderline: true,
@@ -510,6 +535,10 @@ const HomePage = () => {
                   <Button
                     type="submit"
                     variant="contained"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSearchSubmit(e);
+                    }}
                     sx={{
                       backgroundColor: '#087F5B',
                       color: '#FFFFFF',
@@ -523,7 +552,7 @@ const HomePage = () => {
                       '&:hover': { backgroundColor: '#075B43' },
                     }}
                   >
-                    Explore Shops →
+                    Search
                   </Button>
                 </Box>
 
@@ -668,6 +697,157 @@ const HomePage = () => {
         </Box>
       </Container>
     </Box>
+
+      {/* ─────────────────────────────────────────────────────────────
+          2.5. ORDER AGAIN / PAST FAVORITES (Seamless Discovery)
+      ───────────────────────────────────────────────────────────── */}
+      {pastOrders && pastOrders.length > 0 && (
+        <Box sx={{ py: { xs: 3, md: 4 }, backgroundColor: '#FFFFFF', borderBottom: '1px solid #E5E7EB' }}>
+          <Container maxWidth="lg">
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Typography sx={{ fontSize: { xs: '1.1rem', md: '1.35rem' }, fontWeight: 800, color: '#151515' }}>
+                  🔄 Order Again
+                </Typography>
+                <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>
+                  Quickly re-order your favorite past meals & items
+                </Typography>
+              </Box>
+              <Button
+                onClick={() => navigate('/my-orders')}
+                sx={{ color: '#087F5B', fontWeight: 700, fontSize: '13px', textTransform: 'none' }}
+              >
+                View all orders →
+              </Button>
+            </Box>
+
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 2,
+                overflowX: 'auto',
+                pb: 1,
+                scrollbarWidth: 'none',
+                '&::-webkit-scrollbar': { display: 'none' },
+              }}
+            >
+              {pastOrders
+                .flatMap((ord) =>
+                  (ord.items || []).map((item) => {
+                    const prod = (item.product && typeof item.product === 'object') ? item.product : {};
+                    const name = item.name || prod.name || 'Special Item';
+                    const calculatedPrice =
+                      Number(item.special_price) > 0
+                        ? Number(item.special_price)
+                        : Number(item.main_price) > 0
+                        ? Number(item.main_price)
+                        : Number(prod.special_price) > 0
+                        ? Number(prod.special_price)
+                        : Number(prod.main_price) > 0
+                        ? Number(prod.main_price)
+                        : item.item_total && item.quantity
+                        ? Math.round(Number(item.item_total) / Number(item.quantity))
+                        : 0;
+
+                    const vendorObj = (ord.vendor && typeof ord.vendor === 'object') ? ord.vendor : {};
+                    const vendorName = vendorObj.name || (item.vendor?.name) || 'Neighborhood Store';
+                    const vendorId = vendorObj._id || ord.vendor || item.vendor?._id || item.vendor;
+                    const img = prod.image || item.image || vendorObj.vendor_image || FALLBACK_PRODUCT_IMAGE;
+                    const prodId = prod._id || item.product || item._id;
+
+                    return {
+                      prodId,
+                      name,
+                      price: calculatedPrice,
+                      img,
+                      vendorName,
+                      vendorId,
+                      dietary_type: prod.dietary_type || item.dietary_type,
+                    };
+                  })
+                )
+                .filter((item) => item.name && item.price > 0)
+                .slice(0, 8)
+                .map((item, i) => (
+                  <Card
+                    key={i}
+                    sx={{
+                      flex: { xs: '0 0 210px', sm: '0 0 230px' },
+                      borderRadius: '16px',
+                      border: '1px solid #E5E7EB',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      '&:hover': {
+                        borderColor: '#087F5B',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 20px rgba(8,127,91,0.08)',
+                      },
+                    }}
+                  >
+                    <Box sx={{ height: 110, position: 'relative', bgcolor: '#F7F9F8', overflow: 'hidden' }}>
+                      <CardMedia
+                        component="img"
+                        height="110"
+                        image={item.img}
+                        alt={item.name}
+                        sx={{ objectFit: 'cover' }}
+                      />
+                    </Box>
+                    <CardContent sx={{ p: 1.5, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                      <Typography sx={{ fontWeight: 700, fontSize: '14px', color: '#17221D', lineHeight: 1.3, mb: 0.3, noWrap: true }}>
+                        {item.name}
+                      </Typography>
+                      <Typography sx={{ fontSize: '11.5px', color: '#6B7280', noWrap: true, mb: 1.2 }}>
+                        {item.vendorName}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 'auto' }}>
+                        <Typography sx={{ fontWeight: 800, fontSize: '15px', color: '#087F5B' }}>
+                          ₹{item.price}
+                        </Typography>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={() => {
+                            if (item.vendorId) {
+                              addToCart(
+                                item.vendorId,
+                                {
+                                  _id: item.prodId,
+                                  name: item.name,
+                                  main_price: item.price,
+                                  image: item.img,
+                                  dietary_type: item.dietary_type,
+                                },
+                                1
+                              );
+                              setSnackbar({ open: true, message: `${item.name} added to cart!`, severity: 'success' });
+                            }
+                          }}
+                          sx={{
+                            backgroundColor: '#087F5B',
+                            color: '#fff',
+                            textTransform: 'none',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            borderRadius: '8px',
+                            px: 1.4,
+                            py: 0.4,
+                            minWidth: 'auto',
+                            '&:hover': { backgroundColor: '#075B43' },
+                          }}
+                        >
+                          + Reorder
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+            </Box>
+          </Container>
+        </Box>
+      )}
 
       {/* ─────────────────────────────────────────────────────────────
           3. SHOP BY CATEGORY
@@ -2125,6 +2305,13 @@ const HomePage = () => {
           </Card>
         </Container>
       </Box>
+
+      {/* Universal Omnisearch Modal */}
+      <OmniSearchModal
+        open={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        initialQuery={searchQuery}
+      />
 
       {/* Snackbar feedback */}
       <Snackbar

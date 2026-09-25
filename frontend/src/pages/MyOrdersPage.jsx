@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Container,
   Box,
@@ -37,8 +37,10 @@ import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
 import PaymentIcon from '@mui/icons-material/Payment';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import TwoWheelerIcon from '@mui/icons-material/TwoWheeler';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/apiClient';
+import LiveRiderTrackingModal from '../components/LiveRiderTrackingModal';
 
 // AapnuBazaar Brand Design Tokens
 const BRAND = {
@@ -133,16 +135,15 @@ const MyOrdersPage = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [copiedSnackbar, setCopiedSnackbar] = useState(false);
+  const [riderTrackingOrder, setRiderTrackingOrder] = useState(null);
 
-  // Fetch customer orders on mount
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  const fetchOrders = async () => {
+  // Fetch customer orders with silent background updates
+  const fetchOrders = useCallback(async (isBackground = false) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!isBackground) {
+        setLoading(true);
+        setError(null);
+      }
 
       const token = localStorage.getItem('authToken');
       if (!token) {
@@ -157,20 +158,39 @@ const MyOrdersPage = () => {
       });
 
       if (response?.success) {
-        setOrders(Array.isArray(response.data) ? response.data : []);
+        const orderList = Array.isArray(response.data) ? response.data : [];
+        setOrders(orderList);
+
+        // Keep selectedOrder in sync if modal is open
+        setSelectedOrder((prev) => {
+          if (!prev) return null;
+          const fresh = orderList.find((o) => o._id === prev._id);
+          return fresh || prev;
+        });
       } else {
-        setError(response?.message || 'Failed to load orders');
+        if (!isBackground) setError(response?.message || 'Failed to load orders');
       }
     } catch (err) {
       console.error('Error fetching orders:', err);
-      setError(err.response?.data?.message || 'Failed to load orders. Please try again.');
+      if (!isBackground) setError(err.response?.data?.message || 'Failed to load orders. Please try again.');
       if (err.response?.status === 401) {
         navigate('/login');
       }
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  // Initial fetch + 10s auto polling
+  useEffect(() => {
+    fetchOrders(false);
+
+    const interval = setInterval(() => {
+      fetchOrders(true);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [fetchOrders]);
 
   const handleOrderClick = (order) => {
     setSelectedOrder(order);
@@ -756,32 +776,82 @@ const MyOrdersPage = () => {
                       </Typography>
                     </Box>
 
-                    {/* View Details Action Button */}
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOrderClick(order);
-                      }}
-                      sx={{
-                        backgroundColor: BRAND.primaryGreen,
-                        color: BRAND.white,
-                        borderRadius: '10px',
-                        height: 38,
-                        fontWeight: 600,
-                        fontSize: '13px',
-                        textTransform: 'none',
-                        boxShadow: 'none',
-                        transition: 'all 0.18s ease',
-                        '&:hover': {
-                          backgroundColor: BRAND.darkGreen,
-                          boxShadow: '0 4px 12px rgba(8, 127, 91, 0.25)',
-                        },
-                      }}
-                    >
-                      View Details →
-                    </Button>
+                    {/* Action Buttons */}
+                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                      {['placed', 'preparing', 'processing', 'confirmed', 'ready', 'out for delivery'].includes(
+                        String(order.status || '').toLowerCase()
+                      ) && (
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRiderTrackingOrder(order);
+                          }}
+                          startIcon={<TwoWheelerIcon sx={{ fontSize: '16px !important' }} />}
+                          sx={{
+                            background: 'linear-gradient(135deg, #087F5B 0%, #075B43 100%)',
+                            color: BRAND.white,
+                            borderRadius: '10px',
+                            height: 38,
+                            fontWeight: 700,
+                            fontSize: '12px',
+                            textTransform: 'none',
+                            boxShadow: '0 3px 10px rgba(8, 127, 91, 0.2)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #075B43 0%, #054231 100%)',
+                            },
+                          }}
+                        >
+                          Live Track
+                        </Button>
+                      )}
+
+                      <Button
+                        fullWidth
+                        variant={
+                          ['placed', 'preparing', 'processing', 'confirmed', 'ready', 'out for delivery'].includes(
+                            String(order.status || '').toLowerCase()
+                          )
+                            ? 'outlined'
+                            : 'contained'
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOrderClick(order);
+                        }}
+                        sx={{
+                          backgroundColor: ['placed', 'preparing', 'processing', 'confirmed', 'ready', 'out for delivery'].includes(
+                            String(order.status || '').toLowerCase()
+                          )
+                            ? 'transparent'
+                            : BRAND.primaryGreen,
+                          color: ['placed', 'preparing', 'processing', 'confirmed', 'ready', 'out for delivery'].includes(
+                            String(order.status || '').toLowerCase()
+                          )
+                            ? BRAND.primaryGreen
+                            : BRAND.white,
+                          borderColor: BRAND.primaryGreen,
+                          borderRadius: '10px',
+                          height: 38,
+                          fontWeight: 700,
+                          fontSize: '12.5px',
+                          textTransform: 'none',
+                          boxShadow: 'none',
+                          transition: 'all 0.18s ease',
+                          '&:hover': {
+                            backgroundColor: ['placed', 'preparing', 'processing', 'confirmed', 'ready', 'out for delivery'].includes(
+                              String(order.status || '').toLowerCase()
+                            )
+                              ? BRAND.lightGreen
+                              : BRAND.darkGreen,
+                            borderColor: BRAND.darkGreen,
+                          },
+                        }}
+                      >
+                        Details &rarr;
+                      </Button>
+                    </Box>
                   </CardContent>
                 </Card>
               );
@@ -816,7 +886,15 @@ const MyOrdersPage = () => {
           <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', pt: 1.5, pb: 0.5 }}>
             <Box sx={{ width: 44, height: 4, borderRadius: '10px', backgroundColor: '#E5E7EB' }} />
           </Box>
-          <OrderDetailsContent selectedOrder={selectedOrder} onClose={handleCloseDetails} onCopyId={handleCopyOrderId} />
+          <OrderDetailsContent
+            selectedOrder={selectedOrder}
+            onClose={handleCloseDetails}
+            onCopyId={handleCopyOrderId}
+            onOpenRiderTrack={(order) => {
+              handleCloseDetails();
+              setRiderTrackingOrder(order);
+            }}
+          />
         </Drawer>
       ) : (
         /* Desktop Centered Modal */
@@ -833,8 +911,25 @@ const MyOrdersPage = () => {
             },
           }}
         >
-          <OrderDetailsContent selectedOrder={selectedOrder} onClose={handleCloseDetails} onCopyId={handleCopyOrderId} />
+          <OrderDetailsContent
+            selectedOrder={selectedOrder}
+            onClose={handleCloseDetails}
+            onCopyId={handleCopyOrderId}
+            onOpenRiderTrack={(order) => {
+              handleCloseDetails();
+              setRiderTrackingOrder(order);
+            }}
+          />
         </Dialog>
+      )}
+
+      {/* Live Rider Tracking & Delivery Chat Modal */}
+      {Boolean(riderTrackingOrder) && (
+        <LiveRiderTrackingModal
+          open={Boolean(riderTrackingOrder)}
+          onClose={() => setRiderTrackingOrder(null)}
+          order={riderTrackingOrder}
+        />
       )}
 
       {/* Copied ID Snackbar */}
@@ -857,7 +952,7 @@ const MyOrdersPage = () => {
  * SUBCOMPONENT: OrderDetailsContent
  * ─────────────────────────────────────────────────────────────
  */
-const OrderDetailsContent = ({ selectedOrder, onClose, onCopyId }) => {
+const OrderDetailsContent = ({ selectedOrder, onClose, onCopyId, onOpenRiderTrack }) => {
   if (!selectedOrder) return null;
 
   const statusStyle = getStatusBadgeStyle(selectedOrder.status);
@@ -926,6 +1021,54 @@ const OrderDetailsContent = ({ selectedOrder, onClose, onCopyId }) => {
       {/* 2. SCROLLABLE CONTENT BODY */}
       <Box sx={{ overflowY: 'auto', p: { xs: 2, sm: 3 } }}>
         <Stack spacing={2.5}>
+          {/* LIVE TRACKING BANNER FOR ACTIVE ORDERS */}
+          {!isCancelled && !isDelivered && (
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, #087F5B 0%, #055C41 100%)',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxShadow: '0 8px 24px rgba(8, 127, 91, 0.25)',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <Box sx={{ zIndex: 1, pr: 1.5 }}>
+                <Typography sx={{ fontWeight: 800, fontSize: '14.5px', display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                  <TwoWheelerIcon sx={{ fontSize: 20, color: '#FFD43B' }} />
+                  Live Rider Tracking
+                </Typography>
+                <Typography sx={{ fontSize: '12px', opacity: 0.9, mt: 0.3 }}>
+                  Track your delivery partner on live map and chat directly
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                onClick={() => onOpenRiderTrack && onOpenRiderTrack(selectedOrder)}
+                sx={{
+                  backgroundColor: '#ffffff',
+                  color: BRAND.primaryGreen,
+                  fontWeight: 800,
+                  fontSize: '12.5px',
+                  borderRadius: '10px',
+                  px: 2,
+                  py: 0.9,
+                  whiteSpace: 'nowrap',
+                  textTransform: 'none',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  '&:hover': {
+                    backgroundColor: '#F0FDF4',
+                  },
+                }}
+              >
+                Track Live
+              </Button>
+            </Box>
+          )}
           {/* A. VENDOR INFORMATION CARD */}
           <Box
             sx={{

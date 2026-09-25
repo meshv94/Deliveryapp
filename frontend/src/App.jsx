@@ -12,6 +12,8 @@ import MyOrdersPage from './pages/MyOrdersPage';
 import HomePage from './pages/HomePage';
 import ModulesPage from './pages/ModulesPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import SearchResultsPage from './pages/SearchResultsPage';
+import WalletPage from './pages/WalletPage';
 
 // AapnuBazaar Design System Theme
 const theme = createTheme({
@@ -235,8 +237,9 @@ function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/modules" element={<ModulesPage />} />
 
-                    {/* Store Discovery */}
+                    {/* Store Discovery & Smart Search */}
                     <Route path="/vendors" element={<VendorListPage />} />
+                    <Route path="/search" element={<SearchResultsPage />} />
 
                     {/* Store Details & Product Menu */}
                     <Route path="/vendors/:vendorId" element={<VendorDetailsPage />} />
@@ -248,8 +251,9 @@ function App() {
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/address" element={<AddressPage />} />
 
-                    {/* Order History */}
+                    {/* Order History & Wallet */}
                     <Route path="/my-orders" element={<MyOrdersPage />} />
+                    <Route path="/wallet" element={<WalletPage />} />
 
                     {/* Stripe Payment Callback */}
                     <Route path="/payment-success" element={<PaymentSuccessPage />} />

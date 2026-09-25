@@ -33,10 +33,32 @@ const cartSchema = new mongoose.Schema({
 
 	// payment info
 	payment_status: { type: String, enum: ['Pending', 'Paid', 'Failed', 'Refunded'], default: 'Pending' },
+	payment_method: { type: String, enum: ['cod', 'stripe', 'wallet', 'hybrid'], default: 'cod' },
+	wallet_amount_used: { type: Number, default: 0, min: 0 },
 	stripe_session_id: { type: String },
 	stripe_payment_intent: { type: String },
 
-	status: { type: String, enum: ['New','Placed','Cancelled', 'Delivered', 'Refunded'], default: 'New' },
+	// refund info
+	refunded_amount: { type: Number, default: 0 },
+	refunded_to: { type: String, enum: ['wallet', 'source', 'none'], default: 'none' },
+	refunded_at: { type: Date },
+
+	status: {
+		type: String,
+		enum: [
+			'New',
+			'Placed',
+			'Confirmed',
+			'Preparing',
+			'Processing',
+			'Ready',
+			'Out for Delivery',
+			'Delivered',
+			'Cancelled',
+			'Refunded'
+		],
+		default: 'New'
+	},
 	cancel_reason: { type: String },
 	cancelled_by: { type: String, enum: ['admin', 'user', 'system'] },
 	cancelled_at: { type: Date }

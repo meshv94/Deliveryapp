@@ -45,6 +45,11 @@ import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import PaymentsIcon from '@mui/icons-material/Payments';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
 import { useNavigate } from 'react-router-dom';
 
 import { useCartContext } from '../context/CartContext';
@@ -92,6 +97,26 @@ const CartPage = () => {
   const [disableMessage, setDisableMessage] = useState('');
   const [clearCartDialogOpen, setClearCartDialogOpen] = useState(false);
   const [payingLoading, setPayingLoading] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [isWalletEnabled, setIsWalletEnabled] = useState(true);
+  const [allowCheckoutUsage, setAllowCheckoutUsage] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState('online'); // 'wallet' | 'online' | 'cod'
+
+  // Fetch Wallet Balance and Policy Settings
+  const fetchWalletBalance = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+      const res = await apiClient.get('/app/wallet/balance');
+      if (res.success && res.data) {
+        setWalletBalance(Number(res.data.balance || 0));
+        setIsWalletEnabled(res.data.isWalletEnabled !== false);
+        setAllowCheckoutUsage(res.data.allowCheckoutUsage !== false);
+      }
+    } catch (err) {
+      console.log('Error loading wallet balance in checkout:', err);
+    }
+  };
 
   // Fetch checkout data with optional address
   const fetchCheckoutWithAddress = async (addressId = null) => {
@@ -178,6 +203,7 @@ const CartPage = () => {
     if (cart.length > 0) {
       fetchCheckoutWithAddress(selectedAddress);
       fetchAddresses();
+      fetchWalletBalance();
     }
   }, [cart]);
 
@@ -236,7 +262,41 @@ const CartPage = () => {
     navigate('/vendors');
   };
 
-  // Handle Pay / Stripe Checkout
+  // Calculate Grand Total across orders
+  const grandTotal = useMemo(() => {
+    if (!checkoutData || checkoutData.length === 0) return 0;
+    return checkoutData.reduce((total, order) => total + (order.total_payable_amount || 0), 0);
+  }, [checkoutData]);
+
+  // Check if wallet can be selected as payment option
+  const isWalletUsable = Boolean(
+    isWalletEnabled && allowCheckoutUsage && walletBalance > 0
+  );
+
+  // If currently on wallet but wallet becomes non-selectable, fallback to online
+  useEffect(() => {
+    if (!isWalletUsable && paymentMethod === 'wallet') {
+      setPaymentMethod('online');
+    }
+  }, [isWalletUsable, paymentMethod]);
+
+  const isPayingWithWallet = paymentMethod === 'wallet' && isWalletUsable;
+
+  // Wallet deduction and final payable calculations
+  const walletDeduction = useMemo(() => {
+    if (!isPayingWithWallet) return 0;
+    return Math.min(walletBalance, grandTotal);
+  }, [isPayingWithWallet, walletBalance, grandTotal]);
+
+  const finalPayableAmount = useMemo(() => {
+    return Math.max(0, grandTotal - walletDeduction);
+  }, [grandTotal, walletDeduction]);
+
+  const is100PercentWallet = useMemo(() => {
+    return Boolean(isPayingWithWallet && walletBalance >= grandTotal && grandTotal > 0);
+  }, [isPayingWithWallet, walletBalance, grandTotal]);
+
+  // Handle Pay / Direct Order Placement or Stripe Checkout
   const handlePay = async () => {
     if (!selectedAddress) {
       alert('Please select a delivery address');
@@ -258,15 +318,45 @@ const CartPage = () => {
           : deliveryDate;
 
       const cartIds = checkoutData.map((order) => order._id);
+      const token = localStorage.getItem('authToken');
 
+      // 1. If paying with Wallet OR Cash On Delivery: place order directly
+      if (paymentMethod === 'wallet' || paymentMethod === 'cod') {
+        const orderPayload = {
+          selectedAddressId: selectedAddress,
+          cartIds: cartIds,
+          deliveryDate: finalDeliveryDate,
+          deliveryType: deliveryType,
+          use_wallet: paymentMethod === 'wallet',
+          payment_method: paymentMethod === 'wallet' ? 'wallet' : 'cod',
+        };
+
+        const response = await apiClient.post('/app/place-order', orderPayload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response?.success) {
+          clearCart();
+          localStorage.removeItem('deliveryCart');
+          navigate('/my-orders');
+          return;
+        } else {
+          setError(response?.message || 'Failed to place order.');
+          setPayingLoading(false);
+          return;
+        }
+      }
+
+      // 2. Online Payment via Stripe
       const paymentData = {
         selectedAddressId: selectedAddress,
         cartIds: cartIds,
         deliveryDate: finalDeliveryDate,
         deliveryType: deliveryType,
+        use_wallet: false,
       };
-
-      const token = localStorage.getItem('authToken');
 
       const response = await apiClient.post('/app/create-stripe-checkout', paymentData, {
         headers: {
@@ -280,22 +370,16 @@ const CartPage = () => {
         setError(response?.message || 'Failed to create checkout session.');
       }
     } catch (err) {
-      console.error('Stripe checkout error:', err);
+      console.error('Checkout error:', err);
       setError(
         err.response?.data?.message ||
           err.message ||
-          'Failed to create checkout session. Please try again.'
+          'Failed to complete checkout. Please try again.'
       );
     } finally {
       setPayingLoading(false);
     }
   };
-
-  // Calculate Grand Total across orders
-  const grandTotal = useMemo(() => {
-    if (!checkoutData || checkoutData.length === 0) return 0;
-    return checkoutData.reduce((total, order) => total + (order.total_payable_amount || 0), 0);
-  }, [checkoutData]);
 
   // Aggregate Price Breakdown across all orders
   const priceBreakdown = useMemo(() => {
@@ -1060,7 +1144,7 @@ const CartPage = () => {
                 </CardContent>
               </Card>
 
-              {/* 4. PAYMENT METHOD SECTION */}
+              {/* 4. PAYMENT METHOD & WALLET APPLICATION */}
               <Card
                 elevation={0}
                 sx={{
@@ -1072,31 +1156,229 @@ const CartPage = () => {
               >
                 <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
                   <Typography sx={{ fontWeight: 800, fontSize: '16px', color: BRAND.textPrimary, mb: 1.5 }}>
-                    Payment Method
+                    Payment Options
                   </Typography>
 
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      p: 1.6,
-                      borderRadius: '12px',
-                      border: `2px solid ${BRAND.primaryGreen}`,
-                      backgroundColor: BRAND.lightGreen,
-                      gap: 1.5,
+                  <RadioGroup
+                    value={paymentMethod}
+                    onChange={(e) => {
+                      if (e.target.value === 'wallet' && !isWalletUsable) return;
+                      setPaymentMethod(e.target.value);
                     }}
                   >
-                    <CreditCardIcon sx={{ fontSize: 24, color: BRAND.primaryGreen }} />
-                    <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontWeight: 700, fontSize: '14px', color: BRAND.textPrimary }}>
-                        Secure Online Payment (Stripe)
-                      </Typography>
-                      <Typography sx={{ fontSize: '12px', color: BRAND.textSecondary }}>
-                        Cards, NetBanking, UPI & Digital Wallets via 256-bit encrypted checkout
-                      </Typography>
-                    </Box>
-                    <ShieldOutlinedIcon sx={{ color: BRAND.primaryGreen, fontSize: 20 }} />
-                  </Box>
+                    <Stack spacing={1.5}>
+                      {/* OPTION 1: AAPNUBAZAAR WALLET */}
+                      <Box
+                        onClick={() => {
+                          if (isWalletUsable) {
+                            setPaymentMethod('wallet');
+                          }
+                        }}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          p: 1.6,
+                          borderRadius: '12px',
+                          border:
+                            paymentMethod === 'wallet' && isWalletUsable
+                              ? `2px solid ${BRAND.primaryGreen}`
+                              : `1px solid ${BRAND.border}`,
+                          backgroundColor:
+                            paymentMethod === 'wallet' && isWalletUsable
+                              ? BRAND.lightGreen
+                              : isWalletUsable
+                              ? BRAND.white
+                              : '#F9FAFB',
+                          cursor: isWalletUsable ? 'pointer' : 'not-allowed',
+                          opacity: isWalletUsable ? 1 : 0.6,
+                          gap: 1.5,
+                          transition: 'all 0.18s ease',
+                        }}
+                      >
+                        <Radio
+                          checked={paymentMethod === 'wallet' && isWalletUsable}
+                          disabled={!isWalletUsable}
+                          value="wallet"
+                          sx={{
+                            p: 0,
+                            color: BRAND.primaryGreen,
+                            '&.Mui-checked': { color: BRAND.primaryGreen },
+                            '&.Mui-disabled': { color: '#D1D5DB' },
+                          }}
+                        />
+                        <Box
+                          sx={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: '10px',
+                            backgroundColor: isWalletUsable ? BRAND.primaryGreen : '#9CA3AF',
+                            color: '#ffffff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <AccountBalanceWalletIcon sx={{ fontSize: 20 }} />
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                            <Typography
+                              sx={{
+                                fontWeight: 700,
+                                fontSize: '13.5px',
+                                color: isWalletUsable ? BRAND.textPrimary : BRAND.textSecondary,
+                              }}
+                            >
+                              AapnuBazaar Wallet
+                            </Typography>
+                            <Chip
+                              label={
+                                !isWalletEnabled || !allowCheckoutUsage
+                                  ? 'Disabled by Admin'
+                                  : `Bal: ₹${walletBalance.toFixed(2)}`
+                              }
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: '11px',
+                                fontWeight: 800,
+                                backgroundColor:
+                                  !isWalletEnabled || !allowCheckoutUsage
+                                    ? '#FEE2E2'
+                                    : walletBalance > 0
+                                    ? BRAND.lightGreen
+                                    : '#F3F4F6',
+                                color:
+                                  !isWalletEnabled || !allowCheckoutUsage
+                                    ? '#DC2626'
+                                    : walletBalance > 0
+                                    ? BRAND.primaryGreen
+                                    : BRAND.textSecondary,
+                              }}
+                            />
+                          </Box>
+                          <Typography sx={{ fontSize: '11.5px', color: BRAND.textSecondary, mt: 0.2 }}>
+                            {!isWalletEnabled || !allowCheckoutUsage
+                              ? 'Wallet checkout is currently disabled by platform admin'
+                              : walletBalance <= 0
+                              ? 'Insufficient balance (₹0.00) • Non-selectable'
+                              : walletBalance >= grandTotal
+                              ? `Pay 100% full amount (₹${grandTotal.toFixed(2)}) instantly from wallet`
+                              : `Apply ₹${walletBalance.toFixed(2)} from wallet • Remaining via COD/Online`}
+                          </Typography>
+                        </Box>
+                        {isWalletUsable && paymentMethod === 'wallet' && (
+                          <CheckCircleIcon sx={{ color: BRAND.primaryGreen, fontSize: 20 }} />
+                        )}
+                      </Box>
+
+                      {/* OPTION 2: ONLINE PAYMENT */}
+                      <Box
+                        onClick={() => setPaymentMethod('online')}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          p: 1.6,
+                          borderRadius: '12px',
+                          border:
+                            paymentMethod === 'online'
+                              ? `2px solid ${BRAND.primaryGreen}`
+                              : `1px solid ${BRAND.border}`,
+                          backgroundColor: paymentMethod === 'online' ? BRAND.lightGreen : BRAND.white,
+                          cursor: 'pointer',
+                          gap: 1.5,
+                          transition: 'all 0.18s ease',
+                        }}
+                      >
+                        <Radio
+                          checked={paymentMethod === 'online'}
+                          value="online"
+                          sx={{
+                            p: 0,
+                            color: BRAND.primaryGreen,
+                            '&.Mui-checked': { color: BRAND.primaryGreen },
+                          }}
+                        />
+                        <Box
+                          sx={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: '10px',
+                            backgroundColor: paymentMethod === 'online' ? BRAND.primaryGreen : '#F3F4F6',
+                            color: paymentMethod === 'online' ? '#ffffff' : BRAND.textSecondary,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <CreditCardIcon sx={{ fontSize: 20 }} />
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography sx={{ fontWeight: 700, fontSize: '13.5px', color: BRAND.textPrimary }}>
+                            Secure Online Payment (Cards / UPI / NetBanking)
+                          </Typography>
+                          <Typography sx={{ fontSize: '11.5px', color: BRAND.textSecondary, mt: 0.2 }}>
+                            256-bit encrypted checkout via Stripe
+                          </Typography>
+                        </Box>
+                        <ShieldOutlinedIcon sx={{ color: BRAND.primaryGreen, fontSize: 20 }} />
+                      </Box>
+
+                      {/* OPTION 3: CASH ON DELIVERY */}
+                      <Box
+                        onClick={() => setPaymentMethod('cod')}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          p: 1.6,
+                          borderRadius: '12px',
+                          border:
+                            paymentMethod === 'cod'
+                              ? `2px solid ${BRAND.primaryGreen}`
+                              : `1px solid ${BRAND.border}`,
+                          backgroundColor: paymentMethod === 'cod' ? BRAND.lightGreen : BRAND.white,
+                          cursor: 'pointer',
+                          gap: 1.5,
+                          transition: 'all 0.18s ease',
+                        }}
+                      >
+                        <Radio
+                          checked={paymentMethod === 'cod'}
+                          value="cod"
+                          sx={{
+                            p: 0,
+                            color: BRAND.primaryGreen,
+                            '&.Mui-checked': { color: BRAND.primaryGreen },
+                          }}
+                        />
+                        <Box
+                          sx={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: '10px',
+                            backgroundColor: paymentMethod === 'cod' ? BRAND.primaryGreen : '#F3F4F6',
+                            color: paymentMethod === 'cod' ? '#ffffff' : BRAND.textSecondary,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <PaymentsIcon sx={{ fontSize: 20 }} />
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography sx={{ fontWeight: 700, fontSize: '13.5px', color: BRAND.textPrimary }}>
+                            Cash on Delivery (COD)
+                          </Typography>
+                          <Typography sx={{ fontSize: '11.5px', color: BRAND.textSecondary, mt: 0.2 }}>
+                            Pay cash upon delivery at doorstep
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Stack>
+                  </RadioGroup>
                 </CardContent>
               </Card>
             </Stack>
@@ -1176,6 +1458,21 @@ const CartPage = () => {
                         </Typography>
                       </Box>
                     )}
+
+                    {/* Wallet deduction row */}
+                    {walletDeduction > 0 && (
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <AccountBalanceWalletIcon sx={{ fontSize: 16, color: BRAND.primaryGreen }} />
+                          <Typography sx={{ fontSize: '13.5px', color: BRAND.primaryGreen, fontWeight: 700 }}>
+                            Wallet Balance Applied
+                          </Typography>
+                        </Box>
+                        <Typography sx={{ fontSize: '13.5px', fontWeight: 800, color: BRAND.primaryGreen }}>
+                          -₹{walletDeduction.toFixed(2)}
+                        </Typography>
+                      </Box>
+                    )}
                   </Stack>
 
                   <Divider sx={{ my: 1.5 }} />
@@ -1195,14 +1492,14 @@ const CartPage = () => {
                   >
                     <Box>
                       <Typography sx={{ fontSize: '12px', color: BRAND.textSecondary, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Total Payable
+                        Final Payable
                       </Typography>
                       <Typography sx={{ fontSize: '11px', color: BRAND.primaryGreen, fontWeight: 600 }}>
-                        Inclusive of all taxes
+                        {is100PercentWallet ? '100% Paid via Wallet' : 'Inclusive of all taxes'}
                       </Typography>
                     </Box>
                     <Typography sx={{ fontSize: '22px', fontWeight: 800, color: BRAND.primaryGreen }}>
-                      ₹{grandTotal.toFixed(2)}
+                      ₹{finalPayableAmount.toFixed(2)}
                     </Typography>
                   </Box>
 
@@ -1242,10 +1539,14 @@ const CartPage = () => {
                     }}
                   >
                     {payingLoading
-                      ? 'Redirecting to Payment...'
+                      ? 'Processing Order...'
                       : isPayButtonDisabled
                       ? 'Select Address to Continue'
-                      : `Place Order & Pay ₹${grandTotal.toFixed(0)} →`}
+                      : paymentMethod === 'wallet'
+                      ? `⚡ Pay ₹${grandTotal.toFixed(0)} with Wallet & Place Order`
+                      : paymentMethod === 'cod'
+                      ? `Confirm Order & Pay ₹${finalPayableAmount.toFixed(0)} on Delivery →`
+                      : `Place Order & Pay ₹${finalPayableAmount.toFixed(0)} via Stripe →`}
                   </Button>
 
                   {/* Secondary Continue Shopping Action */}

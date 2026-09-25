@@ -87,7 +87,15 @@ const Settings = () => {
   // General App & Marketplace Settings
   const [appSettings, setAppSettings] = useState(DEFAULT_SETTINGS);
 
-  // Load Admin Data and Settings on Mount
+  // Global Backend System & Wallet Settings
+  const [walletSettings, setWalletSettings] = useState({
+    isWalletEnabled: true,
+    autoRefundToWalletOnCancel: true,
+    allowHybridPayment: true,
+    minRedeemAmount: 1,
+  });
+
+  // Load Admin Data and System Settings on Mount
   useEffect(() => {
     try {
       const storedAdmin = JSON.parse(localStorage.getItem('adminData') || '{}');
@@ -108,6 +116,13 @@ const Settings = () => {
           ...JSON.parse(storedSettings),
         }));
       }
+
+      // Fetch live system settings from backend
+      adminService.getSystemSettings().then((res) => {
+        if (res.data?.walletSettings) {
+          setWalletSettings(res.data.walletSettings);
+        }
+      }).catch((err) => console.log('Could not fetch backend system settings:', err));
     } catch (e) {
       console.error('Error loading settings:', e);
     }
@@ -174,6 +189,28 @@ const Settings = () => {
       setSuccess('Platform and marketplace configuration saved successfully!');
     } catch (err) {
       setError('Failed to save application settings.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update Backend System Wallet & Refund Policies (Super Admin)
+  const handleSaveWalletSettings = async (e) => {
+    if (e) e.preventDefault();
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await adminService.updateSystemSettings({ walletSettings });
+      if (res.success || res.data) {
+        setSuccess('Wallet & cancellation refund policies saved to backend successfully!');
+        if (res.data?.walletSettings) {
+          setWalletSettings(res.data.walletSettings);
+        }
+      }
+    } catch (err) {
+      console.error('Error saving wallet settings:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to update wallet settings.');
     } finally {
       setLoading(false);
     }
@@ -297,6 +334,7 @@ const Settings = () => {
           <Tab icon={<DeliveryIcon sx={{ fontSize: 18, mr: 0.5 }} />} iconPosition="start" label="Delivery Defaults" />
           <Tab icon={<NotificationIcon sx={{ fontSize: 18, mr: 0.5 }} />} iconPosition="start" label="Notifications & Audio" />
           <Tab icon={<SecurityIcon sx={{ fontSize: 18, mr: 0.5 }} />} iconPosition="start" label="Security & Sessions" />
+          <Tab icon={<CurrencyRupeeIcon sx={{ fontSize: 18, mr: 0.5 }} />} iconPosition="start" label="Wallet & Refund Policy" />
         </Tabs>
       </Paper>
 
@@ -1091,6 +1129,186 @@ const Settings = () => {
               }}
             >
               {loading ? <CircularProgress size={20} color="inherit" /> : 'Save Security Policies'}
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
+      {/* TAB 6: WALLET & REFUND POLICY (SUPER ADMIN TOGGLE) */}
+      {activeTab === 6 && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 2.5, sm: 3.5 },
+            borderRadius: '24px',
+            border: `1px solid ${colors.border}`,
+            backgroundColor: colors.white,
+            boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 20px rgba(20, 33, 61, 0.03)',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, flexWrap: 'wrap', gap: 1.5 }}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: colors.primaryText }}>
+                Customer Wallet & Cancellation Refund Policy
+              </Typography>
+              <Typography sx={{ fontSize: '0.85rem', color: colors.secondaryText, mt: 0.3 }}>
+                Configure automated customer wallet refunds on order cancellations, enable digital wallet ecosystem, and checkout rules.
+              </Typography>
+            </Box>
+            <Chip
+              label={walletSettings.autoRefundToWalletOnCancel ? 'Auto-Refund Active' : 'Auto-Refund Paused'}
+              color={walletSettings.autoRefundToWalletOnCancel ? 'success' : 'default'}
+              size="small"
+              sx={{ fontWeight: 700, borderRadius: '8px' }}
+            />
+          </Box>
+
+          <Divider sx={{ my: 3 }} />
+
+          <Stack spacing={3}>
+            {/* MASTER TOGGLE 1: AUTO-REFUND ON CANCELLATION */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2.5,
+                borderRadius: '16px',
+                backgroundColor: walletSettings.autoRefundToWalletOnCancel
+                  ? isDark ? 'rgba(8, 127, 91, 0.15)' : '#EAF7F2'
+                  : colors.paperHover,
+                border: `1.5px solid ${walletSettings.autoRefundToWalletOnCancel ? colors.primaryGreen : colors.border}`,
+                display: 'flex',
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                justifyContent: 'space-between',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 2,
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <Box sx={{ pr: { sm: 2 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                  <Typography sx={{ fontWeight: 800, fontSize: '0.98rem', color: colors.primaryText }}>
+                    Auto-Refund to Customer Wallet on Order Cancellation
+                  </Typography>
+                  <Chip
+                    label="Master Policy"
+                    size="small"
+                    sx={{
+                      height: 20,
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      backgroundColor: colors.primaryGreen,
+                      color: '#ffffff',
+                    }}
+                  />
+                </Box>
+                <Typography sx={{ fontSize: '0.82rem', color: colors.secondaryText, lineHeight: 1.45 }}>
+                  When an administrator or merchant cancels an active order, the system instantly deposits 100% of the refundable amount directly into the customer&apos;s AapnuBazaar Wallet with an audio chime and notification banner. No manual gateway processing delay.
+                </Typography>
+              </Box>
+              <Switch
+                checked={Boolean(walletSettings.autoRefundToWalletOnCancel)}
+                onChange={(e) =>
+                  setWalletSettings({ ...walletSettings, autoRefundToWalletOnCancel: e.target.checked })
+                }
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: colors.primaryGreen },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: colors.primaryGreen },
+                }}
+              />
+            </Paper>
+
+            {/* TOGGLE 2: ENABLE WALLET SYSTEM */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2.5,
+                borderRadius: '16px',
+                backgroundColor: colors.paperHover,
+                border: `1px solid ${colors.border}`,
+                display: 'flex',
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                justifyContent: 'space-between',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 2,
+              }}
+            >
+              <Box sx={{ pr: { sm: 2 } }}>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.92rem', color: colors.primaryText, mb: 0.3 }}>
+                  Enable Customer Wallet Ecosystem
+                </Typography>
+                <Typography sx={{ fontSize: '0.82rem', color: colors.secondaryText, lineHeight: 1.45 }}>
+                  Allow customer accounts to hold digital wallet funds, view real-time transaction ledgers, and manage balance.
+                </Typography>
+              </Box>
+              <Switch
+                checked={Boolean(walletSettings.isWalletEnabled)}
+                onChange={(e) =>
+                  setWalletSettings({ ...walletSettings, isWalletEnabled: e.target.checked })
+                }
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: colors.primaryGreen },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: colors.primaryGreen },
+                }}
+              />
+            </Paper>
+
+            {/* TOGGLE 3: HYBRID & 100% WALLET CHECKOUT USAGE */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2.5,
+                borderRadius: '16px',
+                backgroundColor: colors.paperHover,
+                border: `1px solid ${colors.border}`,
+                display: 'flex',
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                justifyContent: 'space-between',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 2,
+              }}
+            >
+              <Box sx={{ pr: { sm: 2 } }}>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.92rem', color: colors.primaryText, mb: 0.3 }}>
+                  Allow Wallet Balance Usage at Storefront Checkout
+                </Typography>
+                <Typography sx={{ fontSize: '0.82rem', color: colors.secondaryText, lineHeight: 1.45 }}>
+                  Enables customers to pay 100% of order totals or apply partial balance alongside COD/Online payment for zero checkout friction.
+                </Typography>
+              </Box>
+              <Switch
+                checked={Boolean(walletSettings.allowHybridPayment)}
+                onChange={(e) =>
+                  setWalletSettings({ ...walletSettings, allowHybridPayment: e.target.checked })
+                }
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: colors.primaryGreen },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: colors.primaryGreen },
+                }}
+              />
+            </Paper>
+          </Stack>
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+            <Button
+              variant="contained"
+              startIcon={<SaveIcon />}
+              onClick={handleSaveWalletSettings}
+              disabled={loading}
+              sx={{
+                backgroundColor: colors.primaryGreen,
+                color: '#FFFFFF',
+                borderRadius: '12px',
+                fontWeight: 700,
+                textTransform: 'none',
+                px: 3.5,
+                py: 1.1,
+                boxShadow: '0 4px 14px rgba(8, 127, 91, 0.25)',
+                '&:hover': {
+                  backgroundColor: colors.darkGreen,
+                },
+              }}
+            >
+              {loading ? <CircularProgress size={20} color="inherit" /> : 'Save Wallet & Refund Policies'}
             </Button>
           </Box>
         </Paper>

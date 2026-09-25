@@ -47,7 +47,20 @@ const adminService = {
   // Admin login (if needed for portal)
   loginAdmin: async (credentials) => {
     return await apiClient.post('/login', credentials);
-  }
+  },
+
+  // Global System & Wallet Policy Settings
+  getSystemSettings: async () => {
+    return await apiClient.get('/settings/system');
+  },
+
+  updateSystemSettings: async (data) => {
+    return await apiClient.put('/settings/system', data);
+  },
+
+  manualWalletAdjustment: async (data) => {
+    return await apiClient.post('/settings/wallet/adjustment', data);
+  },
 };
 
 export default adminService;

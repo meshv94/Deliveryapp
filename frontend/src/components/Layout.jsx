@@ -22,12 +22,17 @@ import {
   Paper,
   Menu,
   MenuItem,
+  Snackbar,
+  Alert,
+  Tooltip,
 } from '@mui/material';
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -45,6 +50,9 @@ import PersonIcon from '@mui/icons-material/Person';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCartContext } from '../context/CartContext';
 import CompleteProfileModal from './CompleteProfileModal';
+import NotificationPopover from './NotificationPopover';
+import notificationService from '../services/notificationService';
+import { playCustomerNotificationSound } from '../utils/notificationSound';
 
 const Layout = ({ children }) => {
   const navigate = useNavigate();
@@ -114,6 +122,107 @@ const Layout = ({ children }) => {
       window.removeEventListener('storage', handleProfileUpdate);
     };
   }, [checkUserProfile, location.pathname]);
+
+  // Notification Center States
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [notificationAnchor, setNotificationAnchor] = useState(null);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [incomingToast, setIncomingToast] = useState({ open: false, title: '', message: '' });
+
+  const fetchCustomerNotifications = useCallback(async (isBackground = false) => {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      setNotifications([]);
+      setUnreadNotificationsCount(0);
+      return;
+    }
+
+    try {
+      if (!isBackground) setLoadingNotifications(true);
+      const res = await notificationService.getNotifications(1, 15);
+      if (res?.success) {
+        const newUnread = res.unreadCount || 0;
+        const newItems = res.data || [];
+
+        // Check if new unread notification arrived
+        if (isBackground && newUnread > unreadNotificationsCount && newItems.length > 0) {
+          const latest = newItems[0];
+          playCustomerNotificationSound();
+          setIncomingToast({
+            open: true,
+            title: latest.title,
+            message: latest.message,
+          });
+        }
+
+        setNotifications(newItems);
+        setUnreadNotificationsCount(newUnread);
+      }
+    } catch (err) {
+      // Quiet background failure
+      if (!isBackground) console.warn('Failed to load notifications:', err);
+    } finally {
+      if (!isBackground) setLoadingNotifications(false);
+    }
+  }, [unreadNotificationsCount]);
+
+  // Initial load and polling every 12 seconds
+  useEffect(() => {
+    fetchCustomerNotifications(false);
+
+    const interval = setInterval(() => {
+      fetchCustomerNotifications(true);
+    }, 12000);
+
+    const handleRefresh = () => fetchCustomerNotifications(true);
+    window.addEventListener('notification_refresh', handleRefresh);
+    window.addEventListener('storage', handleRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notification_refresh', handleRefresh);
+      window.removeEventListener('storage', handleRefresh);
+    };
+  }, [fetchCustomerNotifications]);
+
+  const handleMarkAsRead = async (id) => {
+    try {
+      const res = await notificationService.markAsRead(id);
+      if (res?.success) {
+        setNotifications((prev) =>
+          prev.map((n) => (n._id === id ? { ...n, is_read: true } : n))
+        );
+        setUnreadNotificationsCount(res.unreadCount || 0);
+      }
+    } catch (err) {
+      console.error('Error marking as read:', err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const res = await notificationService.markAllAsRead();
+      if (res?.success) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+        setUnreadNotificationsCount(0);
+      }
+    } catch (err) {
+      console.error('Error marking all as read:', err);
+    }
+  };
+
+  const handleDeleteNotification = async (id) => {
+    try {
+      const res = await notificationService.deleteNotification(id);
+      if (res?.success) {
+        setNotifications((prev) => prev.filter((n) => n._id !== id));
+        setUnreadNotificationsCount(res.unreadCount || 0);
+      }
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+    }
+  };
 
   // Dynamic Delivery Location / Address
   const [deliveryLocation, setDeliveryLocation] = useState('Current Location');
@@ -368,6 +477,35 @@ const Layout = ({ children }) => {
                   </Badge>
                 </IconButton>
 
+                {/* Mobile Notifications */}
+                {token && (
+                  <IconButton
+                    onClick={(e) => setNotificationAnchor(e.currentTarget)}
+                    aria-label="Notifications"
+                    sx={{
+                      width: 44,
+                      height: 44,
+                      color: '#151515',
+                    }}
+                  >
+                    <Badge
+                      badgeContent={unreadNotificationsCount}
+                      sx={{
+                        '& .MuiBadge-badge': {
+                          backgroundColor: '#FF6B00',
+                          color: '#FFFFFF',
+                          fontWeight: 700,
+                          fontSize: '10px',
+                          height: 18,
+                          minWidth: 18,
+                        },
+                      }}
+                    >
+                      <NotificationsOutlinedIcon sx={{ fontSize: 22 }} />
+                    </Badge>
+                  </IconButton>
+                )}
+
                 {/* Mobile Profile */}
                 <IconButton
                   onClick={() => {
@@ -527,6 +665,70 @@ const Layout = ({ children }) => {
                     </Typography>
                   </Box>
                 </Button>
+
+                {/* Notifications Button */}
+                {token && (
+                  <Tooltip title="Notifications">
+                    <IconButton
+                      onClick={(e) => setNotificationAnchor(e.currentTarget)}
+                      aria-label="Notifications"
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '8px',
+                        backgroundColor: '#FAFAF7',
+                        border: '1px solid #E5E7EB',
+                        color: '#151515',
+                        '&:hover': {
+                          backgroundColor: '#EBFBEE',
+                          color: '#087F5B',
+                          borderColor: '#087F5B',
+                        },
+                      }}
+                    >
+                      <Badge
+                        badgeContent={unreadNotificationsCount}
+                        sx={{
+                          '& .MuiBadge-badge': {
+                            backgroundColor: '#FF6B00',
+                            color: '#FFFFFF',
+                            fontWeight: 700,
+                            fontSize: '10px',
+                            height: 18,
+                            minWidth: 18,
+                          },
+                        }}
+                      >
+                        <NotificationsOutlinedIcon sx={{ fontSize: 20 }} />
+                      </Badge>
+                    </IconButton>
+                  </Tooltip>
+                )}
+
+                {/* Wallet Quick Button */}
+                {token && (
+                  <Tooltip title="AapnuBazaar Wallet">
+                    <IconButton
+                      onClick={() => navigate('/wallet')}
+                      aria-label="Wallet"
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '8px',
+                        backgroundColor: '#FAFAF7',
+                        border: '1px solid #E5E7EB',
+                        color: '#151515',
+                        '&:hover': {
+                          backgroundColor: '#EBFBEE',
+                          color: '#087F5B',
+                          borderColor: '#087F5B',
+                        },
+                      }}
+                    >
+                      <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 20 }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
 
                 {/* Cart Button with Counter */}
                 <Button
@@ -688,6 +890,21 @@ const Layout = ({ children }) => {
                 <ReceiptLongOutlinedIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText primary="My Orders" primaryTypographyProps={{ fontSize: '14px', fontWeight: 500 }} />
+            </ListItemButton>
+          </ListItem>
+
+          <ListItem disablePadding sx={{ mb: 0.5 }}>
+            <ListItemButton
+              onClick={() => {
+                setDrawerOpen(false);
+                navigate('/wallet');
+              }}
+              sx={{ borderRadius: '8px', py: 1 }}
+            >
+              <ListItemIcon sx={{ color: '#087F5B', minWidth: 38 }}>
+                <AccountBalanceWalletOutlinedIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Wallet & Refunds" primaryTypographyProps={{ fontSize: '14px', fontWeight: 600, color: '#087F5B' }} />
             </ListItemButton>
           </ListItem>
 
@@ -1003,6 +1220,52 @@ const Layout = ({ children }) => {
           window.dispatchEvent(new Event('profile_updated'));
         }}
       />
+
+      {/* Customer Notification Popover Menu / Drawer */}
+      <NotificationPopover
+        anchorEl={notificationAnchor}
+        open={Boolean(notificationAnchor)}
+        onClose={() => setNotificationAnchor(null)}
+        notifications={notifications}
+        unreadCount={unreadNotificationsCount}
+        loading={loadingNotifications}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllAsRead={handleMarkAllAsRead}
+        onDeleteNotification={handleDeleteNotification}
+      />
+
+      {/* Incoming Order Status Notification Banner Toast */}
+      <Snackbar
+        open={incomingToast.open}
+        autoHideDuration={6000}
+        onClose={() => setIncomingToast({ open: false, title: '', message: '' })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setIncomingToast({ open: false, title: '', message: '' })}
+          severity="success"
+          variant="filled"
+          sx={{
+            width: '100%',
+            bgcolor: '#087F5B',
+            color: '#FFFFFF',
+            borderRadius: '12px',
+            boxShadow: '0 8px 30px rgba(8, 127, 91, 0.25)',
+            cursor: 'pointer',
+          }}
+          onClick={() => {
+            setIncomingToast({ open: false, title: '', message: '' });
+            navigate('/my-orders');
+          }}
+        >
+          <Typography sx={{ fontWeight: 800, fontSize: '13px' }}>
+            {incomingToast.title}
+          </Typography>
+          <Typography sx={{ fontSize: '12px', opacity: 0.95 }}>
+            {incomingToast.message}
+          </Typography>
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

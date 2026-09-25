@@ -37,6 +37,10 @@ import {
   ChevronRightRounded as ChevronRightIcon,
   DarkModeOutlined as DarkModeIcon,
   LightModeOutlined as LightModeIcon,
+  BoltRounded as RushIcon,
+  PauseCircleOutlineRounded as PauseIcon,
+  CheckCircleOutlineRounded as LiveIcon,
+  CancelOutlined as ClosedIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useColorMode } from '../theme/ThemeContext';
@@ -116,7 +120,18 @@ const Layout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [profileAnchor, setProfileAnchor] = useState(null);
   const [notificationsAnchor, setNotificationsAnchor] = useState(null);
+  const [statusAnchor, setStatusAnchor] = useState(null);
+  const [storeStatus, setStoreStatus] = useState(() => {
+    return localStorage.getItem('store_operational_mode') || 'live';
+  });
   const [searchQuery, setSearchQuery] = useState('');
+
+  const handleStatusChange = (newStatus) => {
+    setStoreStatus(newStatus);
+    localStorage.setItem('store_operational_mode', newStatus);
+    window.dispatchEvent(new CustomEvent('store_status_change', { detail: newStatus }));
+    setStatusAnchor(null);
+  };
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -609,8 +624,71 @@ const Layout = ({ children }) => {
             </Box>
           </Box>
 
-          {/* Right Header Actions: Search, Theme Toggle, Notifications, Profile Button */}
+          {/* Right Header Actions: Store Operational Status, Search, Theme Toggle, Notifications, Profile Button */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
+            {/* Store Operational Status Pill */}
+            {(() => {
+              const currentCfg = {
+                live: { label: 'Store Live', color: colors?.primaryGreen || '#087F5B', bg: colors?.lightGreen || '#E6F4EA', icon: LiveIcon },
+                rush: { label: 'Rush Hour (+15m)', color: colors?.orange || '#FF6B00', bg: colors?.lightOrange || '#FFF4E6', icon: RushIcon },
+                paused: { label: 'Paused (30m)', color: '#D97706', bg: '#FEF3C7', icon: PauseIcon },
+                closed: { label: 'Offline', color: '#DC2626', bg: '#FEE2E2', icon: ClosedIcon },
+              }[storeStatus] || { label: 'Store Live', color: colors?.primaryGreen || '#087F5B', bg: colors?.lightGreen || '#E6F4EA', icon: LiveIcon };
+              const IconComp = currentCfg.icon;
+
+              return (
+                <Tooltip title="Click to change store operational mode">
+                  <Box
+                    onClick={(e) => setStatusAnchor(e.currentTarget)}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.8,
+                      px: { xs: 1.2, sm: 1.5 },
+                      py: 0.6,
+                      borderRadius: '50px',
+                      backgroundColor: currentCfg.bg,
+                      color: currentCfg.color,
+                      border: `1px solid ${currentCfg.color}33`,
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        transform: 'scale(1.02)',
+                        boxShadow: `0 2px 8px ${currentCfg.color}33`,
+                      },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: currentCfg.color,
+                        boxShadow: `0 0 6px ${currentCfg.color}`,
+                        animation: storeStatus === 'live' || storeStatus === 'rush' ? 'pulse 2s infinite' : 'none',
+                        '@keyframes pulse': {
+                          '0%': { opacity: 1, transform: 'scale(1)' },
+                          '50%': { opacity: 0.5, transform: 'scale(1.3)' },
+                          '100%': { opacity: 1, transform: 'scale(1)' },
+                        },
+                      }}
+                    />
+                    <Typography
+                      sx={{
+                        fontSize: { xs: '11.5px', sm: '12px' },
+                        fontWeight: 700,
+                        color: currentCfg.color,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {currentCfg.label}
+                    </Typography>
+                  </Box>
+                </Tooltip>
+              );
+            })()}
+
             {/* Global Quick Search Bar */}
             <Paper
               elevation={0}
@@ -726,6 +804,130 @@ const Layout = ({ children }) => {
         {/* Page Content Container */}
         <Box sx={{ flexGrow: 1 }}>{children}</Box>
       </Box>
+
+      {/* Store Operational Status Popover Menu */}
+      <Menu
+        anchorEl={statusAnchor}
+        open={Boolean(statusAnchor)}
+        onClose={() => setStatusAnchor(null)}
+        PaperProps={{
+          sx: {
+            mt: 1.2,
+            width: 320,
+            borderRadius: '16px',
+            backgroundColor: colors.white,
+            boxShadow: '0 12px 35px rgba(0, 0, 0, 0.16)',
+            border: `1px solid ${colors.border}`,
+            p: 1,
+          },
+        }}
+      >
+        <Box sx={{ px: 1.5, py: 1 }}>
+          <Typography sx={{ fontWeight: 800, fontSize: '13.5px', color: colors.primaryText }}>
+            Store Operational State
+          </Typography>
+          <Typography sx={{ fontSize: '11px', color: colors.secondaryText, mt: 0.2 }}>
+            Switch mode to inform customers & adjust kitchen prep times
+          </Typography>
+        </Box>
+        <Divider sx={{ my: 0.8, borderColor: colors.divider }} />
+
+        {[
+          {
+            id: 'live',
+            title: 'Live & Accepting Orders',
+            desc: 'Store open with normal prep times',
+            color: colors?.primaryGreen || '#087F5B',
+            bg: colors?.lightGreen || '#E6F4EA',
+            icon: LiveIcon,
+          },
+          {
+            id: 'rush',
+            title: 'Rush Hour Mode (+15m Buffer)',
+            desc: 'High demand: auto-adds 15m to customer ETA',
+            color: colors?.orange || '#FF6B00',
+            bg: colors?.lightOrange || '#FFF4E6',
+            icon: RushIcon,
+          },
+          {
+            id: 'paused',
+            title: 'Kitchen Paused (30m Breather)',
+            desc: 'Temporarily pause new orders to clear backlog',
+            color: '#D97706',
+            bg: '#FEF3C7',
+            icon: PauseIcon,
+          },
+          {
+            id: 'closed',
+            title: 'Store Closed / Offline',
+            desc: 'Stop receiving orders for the rest of shift',
+            color: '#DC2626',
+            bg: '#FEE2E2',
+            icon: ClosedIcon,
+          },
+        ].map((item) => {
+          const isSelected = storeStatus === item.id;
+          const ItemIcon = item.icon;
+          return (
+            <MenuItem
+              key={item.id}
+              onClick={() => handleStatusChange(item.id)}
+              sx={{
+                p: 1.2,
+                borderRadius: '10px',
+                mb: 0.5,
+                backgroundColor: isSelected ? item.bg : 'transparent',
+                border: `1px solid ${isSelected ? item.color + '44' : 'transparent'}`,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 1.4,
+                '&:hover': {
+                  backgroundColor: item.bg,
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '8px',
+                  backgroundColor: isSelected ? item.color : colors.paperHover,
+                  color: isSelected ? '#FFFFFF' : item.color,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  mt: 0.2,
+                }}
+              >
+                <ItemIcon sx={{ fontSize: 18 }} />
+              </Box>
+              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                <Typography
+                  sx={{
+                    fontSize: '12.5px',
+                    fontWeight: isSelected ? 800 : 700,
+                    color: isSelected ? item.color : colors.primaryText,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {item.title}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: '11px',
+                    color: colors.secondaryText,
+                    mt: 0.3,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {item.desc}
+                </Typography>
+              </Box>
+            </MenuItem>
+          );
+        })}
+      </Menu>
 
       {/* Notifications Popover */}
       <Menu

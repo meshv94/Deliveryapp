@@ -445,7 +445,13 @@ const Dashboard = () => {
     fetchRevenueStats(revenuePeriod);
   }, [revenuePeriod, fetchRevenueStats]);
 
-  const { overview, today, topVendors, topProducts, topUsers, dailyOrders, recentOrders } = dashboardData || {};
+  const { overview, today, topVendors, topProducts, topUsers, dailyOrders, hourlyDistribution, recentOrders } = dashboardData || {};
+
+  // Compute peak hour stats
+  const maxHourlyOrders = useMemo(() => {
+    if (!hourlyDistribution || hourlyDistribution.length === 0) return 1;
+    return Math.max(...hourlyDistribution.map((h) => h.orders), 1);
+  }, [hourlyDistribution]);
 
   // Derive dynamic chartData according to selected date range
   const chartData = useMemo(() => {
@@ -1214,7 +1220,122 @@ const Dashboard = () => {
       </Paper>
 
       {/* ======================================================== */}
-      {/* 8. TOP PRODUCTS & TOP CUSTOMERS COMPACT CARDS */}
+      {/* 8. PEAK ORDERING HOURS (RUSH HOUR HEATMAP) */}
+      {/* ======================================================== */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 2, sm: 2.5 },
+          borderRadius: '16px',
+          backgroundColor: BRAND.white,
+          border: `1px solid ${BRAND.border}`,
+          boxShadow: '0 2px 10px rgba(20, 33, 61, 0.02)',
+          mb: 3,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+          <Box>
+            <Typography sx={{ fontWeight: 800, fontSize: '14px', color: BRAND.text }}>
+              Peak Ordering Hours & Rush Hour Trends
+            </Typography>
+            <Typography sx={{ fontSize: '11.5px', color: BRAND.muted, mt: 0.2 }}>
+              24-hour marketplace order frequency to help vendors prep kitchen capacity & staff
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Chip
+              size="small"
+              label="Lunch Peak: 12 PM - 2 PM"
+              sx={{ bgcolor: BRAND.lightOrange, color: BRAND.orange, fontWeight: 700, fontSize: '11px' }}
+            />
+            <Chip
+              size="small"
+              label="Dinner Peak: 7 PM - 10 PM"
+              sx={{ bgcolor: BRAND.lightGreen, color: BRAND.green, fontWeight: 700, fontSize: '11px' }}
+            />
+          </Box>
+        </Box>
+
+        {hourlyDistribution && hourlyDistribution.length > 0 ? (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: 'repeat(6, 1fr)', sm: 'repeat(12, 1fr)', md: 'repeat(24, 1fr)' },
+              gap: 0.8,
+              pt: 2,
+              pb: 1,
+            }}
+          >
+            {hourlyDistribution.map((slot) => {
+              const heightPercent = Math.max((slot.orders / maxHourlyOrders) * 100, slot.orders > 0 ? 15 : 6);
+              const isPeak = (slot.hour >= 12 && slot.hour <= 14) || (slot.hour >= 19 && slot.hour <= 22);
+
+              return (
+                <Tooltip
+                  key={slot.hour}
+                  title={`${slot.label}: ${slot.orders} orders (${formatCurrency(slot.revenue)})`}
+                  arrow
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 0.8,
+                      p: 0.5,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': { bgcolor: BRAND.paperHover },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: 90,
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'center',
+                        bgcolor: BRAND.innerCard,
+                        borderRadius: '6px',
+                        p: '2px',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: `${heightPercent}%`,
+                          borderRadius: '4px',
+                          bgcolor: isPeak ? BRAND.orange : slot.orders > 0 ? BRAND.green : BRAND.border,
+                          transition: 'height 0.4s ease',
+                        }}
+                      />
+                    </Box>
+                    <Typography
+                      sx={{
+                        fontSize: '9.5px',
+                        fontWeight: isPeak ? 800 : 600,
+                        color: isPeak ? BRAND.orange : BRAND.muted,
+                      }}
+                    >
+                      {slot.hour}h
+                    </Typography>
+                  </Box>
+                </Tooltip>
+              );
+            })}
+          </Box>
+        ) : (
+          <Box sx={{ py: 3, textAlign: 'center' }}>
+            <Typography sx={{ color: BRAND.muted, fontSize: '12.5px' }}>
+              Hourly analytics will populate as customer orders arrive
+            </Typography>
+          </Box>
+        )}
+      </Paper>
+
+      {/* ======================================================== */}
+      {/* 9. TOP PRODUCTS & TOP CUSTOMERS COMPACT CARDS */}
       {/* ======================================================== */}
       <Grid container spacing={{ xs: 2, md: 2.5 }}>
         {/* Top Products */}

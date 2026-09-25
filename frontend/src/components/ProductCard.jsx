@@ -132,6 +132,75 @@ const ProductCard = ({ product, vendorId, onAddClick }) => {
           }}
         />
 
+        {/* Dietary Tag Overlay (Veg / Non-Veg / Vegan) */}
+        {product.dietary_type && product.dietary_type !== 'none' && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 8,
+              left: 8,
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              px: 0.6,
+              py: 0.4,
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            {product.dietary_type === 'veg' && (
+              <Box
+                sx={{
+                  width: 14,
+                  height: 14,
+                  border: '2px solid #087F5B',
+                  borderRadius: '3px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#087F5B' }} />
+              </Box>
+            )}
+            {product.dietary_type === 'non_veg' && (
+              <Box
+                sx={{
+                  width: 14,
+                  height: 14,
+                  border: '2px solid #E03131',
+                  borderRadius: '3px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 0,
+                    height: 0,
+                    borderLeft: '4px solid transparent',
+                    borderRight: '4px solid transparent',
+                    borderBottom: '7px solid #E03131',
+                  }}
+                />
+              </Box>
+            )}
+            {product.dietary_type === 'vegan' && (
+              <Typography sx={{ fontSize: '10px', fontWeight: 800, color: '#087F5B', lineHeight: 1 }}>
+                🌱 VEGAN
+              </Typography>
+            )}
+            {product.dietary_type === 'egg' && (
+              <Typography sx={{ fontSize: '10px', fontWeight: 800, color: '#D97706', lineHeight: 1 }}>
+                🥚 EGG
+              </Typography>
+            )}
+          </Box>
+        )}
+
         {/* Discount Tag Overlay */}
         {discountPercent > 0 && (
           <Box
@@ -154,13 +223,37 @@ const ProductCard = ({ product, vendorId, onAddClick }) => {
           </Box>
         )}
 
+        {/* Preparation Time / Rating overlay */}
+        {product.preparation_time_minute > 0 && (
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 8,
+              left: 8,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.4,
+              backgroundColor: 'rgba(23, 34, 29, 0.75)',
+              color: '#FFFFFF',
+              px: 0.7,
+              py: 0.2,
+              borderRadius: '6px',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            <Typography sx={{ fontSize: '10px', fontWeight: 700, color: '#FFFFFF' }}>
+              ⏱ {product.preparation_time_minute}m
+            </Typography>
+          </Box>
+        )}
+
         {/* Rating overlay if available */}
         {(product.rating || product.avgRating) && (
           <Box
             sx={{
               position: 'absolute',
               bottom: 8,
-              left: 8,
+              right: 8,
               display: 'flex',
               alignItems: 'center',
               gap: 0.3,

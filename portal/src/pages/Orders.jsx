@@ -53,11 +53,24 @@ import {
   HourglassEmptyRounded as PendingIcon,
   AccountBalanceWalletOutlined as PaymentIcon,
   ReceiptLongOutlined as ReceiptIcon,
+  VolumeUpRounded as SoundOnIcon,
+  VolumeOffRounded as SoundOffIcon,
+  ViewKanbanRounded as KdsIcon,
+  TableRowsRounded as TableViewIcon,
+  NotificationsActiveRounded as BellIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import orderService from '../services/orderService';
 import vendorService from '../services/vendorService';
 import { useColorMode } from '../theme/ThemeContext';
+import KitchenDisplayBoard from '../components/KitchenDisplayBoard';
+import {
+  playOrderChime,
+  startNewOrderAlertLoop,
+  stopNewOrderAlertLoop,
+  isAudioMuted,
+  setAudioMuted,
+} from '../utils/audioAlert';
 
 const formatCurrency = (val) => {
   const num = Number(val) || 0;
@@ -171,6 +184,16 @@ const Orders = () => {
     deliveryDate: '',
   });
 
+  // View mode: 'kds' (Kitchen Display) | 'table' (Data Table)
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      return localStorage.getItem('portal_orders_view') || 'kds';
+    } catch {
+      return 'kds';
+    }
+  });
+  const [muted, setMuted] = useState(isAudioMuted);
+
   // Pagination
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
@@ -186,10 +209,38 @@ const Orders = () => {
     totalRevenue: 0,
   });
 
+  const handleToggleViewMode = (mode) => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('portal_orders_view', mode);
+    } catch {}
+  };
+
+  const handleToggleSound = () => {
+    const next = !muted;
+    setMuted(next);
+    setAudioMuted(next);
+    if (!next) {
+      playOrderChime();
+    } else {
+      stopNewOrderAlertLoop();
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
     fetchVendors();
-  }, []);
+
+    // Auto-sync polling every 10s
+    const pollInterval = setInterval(() => {
+      fetchOrders(filters, true);
+    }, 10000);
+
+    return () => {
+      clearInterval(pollInterval);
+      stopNewOrderAlertLoop();
+    };
+  }, [filters]);
 
   const fetchVendors = async () => {
     try {
@@ -202,9 +253,9 @@ const Orders = () => {
     }
   };
 
-  const fetchOrders = async (customFilters = filters) => {
+  const fetchOrders = async (customFilters = filters, isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground) setLoading(true);
       setError(null);
 
       const response = await orderService.getAllOrders(customFilters);
@@ -212,6 +263,18 @@ const Orders = () => {
       if (response.success) {
         const orderList = response.data || [];
         setOrders(orderList);
+
+        // Check for unaccepted new orders & trigger sound alert loop
+        const unaccepted = orderList.filter((o) => {
+          const s = String(o.status || '').toLowerCase();
+          return s === 'placed' || s === 'new' || s === 'pending';
+        });
+
+        if (unaccepted.length > 0) {
+          startNewOrderAlertLoop();
+        } else {
+          stopNewOrderAlertLoop();
+        }
 
         if (response.stats) {
           setStats((prev) => ({
@@ -222,13 +285,30 @@ const Orders = () => {
           calculateStats(orderList);
         }
       } else {
-        setError(response.message || 'Failed to fetch orders');
+        if (!isBackground) setError(response.message || 'Failed to fetch orders');
       }
     } catch (err) {
       console.error('Error fetching orders:', err);
-      setError(err.message || 'Failed to fetch orders');
+      if (!isBackground) setError(err.message || 'Failed to fetch orders');
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
+    }
+  };
+
+  const handleDirectStatusUpdate = async (order, newStatusVal) => {
+    try {
+      setUpdatingStatus(true);
+      const res = await orderService.updateOrderStatus(order._id, newStatusVal);
+      if (res.success) {
+        setSuccess(`Order #${order._id.slice(-6).toUpperCase()} marked as ${newStatusVal}!`);
+        fetchOrders(filters, true);
+      } else {
+        setError(res.message || 'Failed to update order status');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to update order status');
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -481,30 +561,118 @@ const Orders = () => {
             Track marketplace customer orders, live statuses and fulfillment routing
           </Typography>
         </Box>
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon sx={{ fontSize: '18px !important' }} />}
-          onClick={() => fetchOrders(filters)}
-          disabled={loading}
-          sx={{
-            borderColor: BRAND.border,
-            color: BRAND.text,
-            borderRadius: '10px',
-            fontSize: '12.5px',
-            fontWeight: 700,
-            px: 2,
-            py: 0.8,
-            textTransform: 'none',
-            backgroundColor: BRAND.white,
-            '&:hover': {
-              borderColor: BRAND.green,
-              color: BRAND.green,
-              backgroundColor: BRAND.lightGreen,
-            },
-          }}
-        >
-          Refresh Orders
-        </Button>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexWrap: 'wrap' }}>
+          {/* Sound Alert Toggle */}
+          <Tooltip title={muted ? 'Unmute Kitchen Audio Alerts' : 'Mute Kitchen Audio Alerts'}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={handleToggleSound}
+              startIcon={muted ? <SoundOffIcon sx={{ color: BRAND.red }} /> : <SoundOnIcon sx={{ color: BRAND.green }} />}
+              sx={{
+                borderColor: muted ? BRAND.redLight : BRAND.border,
+                bgcolor: muted ? (isDark ? 'rgba(239,68,68,0.1)' : BRAND.redLight) : BRAND.white,
+                color: muted ? BRAND.red : BRAND.text,
+                borderRadius: '10px',
+                fontSize: '12px',
+                fontWeight: 700,
+                textTransform: 'none',
+                height: 36,
+              }}
+            >
+              {muted ? 'Sound Muted' : 'Alerts ON'}
+            </Button>
+          </Tooltip>
+
+          {/* Test Chime Button */}
+          <Button
+            size="small"
+            onClick={() => playOrderChime()}
+            sx={{
+              color: BRAND.muted,
+              fontSize: '11.5px',
+              textTransform: 'none',
+              fontWeight: 600,
+              display: { xs: 'none', sm: 'inline-flex' }
+            }}
+          >
+            🔔 Test Chime
+          </Button>
+
+          {/* View Mode Switcher: Kitchen KDS vs Table */}
+          <Box
+            sx={{
+              display: 'flex',
+              bgcolor: BRAND.innerCard,
+              p: 0.4,
+              borderRadius: '10px',
+              border: `1px solid ${BRAND.border}`,
+            }}
+          >
+            <Button
+              size="small"
+              onClick={() => handleToggleViewMode('kds')}
+              startIcon={<KdsIcon sx={{ fontSize: '16px !important' }} />}
+              sx={{
+                borderRadius: '8px',
+                px: 1.4,
+                py: 0.5,
+                fontSize: '12px',
+                fontWeight: 800,
+                textTransform: 'none',
+                bgcolor: viewMode === 'kds' ? BRAND.green : 'transparent',
+                color: viewMode === 'kds' ? '#FFFFFF' : BRAND.muted,
+                '&:hover': { bgcolor: viewMode === 'kds' ? BRAND.darkGreen : 'transparent' },
+              }}
+            >
+              Kitchen KDS
+            </Button>
+            <Button
+              size="small"
+              onClick={() => handleToggleViewMode('table')}
+              startIcon={<TableViewIcon sx={{ fontSize: '16px !important' }} />}
+              sx={{
+                borderRadius: '8px',
+                px: 1.4,
+                py: 0.5,
+                fontSize: '12px',
+                fontWeight: 800,
+                textTransform: 'none',
+                bgcolor: viewMode === 'table' ? BRAND.green : 'transparent',
+                color: viewMode === 'table' ? '#FFFFFF' : BRAND.muted,
+                '&:hover': { bgcolor: viewMode === 'table' ? BRAND.darkGreen : 'transparent' },
+              }}
+            >
+              Table View
+            </Button>
+          </Box>
+
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon sx={{ fontSize: '18px !important' }} />}
+            onClick={() => fetchOrders(filters)}
+            disabled={loading}
+            sx={{
+              borderColor: BRAND.border,
+              color: BRAND.text,
+              borderRadius: '10px',
+              fontSize: '12.5px',
+              fontWeight: 700,
+              px: 1.8,
+              height: 36,
+              textTransform: 'none',
+              backgroundColor: BRAND.white,
+              '&:hover': {
+                borderColor: BRAND.green,
+                color: BRAND.green,
+                backgroundColor: BRAND.lightGreen,
+              },
+            }}
+          >
+            Refresh
+          </Button>
+        </Box>
       </Box>
 
       {/* ======================================================== */}
@@ -577,8 +745,16 @@ const Orders = () => {
       </Box>
 
       {/* ======================================================== */}
-      {/* 3. MAIN TABLE & TOOLBAR CARD */}
+      {/* 3. MAIN KITCHEN KDS BOARD OR DATA TABLE */}
       {/* ======================================================== */}
+      {viewMode === 'kds' ? (
+        <KitchenDisplayBoard
+          orders={filteredOrders}
+          onUpdateStatus={handleDirectStatusUpdate}
+          onCancelOrder={handleOpenCancelDialog}
+          onRefresh={() => fetchOrders(filters, true)}
+        />
+      ) : (
       <Paper
         elevation={0}
         sx={{
@@ -998,6 +1174,7 @@ const Orders = () => {
           </Box>
         </Box>
       </Paper>
+      )}
 
       {/* ======================================================== */}
       {/* 4. ORDER DETAILS DRAWER */}
@@ -1072,6 +1249,29 @@ const Orders = () => {
                   {updatingStatus ? <CircularProgress size={16} color="inherit" /> : 'Update'}
                 </Button>
               </Box>
+
+              {/* Wallet Auto-Refund Status Banner */}
+              {orderDetails.refunded_to === 'wallet' && (
+                <Box
+                  sx={{
+                    mt: 1.5,
+                    p: 1.2,
+                    borderRadius: '8px',
+                    bgcolor: '#EAF7F2',
+                    border: `1px solid ${BRAND.green}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Typography sx={{ fontSize: '11.5px', fontWeight: 700, color: BRAND.green }}>
+                    💰 Auto-Refunded to Customer Wallet
+                  </Typography>
+                  <Typography sx={{ fontSize: '12px', fontWeight: 800, color: BRAND.green }}>
+                    ₹{(orderDetails.refunded_amount || orderDetails.total_payable_amount || 0).toFixed(2)}
+                  </Typography>
+                </Box>
+              )}
             </Paper>
 
             {/* Customer & Address */}

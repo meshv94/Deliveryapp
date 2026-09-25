@@ -62,6 +62,7 @@ const adminUserRoutes = require('./routes/admin/userRoutes');
 const orderRoutes = require('./routes/admin/orderRoutes');
 const dashboardRoutes = require('./routes/admin/dashboardRoutes');
 const adminRoutes = require('./routes/admin/adminRoutes');
+const settingsRoutes = require('./routes/admin/settingsRoutes');
 
 // App Routes
 const userRoutes = require('./routes/app/userRoutes');
@@ -69,6 +70,9 @@ const addressRoutes = require('./routes/app/addressRoutes');
 const vendorAppRoutes = require('./routes/app/vendorRoutes');
 const cartCheckoutRoutes = require('./routes/app/cartCheckoutRoute');
 const moduleAppRoutes = require('./routes/app/moduleRoutes');
+const searchAppRoutes = require('./routes/app/searchRoutes');
+const notificationAppRoutes = require('./routes/app/notificationRoutes');
+const walletAppRoutes = require('./routes/app/walletRoutes');
 
 
 // Mount admin routes
@@ -78,6 +82,7 @@ app.use('/api/admin', adminUserRoutes);
 app.use('/api/admin', orderRoutes);
 app.use('/api/admin', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/settings', settingsRoutes);
 
 // Mount app routes
 app.use('/api/app', userRoutes);
@@ -85,6 +90,9 @@ app.use('/api/app', addressRoutes);
 app.use('/api/app', vendorAppRoutes);
 app.use('/api/app', moduleAppRoutes);
 app.use('/api/app', cartCheckoutRoutes);
+app.use('/api/app/search', searchAppRoutes);
+app.use('/api/app/notifications', notificationAppRoutes);
+app.use('/api/app/wallet', walletAppRoutes);
 
 // Health Check Route
 app.get('/api/health', (req, res) => {

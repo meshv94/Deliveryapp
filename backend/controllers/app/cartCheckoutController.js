@@ -2,7 +2,11 @@ const Cart = require('../../models/cartModal');
 const Product = require('../../models/productModal');
 const Vendor = require('../../models/vendorModal');
 const Address = require('../../models/addressModal');
+const User = require('../../models/userModal');
 const { calculateDistance, calculateDeliveryCharge } = require('../../utils/distanceCalculator');
+const { createOrderNotification } = require('../../utils/notificationService');
+const walletService = require('../../utils/walletService');
+const { getSystemSettings } = require('../../utils/systemSettingsService');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Checkout: save cart(s) per vendor for the authenticated user
@@ -169,13 +173,13 @@ exports.checkout = async (req, res) => {
 	}
 };
 
-// Place Order: Update cart(s) with address and delivery details, set status to Placed
+// Place Order: Update cart(s) with address and delivery details, set status to Placed, and apply wallet balance if selected
 exports.placeOrder = async (req, res) => {
 	try {
 		const userId = req.user && (req.user._id || req.user.id || req.user);
 		if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-		const { selectedAddressId, cartIds, deliveryDate, deliveryType } = req.body;
+		const { selectedAddressId, cartIds, deliveryDate, deliveryType, use_wallet, payment_method } = req.body;
 
 		// Validation
 		if (!selectedAddressId) {
@@ -203,8 +207,27 @@ exports.placeOrder = async (req, res) => {
 			});
 		}
 
-		// Update all carts
-		const updatedCarts = [];
+		// Fetch user to check wallet balance
+		const user = await User.findById(userId);
+		let availableWalletBalance = Number(user?.wallet_balance || 0);
+		const wantsWallet = Boolean(use_wallet) || payment_method === 'wallet';
+
+		// Check system settings for wallet enablement
+		const systemSettings = await getSystemSettings();
+		const isWalletEnabled = systemSettings?.walletSettings?.isWalletEnabled !== false;
+		const allowCheckoutUsage = isWalletEnabled && (systemSettings?.walletSettings?.allowHybridPayment !== false);
+
+		if (wantsWallet && !allowCheckoutUsage) {
+			return res.status(400).json({
+				success: false,
+				message: 'Wallet payment at checkout is currently disabled by administrator. Please select another payment method.',
+			});
+		}
+
+		// First pass: Fetch carts and compute updated totals
+		const cartsToUpdate = [];
+		let grandPayableTotal = 0;
+
 		for (const cartId of cartIds) {
 			const cart = await Cart.findOne({ _id: cartId, user: userId }).populate('vendor');
 
@@ -232,7 +255,6 @@ exports.placeOrder = async (req, res) => {
 			// Calculate delivery charge based on distance
 			const deliveryCharge = calculateDeliveryCharge(distance);
 
-			// Update cart with delivery details
 			cart.address = selectedAddressId;
 			cart.delivery_date = new Date(deliveryDate);
 			cart.delivery_time = deliveryType || 'today';
@@ -243,16 +265,72 @@ exports.placeOrder = async (req, res) => {
 			cart.total_payable_amount = cart.subtotal - cart.discount +
 				cart.packaging_charge + cart.delivery_charge + cart.convenience_charge;
 
-			cart.status = 'Placed';
+			grandPayableTotal += cart.total_payable_amount;
+			cartsToUpdate.push(cart);
+		}
 
+		if (wantsWallet && payment_method === 'wallet' && availableWalletBalance < grandPayableTotal) {
+			return res.status(400).json({
+				success: false,
+				message: `Insufficient wallet balance. Total order: ₹${grandPayableTotal}, Available in wallet: ₹${availableWalletBalance}`
+			});
+		}
+
+		// Second pass: Deduct wallet balance and save orders
+		const updatedCarts = [];
+		let remainingWalletToSpend = wantsWallet ? Math.min(availableWalletBalance, grandPayableTotal) : 0;
+		const totalWalletUsedForBatch = remainingWalletToSpend;
+
+		for (const cart of cartsToUpdate) {
+			let walletForThisCart = 0;
+			if (remainingWalletToSpend > 0) {
+				walletForThisCart = Math.min(remainingWalletToSpend, cart.total_payable_amount);
+				remainingWalletToSpend -= walletForThisCart;
+			}
+
+			cart.wallet_amount_used = walletForThisCart;
+
+			if (walletForThisCart >= cart.total_payable_amount) {
+				// Completely paid with wallet
+				cart.payment_status = 'Paid';
+				cart.payment_method = 'wallet';
+			} else if (walletForThisCart > 0) {
+				// Partially paid with wallet
+				cart.payment_status = 'Pending';
+				cart.payment_method = 'hybrid';
+			} else {
+				// Paid via standard COD
+				cart.payment_status = 'Pending';
+				cart.payment_method = payment_method || 'cod';
+			}
+
+			cart.status = 'Placed';
 			const saved = await cart.save();
 			updatedCarts.push(saved);
+
+			// Trigger customer notification asynchronously
+			createOrderNotification(saved, 'Placed').catch((err) =>
+				console.error('Failed to dispatch place-order notification:', err)
+			);
+		}
+
+		// Atomically debit user's wallet if wallet balance was utilized
+		if (totalWalletUsedForBatch > 0) {
+			const orderShortIds = updatedCarts.map((c) => (c._id || '').toString().slice(-6).toUpperCase()).join(', ');
+			await walletService.debitWallet({
+				userId,
+				amount: totalWalletUsedForBatch,
+				category: 'ORDER_PAYMENT',
+				description: `Paid for order #${orderShortIds} using AapnuBazaar Wallet`,
+				orderId: updatedCarts[0]?._id,
+			});
 		}
 
 		return res.status(200).json({
 			success: true,
 			message: 'Order placed successfully',
-			data: updatedCarts
+			data: updatedCarts,
+			wallet_amount_used: totalWalletUsedForBatch,
 		});
 
 	} catch (err) {
@@ -509,6 +587,11 @@ exports.verifyStripePayment = async (req, res) => {
 
 				await cart.save();
 				updatedCarts.push(cart);
+
+				// Trigger customer notification asynchronously
+				createOrderNotification(cart, 'Placed').catch((err) =>
+					console.error('Failed to dispatch stripe place-order notification:', err)
+				);
 			}
 		}
 

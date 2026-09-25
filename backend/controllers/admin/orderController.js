@@ -1,15 +1,70 @@
 const Joi = require('joi');
 const Cart = require('../../models/cartModal');
+const { createOrderNotification } = require('../../utils/notificationService');
+const walletService = require('../../utils/walletService');
+const { getSystemSettings } = require('../../utils/systemSettingsService');
+
+/**
+ * Helper to process auto-refund to wallet on order cancellation
+ */
+const processOrderCancellationRefund = async (orderDoc, cancelReason = '') => {
+  try {
+    const settings = await getSystemSettings();
+    const isAutoRefundEnabled = settings.walletSettings?.autoRefundToWalletOnCancel !== false;
+
+    // Check if auto-refund is enabled and order has not already been refunded
+    if (isAutoRefundEnabled && orderDoc && orderDoc.user && orderDoc.refunded_to !== 'wallet') {
+      const refundAmount = Number(orderDoc.total_payable_amount || orderDoc.subtotal || 0);
+      if (refundAmount > 0) {
+        const userId = orderDoc.user._id || orderDoc.user;
+        const shortOrderId = (orderDoc._id || '').toString().slice(-6).toUpperCase();
+
+        await walletService.creditWallet({
+          userId,
+          amount: refundAmount,
+          category: 'ORDER_REFUND',
+          description: `Refund for cancelled order #${shortOrderId}${cancelReason ? ` (${cancelReason})` : ''}`,
+          orderId: orderDoc._id,
+        });
+
+        // Update the order doc with refund details
+        await Cart.findByIdAndUpdate(orderDoc._id, {
+          payment_status: 'Refunded',
+          refunded_to: 'wallet',
+          refunded_amount: refundAmount,
+          refunded_at: new Date(),
+        });
+
+        console.log(`[Wallet] Auto-refunded ₹${refundAmount} to user ${userId} for cancelled order #${shortOrderId}`);
+        return { refunded: true, amount: refundAmount };
+      }
+    }
+  } catch (err) {
+    console.error('[Wallet] Failed to process auto-refund on order cancellation:', err);
+  }
+  return { refunded: false, amount: 0 };
+};
 
 // Validation Schema for updating order status
 const updateOrderStatusSchema = Joi.object({
   status: Joi.string()
-    .valid('New', 'Placed', 'Cancelled', 'Delivered', 'Refunded')
+    .valid(
+      'New',
+      'Placed',
+      'Confirmed',
+      'Preparing',
+      'Processing',
+      'Ready',
+      'Out for Delivery',
+      'Delivered',
+      'Cancelled',
+      'Refunded'
+    )
     .required()
     .messages({
       'string.empty': 'Status is required',
       'any.required': 'Status is required',
-      'any.only': 'Status must be one of: New, Placed, Cancelled, Delivered, Refunded',
+      'any.only': 'Status must be one of: New, Placed, Confirmed, Preparing, Processing, Ready, Out for Delivery, Delivered, Cancelled, Refunded',
     }),
 });
 
@@ -102,7 +157,7 @@ const getAllOrders = async (req, res) => {
         delivery_date: { $gte: today, $lt: tomorrow },
         status: { $ne: 'New' },
       }),
-      pendingOrders: await Cart.countDocuments({ status: 'Placed' }),
+      pendingOrders: await Cart.countDocuments({ status: { $in: ['Placed', 'Pending'] } }),
       deliveredOrders: await Cart.countDocuments({ status: 'Delivered' }),
       cancelledOrders: await Cart.countDocuments({ status: 'Cancelled' }),
     };
@@ -259,6 +314,16 @@ const updateOrderStatus = async (req, res) => {
       .populate('vendor', 'name email mobile_number')
       .lean();
 
+    // If cancelled or refunded, process auto-refund to wallet
+    if (status === 'Cancelled' || status === 'Refunded') {
+      await processOrderCancellationRefund(order, 'Status updated to ' + status);
+    }
+
+    // Trigger customer notification asynchronously
+    createOrderNotification(order, status).catch((err) =>
+      console.error('Failed to dispatch order notification:', err)
+    );
+
     return res.status(200).json({
       success: true,
       message: 'Order status updated successfully',
@@ -344,7 +409,7 @@ const getOrderStats = async (req, res) => {
       ]).then((result) => result[0]?.total || 0),
 
       // Status-wise breakdown
-      pendingOrders: await Cart.countDocuments({ ...vendorFilter, status: 'Placed' }),
+      pendingOrders: await Cart.countDocuments({ ...vendorFilter, status: { $in: ['Placed', 'Pending'] } }),
       deliveredOrders: await Cart.countDocuments({ ...vendorFilter, status: 'Delivered' }),
       cancelledOrders: await Cart.countDocuments({ ...vendorFilter, status: 'Cancelled' }),
     };
@@ -404,8 +469,18 @@ const deleteOrder = async (req, res) => {
     // Find and update order status to Cancelled
     const order = await Cart.findByIdAndUpdate(
       id,
-      { status: 'Cancelled' },
+      { status: 'Cancelled', cancelled_by: 'admin', cancelled_at: new Date() },
       { new: true }
+    );
+
+    // Process auto-refund to wallet if enabled
+    if (order) {
+      await processOrderCancellationRefund(order, 'Cancelled by admin');
+    }
+
+    // Trigger customer notification asynchronously
+    createOrderNotification(order, 'Cancelled', 'Cancelled by marketplace admin').catch((err) =>
+      console.error('Failed to dispatch order notification:', err)
     );
 
     return res.status(200).json({
@@ -484,6 +559,11 @@ const markAsDelivered = async (req, res) => {
       .populate('user', 'name email mobile')
       .populate('vendor', 'name email mobile_number')
       .lean();
+
+    // Trigger customer notification asynchronously
+    createOrderNotification(updatedOrder, 'Delivered').catch((err) =>
+      console.error('Failed to dispatch order notification:', err)
+    );
 
     return res.status(200).json({
       success: true,
@@ -568,11 +648,19 @@ const cancelOrder = async (req, res) => {
     order.cancelled_at = new Date();
     await order.save();
 
+    // Process auto-refund to wallet if enabled
+    await processOrderCancellationRefund(order, cancel_reason.trim());
+
     // Populate for response
     const updatedOrder = await Cart.findById(id)
       .populate('user', 'name email mobile')
       .populate('vendor', 'name email mobile_number')
       .lean();
+
+    // Trigger customer notification asynchronously
+    createOrderNotification(updatedOrder, 'Cancelled', cancel_reason.trim()).catch((err) =>
+      console.error('Failed to dispatch order notification:', err)
+    );
 
     return res.status(200).json({
       success: true,

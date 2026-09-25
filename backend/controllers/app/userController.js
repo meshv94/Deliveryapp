@@ -320,7 +320,7 @@ exports.getMyOrders = async (req, res) => {
     })
       .populate('vendor', 'name vendor_image address mobile_number')
       .populate('address', 'name address city pincode type')
-      .populate('items.product', 'name image')
+      .populate('items.product', 'name image main_price special_price dietary_type preparation_time_minute')
       .sort({ createdAt: -1 }); // Most recent first
 
     res.status(200).json({

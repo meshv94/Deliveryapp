@@ -244,6 +244,34 @@ const getDashboardOverview = async (req, res) => {
       .select('_id user vendor total_payable_amount status createdAt')
       .lean();
 
+    // ==================== HOURLY DISTRIBUTION (Last 30 Days) ====================
+    const hourlyData = await Cart.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: last30Days },
+          status: { $ne: 'New' },
+        },
+      },
+      {
+        $group: {
+          _id: { $hour: '$createdAt' },
+          orders: { $sum: 1 },
+          revenue: { $sum: '$total_payable_amount' },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const hourlyDistribution = Array.from({ length: 24 }, (_, hour) => {
+      const match = hourlyData.find((h) => h._id === hour);
+      return {
+        hour,
+        label: `${hour.toString().padStart(2, '0')}:00`,
+        orders: match ? match.orders : 0,
+        revenue: match ? match.revenue : 0,
+      };
+    });
+
     // ==================== RESPONSE ====================
     return res.status(200).json({
       success: true,
@@ -281,6 +309,7 @@ const getDashboardOverview = async (req, res) => {
 
         // Charts data
         dailyOrders: filledDailyOrders,
+        hourlyDistribution,
         recentOrders,
       },
     });
