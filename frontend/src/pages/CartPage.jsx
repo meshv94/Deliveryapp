@@ -338,9 +338,23 @@ const CartPage = () => {
         });
 
         if (response?.success) {
+          const placedOrders = Array.isArray(response.data) ? response.data : [response.data];
+          const firstOrder = placedOrders[0] || {};
           clearCart();
           localStorage.removeItem('deliveryCart');
-          navigate('/my-orders');
+
+          navigate(`/payment-success?method=${paymentMethod}&order_id=${firstOrder._id || ''}`, {
+            state: {
+              method: paymentMethod,
+              order: firstOrder,
+              orders: placedOrders,
+              orderId: firstOrder._id,
+              totalAmount: grandTotal,
+              itemsCount: totalItemsCount,
+              deliveryType: deliveryType,
+              deliveryDate: finalDeliveryDate,
+            },
+          });
           return;
         } else {
           setError(response?.message || 'Failed to place order.');

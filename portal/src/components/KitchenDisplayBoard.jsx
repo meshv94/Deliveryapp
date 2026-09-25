@@ -80,7 +80,7 @@ export default function KitchenDisplayBoard({
 
   const readyOrders = orders.filter((o) => {
     const s = String(o.status || '').toLowerCase();
-    return s === 'ready' || s === 'out for delivery' || s === 'out_for_delivery' || s === 'delivered';
+    return s === 'ready' || s === 'out for delivery' || s === 'out_for_delivery' || s === 'dispatched' || s === 'shipped';
   });
 
   // Print 80mm thermal receipt
